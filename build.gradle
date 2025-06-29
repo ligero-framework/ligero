@@ -1,11 +1,27 @@
 // Configuración común para todos los subproyectos
 
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'io.github.gradle-nexus:publish-plugin:1.1.0'
+    }
+}
+
+plugins {
+    id 'io.github.gradle-nexus.publish-plugin' version '1.1.0' apply false
+}
+
+apply plugin: 'io.github.gradle-nexus.publish-plugin'
+
 allprojects {
     apply plugin: 'java'
     apply plugin: 'maven-publish'
+    apply plugin: 'signing'
 
-    group = 'com.ligero'
-    version = '0.1.0-SNAPSHOT'
+    group = project.findProperty('group') ?: 'com.ligero'
+    version = project.findProperty('version') ?: '0.1.0-SNAPSHOT'
 
     repositories {
         mavenCentral()
@@ -14,6 +30,8 @@ allprojects {
     java {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
+        withJavadocJar()
+        withSourcesJar()
     }
 
     tasks.withType(JavaCompile) {
@@ -32,5 +50,122 @@ allprojects {
 
     tasks.withType(JavaExec) {
         jvmArgs '--enable-preview'
+    }
+    
+    tasks.withType(Javadoc) {
+        options.addStringOption('Xdoclint:none', '-quiet')
+        options.addStringOption('encoding', 'UTF-8')
+        options.addStringOption('charSet', 'UTF-8')
+    }
+
+    // Only apply publishing configuration to subprojects
+    if (project != rootProject) {
+        publishing {
+            publications {
+                mavenJava(MavenPublication) {
+                    from components.java
+                    
+                    pom {
+                        name = project.name
+                        description = project.description ?: 'A lightweight Java web framework for modern applications'
+                        url = project.findProperty('projectUrl') ?: 'https://github.com/ligero-framework/ligero'
+                        
+                        licenses {
+                            license {
+                                name = 'The Apache License, Version 2.0'
+                                url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                            }
+                        }
+                        
+                        developers {
+                            developer {
+                                id = project.findProperty('developerName')?.toLowerCase()?.replace(' ', '.') ?: 'developer'
+                                name = project.findProperty('developerName') ?: 'Developer'
+                                email = project.findProperty('developerEmail') ?: 'developer@example.com'
+                                url = project.findProperty('developerUrl') ?: 'https://github.com/developer'
+                            }
+                        }
+                        
+                        scm {
+                            connection = project.findProperty('projectScmConnection') ?: 'scm:git:git://github.com/ligero-framework/ligero.git'
+                            developerConnection = project.findProperty('projectScmDeveloperConnection') ?: 'scm:git:ssh://github.com:ligero-framework/ligero.git'
+                            url = project.findProperty('projectScmUrl') ?: 'https://github.com/ligero-framework/ligero'
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Signing configuration
+        signing {
+            required { !version.endsWith('SNAPSHOT') && gradle.taskGraph.hasTask("publish") }
+            sign publishing.publications.mavenJava
+        }
+    }
+}
+
+// Maven Central publishing configuration
+nexusPublishing {
+    repositories {
+        sonatype {
+            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+            username = project.findProperty('mavenCentralUsername') ?: System.getenv('MAVEN_CENTRAL_USERNAME')
+            password = project.findProperty('mavenCentralPassword') ?: System.getenv('MAVEN_CENTRAL_PASSWORD')
+        }
+    }
+}
+
+// Task to create a release version
+task prepareRelease {
+    doLast {
+        String currentVersion = project.version.toString()
+        if (!currentVersion.endsWith('-SNAPSHOT')) {
+            throw new GradleException("Current version is already a release version: ${currentVersion}")
+        }
+        
+        String releaseVersion = currentVersion.replace('-SNAPSHOT', '')
+        String nextVersion = releaseVersion.split('\\.').with { 
+            it[it.size() - 1] = (it[it.size() - 1] as Integer) + 1
+            it.join('.')
+        } + '-SNAPSHOT'
+        
+        println "Current version: ${currentVersion}"
+        println "Release version: ${releaseVersion}"
+        println "Next version: ${nextVersion}"
+        
+        // Update version in gradle.properties
+        File propsFile = file('gradle.properties')
+        String propsContent = propsFile.text
+        propsContent = propsContent.replaceAll("version=${currentVersion}", "version=${releaseVersion}")
+        propsFile.text = propsContent
+        
+        println "Updated gradle.properties with release version: ${releaseVersion}"
+    }
+}
+
+// Task to prepare for next development version
+task prepareNextDevelopment {
+    doLast {
+        String currentVersion = project.version.toString()
+        if (currentVersion.endsWith('-SNAPSHOT')) {
+            throw new GradleException("Current version is already a snapshot version: ${currentVersion}")
+        }
+        
+        String nextVersion = currentVersion.split('\\.').with { 
+            it[it.size() - 1] = (it[it.size() - 1] as Integer) + 1
+            it.join('.')
+        } + '-SNAPSHOT'
+        
+        println "Current version: ${currentVersion}"
+        println "Next version: ${nextVersion}"
+        
+        // Update version in gradle.properties
+        File propsFile = file('gradle.properties')
+        String propsContent = propsFile.text
+        propsContent = propsContent.replaceAll("version=${currentVersion}", "version=${nextVersion}")
+        propsFile.text = propsContent
+        
+        println "Updated gradle.properties with next development version: ${nextVersion}"
     }
 }
