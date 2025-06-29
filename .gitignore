@@ -1,0 +1,99 @@
+# Build output
+/target/
+/build/
+
+# IDE specific files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Logs
+*.log
+logs/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Docusaurus
+docs/website/.docusaurus/
+docs/website/node_modules/
+docs/website/build/
+
+# Local development
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Maven
+target/
+
+# VS Code
+.settings/
+
+# Maven wrapper
+.mvn/
+
+# Maven logs
+mvnw.cmd
+mvnw
+*.log.*
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Vim
+*.swp
+*.swo
+
+# Mac OS X
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Gradle
+.gradle/
+build/
+
+# Maven
+target/
+
+# VS Code
+.vscode/
+
+# Package Files
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# virtual machine crash logs, see https://www.java.com/en/download/help/error_hotspot.xml
+hs_err_pid*
+
+# Maven wrapper
+.mvn/
+
+# Maven logs
+mvnw.cmd
+mvnw
+*.log.*

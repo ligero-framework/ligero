@@ -1,0 +1,224 @@
+/* Custom styles for Ligero Framework documentation */
+
+:root {
+  --ifm-color-primary: #1a73e8;
+  --ifm-color-primary-dark: #1765cc;
+  --ifm-color-primary-darker: #165fc0;
+  --ifm-color-primary-darkest: #124e9e;
+  --ifm-color-primary-light: #3182ed;
+  --ifm-color-primary-lighter: #3c8aee;
+  --ifm-color-primary-lightest: #5e9ef1;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  
+  /* Custom gradient background */
+  --ifm-background-color: #f8f9fa;
+  --ifm-hero-background-color: #ffffff;
+  --ifm-hero-text-color: #1c1e21;
+}
+
+.hero {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  color: var(--ifm-hero-text-color);
+}
+
+.hero--primary {
+  --ifm-hero-background-color: var(--ifm-color-primary);
+  --ifm-hero-text-color: #ffffff;
+  background: linear-gradient(135deg, var(--ifm-color-primary) 0%, #0d47a1 100%);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #8ab4f8;
+  --ifm-color-primary-dark: #6ba4f6;
+  --ifm-color-primary-darker: #5b9bf5;
+  --ifm-color-primary-darkest: #2d82f2;
+  --ifm-color-primary-light: #a9c4fa;
+  --ifm-color-primary-lighter: #b9cdfb;
+  --ifm-color-primary-lightest: #e8f0fe;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+  
+  --ifm-background-color: #1a1a1a;
+  --ifm-hero-background-color: #242526;
+  --ifm-hero-text-color: #e4e6eb;
+}
+
+[data-theme='dark'] .hero {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+}
+
+[data-theme='dark'] .hero--primary {
+  background: linear-gradient(135deg, #0d47a1 0%, #1a237e 100%);
+}
+
+/* Code blocks */
+.codeBlockContainer {
+  border-radius: 6px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin: 1rem 0;
+}
+
+/* Inline code */
+:not(pre) > code {
+  background: var(--ifm-code-background);
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 4px;
+  color: var(--ifm-code-color);
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.9em;
+  padding: 0.2em 0.4em;
+  vertical-align: middle;
+}
+
+/* Code block title */
+.codeBlockTitle {
+  background: var(--ifm-color-emphasis-100);
+  border-bottom: 1px solid var(--ifm-color-emphasis-300);
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  color: var(--ifm-color-emphasis-700);
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.8em;
+  font-weight: 600;
+  padding: 0.4rem 0.8rem;
+}
+
+/* Java syntax highlighting */
+.token.keyword { color: #0000ff; }
+.token.comment { color: #6a9955; font-style: italic; }
+.token.string { color: #ce9178; }
+.token.number { color: #b5cea8; }
+.token.class-name { color: #4ec9b0; }
+.token.function { color: #dcdcaa; }
+
+/* API method badges */
+.api-method {
+  border-radius: 3px;
+  color: white;
+  display: inline-block;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.75em;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.25em 0.4em;
+  text-align: center;
+  vertical-align: baseline;
+  white-space: nowrap;
+}
+
+.api-method.get { background-color: #61affe; }
+.api-method.post { background-color: #49cc90; }
+.api-method.put { background-color: #fca130; }
+.api-method.delete { background-color: #f93e3e; }
+
+/* Tables */
+table {
+  width: 100%;
+  margin: 1rem 0;
+  border-collapse: collapse;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+th, td {
+  border: 1px solid var(--ifm-table-border-color);
+  padding: 0.75rem;
+  text-align: left;
+}
+
+th {
+  background-color: var(--ifm-table-head-background);
+  color: var(--ifm-table-head-color);
+  font-weight: 700;
+}
+
+tr:nth-child(2n) {
+  background-color: var(--ifm-table-stripe-background);
+}
+
+/* Blockquotes */
+blockquote {
+  background-color: var(--ifm-alert-background-color);
+  border-left: 6px solid var(--ifm-color-primary);
+  border-radius: 0 4px 4px 0;
+  color: var(--ifm-alert-foreground-color);
+  margin: 0 0 var(--ifm-leading);
+  padding: 1rem;
+}
+
+blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* Callouts */
+.theme-doc-markdown .admonition {
+  border-radius: 6px;
+  margin: 1.25rem 0;
+  overflow: hidden;
+}
+
+.theme-doc-markdown .admonition > div:first-child {
+  align-items: center;
+  display: flex;
+  font-weight: 700;
+  padding: 0.75rem 1.25rem;
+}
+
+.theme-doc-markdown .admonition > div:last-child {
+  padding: 1.25rem;
+}
+
+/* Sidebar */
+.menu__link {
+  border-radius: 4px;
+  margin: 0.2rem 0;
+  padding: 0.5rem 1rem;
+  transition: all 0.2s ease;
+}
+
+.menu__link:hover,
+.menu__link--active {
+  background: var(--ifm-menu-color-background-active);
+  color: var(--ifm-menu-color-active);
+}
+
+/* Navbar */
+.navbar__logo {
+  height: 2rem;
+  margin-right: 0.5rem;
+}
+
+.navbar__title {
+  font-weight: 600;
+}
+
+/* Responsive adjustments */
+@media (max-width: 996px) {
+  .navbar__items {
+    padding: 0.5rem;
+  }
+  
+  .menu__link {
+    padding: 0.5rem 0.75rem;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--ifm-color-emphasis-100);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--ifm-color-emphasis-300);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ifm-color-emphasis-500);
+}

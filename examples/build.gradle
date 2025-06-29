@@ -1,0 +1,40 @@
+apply plugin: 'application'
+
+mainClassName = 'com.ligero.examples.ExampleApp'
+
+dependencies {
+    // Dependencias de otros módulos del proyecto
+    implementation project(':server')
+    implementation project(':http')
+    implementation project(':router')
+    implementation project(':core')
+    
+    // Dependencias de Jackson para JSON
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.14.2'
+    
+    // Para testing
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.2'
+}
+
+// Configuración para crear un JAR ejecutable
+jar {
+    manifest {
+        attributes 'Main-Class': mainClassName
+    }
+    
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+test {
+    useJUnitPlatform()
+}
+
+// Configuración para ejecutar la aplicación con Gradle
+run {
+    standardInput = System.in
+}

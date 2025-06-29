@@ -1,0 +1,36 @@
+// Configuración común para todos los subproyectos
+
+allprojects {
+    apply plugin: 'java'
+    apply plugin: 'maven-publish'
+
+    group = 'com.ligero'
+    version = '0.1.0-SNAPSHOT'
+
+    repositories {
+        mavenCentral()
+    }
+
+    java {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+
+    tasks.withType(JavaCompile) {
+        options.encoding = 'UTF-8'
+        options.compilerArgs += ['--enable-preview']
+    }
+
+    test {
+        useJUnitPlatform()
+        jvmArgs '--enable-preview'
+    }
+
+    tasks.withType(Test) {
+        jvmArgs '--enable-preview'
+    }
+
+    tasks.withType(JavaExec) {
+        jvmArgs '--enable-preview'
+    }
+}

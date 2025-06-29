@@ -1,0 +1,9 @@
+rootProject.name = 'ligero'
+
+// Incluir los módulos principales
+include 'core'
+include 'server'
+include 'http'
+include 'router'
+include 'json'
+include 'examples'
