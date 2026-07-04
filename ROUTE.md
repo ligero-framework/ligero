@@ -1,3 +1,5 @@
+> **⚠️ Documento histórico.** Estas notas iniciales fueron consolidadas en la hoja de ruta oficial: ver [ROADMAP.md](ROADMAP.md) y [ARCHITECTURE_ANALYSIS.md](ARCHITECTURE_ANALYSIS.md).
+
 ¡Fascinante! Crear tu propio framework con Java 21 y aprovechar las características de Project Loom (hilos virtuales y concurrencia estructurada) es un proyecto ambicioso y muy interesante. Te permitirá tener un control granular y optimizar el rendimiento de una manera que antes era mucho más compleja.
 
 Aquí te listo las cosas clave que deberías tener en cuenta:

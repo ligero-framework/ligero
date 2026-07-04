@@ -188,14 +188,13 @@ Check out the [examples directory](examples/src/main/java/com/ligero/examples) f
 
 ## Roadmap
 
-- [ ] Middleware support
-- [ ] WebSocket support
-- [ ] Static file serving
-- [ ] Template engine integration
-- [ ] Form data parsing
-- [ ] CORS support
-- [ ] Authentication helpers
-- [ ] OpenAPI/Swagger integration
+The detailed, phased roadmap lives in [ROADMAP.md](ROADMAP.md), backed by the technical assessment in [ARCHITECTURE_ANALYSIS.md](ARCHITECTURE_ANALYSIS.md). Highlights:
+
+- **Phase 0 (v0.2)** — Stabilization: bug fixes, dependency cleanup, tests, CI
+- **Phase 1 (v0.3)** — Extensible core: middleware chain, server/JSON SPIs, trie-based router
+- **Phase 2 (v0.4)** — Web essentials: static files, CORS, templates, validation, config
+- **Phase 3 (v0.5)** — Production readiness: security, observability, WebSockets
+- **Phase 4 (v0.6–1.0)** — Ecosystem: testing utilities, OpenAPI, CLI, API freeze
 
 ## Contributing
 
