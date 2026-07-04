@@ -17,9 +17,8 @@ Ligero is a lightweight, minimalist web framework for building modern web applic
 Ligero app = Ligero.create(8080);
 
 // Define a simple route
-app.get("/hello", (req, res) -> {
-    res.json(Map.of("message", "Hello, World!"));
-});
+app.get("/hello/{name}", ctx ->
+    ctx.json(Map.of("message", "Hello, " + ctx.pathParam("name") + "!")));
 
 // Start the server
 app.start();
@@ -27,15 +26,28 @@ app.start();
 
 ## Features
 
-- ⚡️ **Lightweight & Fast**: Minimal overhead and optimized performance
-- 🧩 **Simple API**: Intuitive, fluent API inspired by modern web frameworks
-- 🛣️ **Expressive Routing**: Easy route definition with path parameters
-- 🔄 **Content Negotiation**: Support for JSON, HTML, and plain text responses
-- 🧪 **Testable**: Easy to test with minimal dependencies
-- 🔌 **Extensible**: Designed to be extended with custom middleware and plugins
-- 🔒 **Secure by Default**: Follows secure coding practices
+- ⚡️ **Lightweight & Fast**: zero dependencies in the core, served on Java 21 virtual threads
+- 🧩 **Simple API**: fluent, Express-inspired `Context` handlers (`ctx.json(...)`, `ctx.pathParam(...)`)
+- 🛣️ **Expressive Routing**: trie-based matching with `{params}`, `*wildcards`, route groups, automatic 405/OPTIONS
+- 🔗 **Middleware**: composable pipeline with built-ins for CORS, security headers, rate limiting, Basic auth, request id, access logging and static files
+- 🚨 **Error Handling**: `HttpException` hierarchy, custom exception/status handlers, no stack-trace leaks
+- ⚙️ **Typed Config**: builder > env vars (`LIGERO_*`) > `ligero.properties` > defaults
+- 🔌 **Extensible (SPI)**: pluggable server engines, JSON mappers and template engines via `ServiceLoader`
+- 🧪 **Testable**: inject a fake engine and drive the whole pipeline in-memory
 
 ## Installation
+
+> **Note:** Ligero is not published to Maven Central yet (planned — see
+> [ROADMAP.md](ROADMAP.md)). Until then, build it locally with
+> `./gradlew publishToMavenLocal` and depend on the snapshot.
+
+### Gradle
+
+```groovy
+implementation 'com.ligero:ligero-core:0.2.0-SNAPSHOT'       // API
+runtimeOnly    'com.ligero:ligero-server-jdk:0.2.0-SNAPSHOT' // server engine (SPI)
+runtimeOnly    'com.ligero:ligero-json:0.2.0-SNAPSHOT'       // JSON mapper (SPI, optional)
+```
 
 ### Maven
 
@@ -43,14 +55,18 @@ app.start();
 <dependency>
     <groupId>com.ligero</groupId>
     <artifactId>ligero-core</artifactId>
-    <version>0.1.0</version>
+    <version>0.2.0-SNAPSHOT</version>
 </dependency>
-```
-
-### Gradle
-
-```groovy
-implementation 'com.ligero:ligero-core:0.1.0'
+<dependency>
+    <groupId>com.ligero</groupId>
+    <artifactId>ligero-server-jdk</artifactId>
+    <version>0.2.0-SNAPSHOT</version>
+</dependency>
+<dependency>
+    <groupId>com.ligero</groupId>
+    <artifactId>ligero-json</artifactId>
+    <version>0.2.0-SNAPSHOT</version>
+</dependency>
 ```
 
 ## Quick Start
@@ -70,26 +86,21 @@ import com.ligero.Ligero;
 import java.util.Map;
 
 public class Application {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         // Create a new Ligero app
         Ligero app = Ligero.create(8080);
-        
+
         // Define routes
-        app.get("/", (req, res) -> {
-            res.send("Welcome to Ligero!");
-        });
-        
-        app.get("/api/hello/{name}", (req, res) -> {
-            String name = req.getPathParams().get("name");
-            res.json(Map.of(
-                "message", "Hello, " + name + "!",
-                "timestamp", System.currentTimeMillis()
-            ));
-        });
-        
+        app.get("/", ctx -> ctx.text("Welcome to Ligero!"));
+
+        app.get("/api/hello/{name}", ctx -> ctx.json(Map.of(
+            "message", "Hello, " + ctx.pathParam("name") + "!",
+            "timestamp", System.currentTimeMillis()
+        )));
+
         // Start the server
         app.start();
-        System.out.println("Server started at http://localhost:8080");
+        System.out.println("Server started at http://localhost:" + app.port());
     }
 }
 ```
@@ -102,84 +113,144 @@ Run your application and visit `http://localhost:8080` in your browser.
 
 ### Routes
 
-Ligero uses a simple, expressive API for defining routes:
-
 ```java
-// Basic routes
-app.get("/users", (req, res) -> { /* handler */ });
-app.post("/users", (req, res) -> { /* handler */ });
-app.put("/users/{id}", (req, res) -> { /* handler */ });
-app.delete("/users/{id}", (req, res) -> { /* handler */ });
+// Basic routes — handlers receive a Context
+app.get("/users", ctx -> ctx.json(users));
+app.post("/users", ctx -> { /* ... */ });
+app.put("/users/{id}", ctx -> { /* ... */ });
+app.delete("/users/{id}", ctx -> { /* ... */ });
 
-// Path parameters
-app.get("/users/{id}/posts/{postId}", (req, res) -> {
-    String userId = req.getPathParams().get("id");
-    String postId = req.getPathParams().get("postId");
+// Path parameters (typed access responds 400 automatically on bad input)
+app.get("/users/{id}/posts/{postId}", ctx -> {
+    long userId = ctx.pathParamAsLong("id");
+    String postId = ctx.pathParam("postId");
     // ...
 });
 
-// Fallback for not found routes
-app.fallback((req, res) -> {
-    res.status(404).json(Map.of(
-        "error", "Not found",
-        "path", req.getUri()
-    ));
+// Wildcards capture the rest of the path
+app.get("/files/*path", ctx -> ctx.text(ctx.pathParam("path")));
+
+// Route groups share a prefix (and optionally middleware)
+app.group("/api/v1", api -> {
+    api.get("/users", ctx -> ctx.json(users));
+    api.group("/admin", admin -> admin.get("/stats", ctx -> ctx.json(stats)));
 });
+
+// Custom 404 rendering
+app.error(404, ctx -> ctx.json(Map.of("error", "Not found", "path", ctx.path())));
+```
+
+The classic `(req, res)` handler style keeps working:
+
+```java
+app.get("/legacy/{id}", (req, res) -> res.json(Map.of("id", req.getPathParams().get("id"))));
 ```
 
 ### Requests & Responses
 
-Ligero provides a simple API for handling HTTP requests and responses:
-
 ```java
-// Request handling
-app.post("/api/data", (req, res) -> {
-    // Get request body as string
-    String body = req.getBodyAsString();
-    
-    // Get query parameters
-    String param = req.getQueryParam("param");
-    
-    // Get headers
-    String userAgent = req.getHeader("User-Agent");
-    
-    // Response handling
-    res.status(201)                         // Set status code
-       .header("X-Custom-Header", "value")  // Set header
-       .contentType("application/json")     // Set content type
-       .json(Map.of("status", "created"));  // Send JSON response
+app.post("/api/data", ctx -> {
+    MyDto dto = ctx.body(MyDto.class);           // JSON body (via ligero-json)
+    String raw = ctx.bodyAsString();             // raw body
+    String param = ctx.queryParam("param");      // query parameter
+    String agent = ctx.header("User-Agent");     // header (case-insensitive)
+    String session = ctx.cookie("session");      // cookie
+
+    ctx.status(201)                              // status code
+       .header("X-Custom-Header", "value")      // header
+       .json(Map.of("status", "created"));      // JSON response
 });
 ```
 
-## Advanced Usage
+### Middleware
 
-### Context Paths
-
-You can set a context path for your application:
+Everything cross-cutting is a middleware — the core never changes (open/closed):
 
 ```java
-// Create app with context path /api
-Ligero app = Ligero.create(8080, "/api");
+app.use(new RequestIdMiddleware());              // X-Request-Id propagation
+app.use(new RequestLoggingMiddleware());         // access log
+app.use(SecurityHeadersMiddleware.defaults());   // nosniff, frame options, ...
+app.use(CorsMiddleware.builder()
+    .allowOrigins("https://example.com")
+    .allowMethods("GET", "POST")
+    .build());
+app.use(RateLimitMiddleware.of(100, 100));       // 100 req burst, 100 req/s
+app.use(StaticFilesMiddleware.external("/static", Path.of("public")));
+app.use("/admin", BasicAuthMiddleware.of("Admin", store::matches)); // path-scoped
 
-// Now all routes are under /api
-app.get("/users", (req, res) -> { /* accessible at /api/users */ });
+// Custom middleware
+app.use((ctx, chain) -> {
+    long start = System.nanoTime();
+    chain.proceed();
+    log.info("{} took {} µs", ctx.path(), (System.nanoTime() - start) / 1000);
+});
+```
+
+### Error Handling
+
+```java
+// Throw HttpException (or subclasses) from anywhere in the pipeline
+app.get("/users/{id}", ctx -> {
+    User user = repo.find(ctx.pathParamAsLong("id"))
+        .orElseThrow(() -> new NotFoundException("No such user"));
+    ctx.json(user);
+});
+
+// Map your own exception types
+app.exception(SQLException.class, (e, ctx) ->
+    ctx.status(503).json(Map.of("error", "database unavailable")));
+```
+
+Unexpected exceptions become an opaque `500` — details go to the log, never to the client.
+
+### Validation
+
+```java
+app.post("/users", ctx -> {
+    User user = ctx.bodyValidator(User.class)
+        .check(u -> u.name() != null && !u.name().isBlank(), "name is required")
+        .check(u -> u.age() >= 0, "age must be positive")
+        .get(); // throws -> 400 with all collected messages
+    ctx.status(201).json(repo.save(user));
+});
+```
+
+### Configuration
+
+```java
+Ligero app = Ligero.create(LigeroConfig.builder()
+    .port(8080)
+    .contextPath("/api")
+    .maxBodyBytes(5 * 1024 * 1024)
+    .gzip(true)
+    .shutdownGrace(Duration.ofSeconds(30))
+    .build());
+```
+
+Every value can also come from `LIGERO_*` environment variables or a
+classpath `ligero.properties` file (builder > env > properties > defaults).
+
+## Advanced Usage
+
+### Pluggable Server Engines (SPI)
+
+The core never instantiates a server: engines implement the `ServerEngine`
+SPI and are discovered via `ServiceLoader` (`ligero-server-jdk` is the
+default, running on virtual threads). For tests you can inject an in-memory
+fake and drive the whole pipeline without opening a socket:
+
+```java
+app.engine(new FakeEngine());
+app.bodyMapper(new JacksonBodyMapper());
 ```
 
 ### Graceful Shutdown
 
-Ligero supports graceful shutdown:
-
 ```java
-// Create and configure app
 Ligero app = Ligero.create(8080);
 // ...
-
-// Add shutdown hook
-Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-    System.out.println("Shutting down server...");
-    app.close();
-    System.out.println("Server stopped.");
-}));
+app.start();
+Runtime.getRuntime().addShutdownHook(new Thread(app::stop)); // drains in-flight requests
 ```
 
 ## Examples

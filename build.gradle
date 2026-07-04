@@ -1,30 +1,28 @@
 // Configuración común para todos los subproyectos
 
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'io.github.gradle-nexus:publish-plugin:1.1.0'
-    }
-}
-
 plugins {
-    id 'io.github.gradle-nexus.publish-plugin' version '1.1.0' apply false
+    id 'io.github.gradle-nexus.publish-plugin' version '2.0.0'
 }
-
-apply plugin: 'io.github.gradle-nexus.publish-plugin'
 
 allprojects {
-    apply plugin: 'java'
-    apply plugin: 'maven-publish'
-    apply plugin: 'signing'
-
     group = project.findProperty('group') ?: 'com.ligero'
-    version = project.findProperty('version') ?: '0.1.0-SNAPSHOT'
+    version = rootProject.findProperty('version') ?: '0.2.0-SNAPSHOT'
 
     repositories {
         mavenCentral()
+    }
+}
+
+subprojects {
+    apply plugin: 'java-library'
+    apply plugin: 'jacoco'
+
+    // Los artefactos se publican con el prefijo ligero- (p. ej. ligero-core).
+    // El módulo server se publica como ligero-server-jdk porque es la
+    // implementación del SPI ServerEngine basada en el JDK.
+    def artifactName = project.name == 'server' ? 'ligero-server-jdk' : "ligero-${project.name}"
+    base {
+        archivesName = artifactName
     }
 
     java {
@@ -34,49 +32,72 @@ allprojects {
         withSourcesJar()
     }
 
-    tasks.withType(JavaCompile) {
+    tasks.withType(JavaCompile).configureEach {
         options.encoding = 'UTF-8'
-        options.compilerArgs += ['--enable-preview']
     }
 
     test {
         useJUnitPlatform()
-        jvmArgs '--enable-preview'
+        testLogging {
+            events 'passed', 'skipped', 'failed'
+        }
+        finalizedBy jacocoTestReport
     }
 
-    tasks.withType(Test) {
-        jvmArgs '--enable-preview'
+    jacocoTestReport {
+        dependsOn test
+        reports {
+            xml.required = true
+            html.required = true
+        }
     }
 
-    tasks.withType(JavaExec) {
-        jvmArgs '--enable-preview'
+    // Umbral de cobertura por módulo (roadmap fase 0.4: 80 % en core).
+    // json y server se cubren además indirectamente por los tests de
+    // integración, que JaCoCo no cuenta entre módulos.
+    def coverageMinimums = [core: 0.80, json: 0.70, server: 0.70, examples: 0.0]
+    jacocoTestCoverageVerification {
+        dependsOn test
+        violationRules {
+            rule {
+                limit {
+                    counter = 'LINE'
+                    minimum = coverageMinimums.getOrDefault(project.name, 0.0).toBigDecimal()
+                }
+            }
+        }
     }
-    
-    tasks.withType(Javadoc) {
+    check.dependsOn jacocoTestCoverageVerification
+
+    tasks.withType(Javadoc).configureEach {
         options.addStringOption('Xdoclint:none', '-quiet')
         options.addStringOption('encoding', 'UTF-8')
         options.addStringOption('charSet', 'UTF-8')
     }
 
-    // Only apply publishing configuration to subprojects
-    if (project != rootProject) {
+    // El módulo examples es una aplicación de demostración: no se publica.
+    if (project.name != 'examples') {
+        apply plugin: 'maven-publish'
+        apply plugin: 'signing'
+
         publishing {
             publications {
                 mavenJava(MavenPublication) {
                     from components.java
-                    
+                    artifactId = artifactName
+
                     pom {
-                        name = project.name
+                        name = artifactName
                         description = project.description ?: 'A lightweight Java web framework for modern applications'
                         url = project.findProperty('projectUrl') ?: 'https://github.com/ligero-framework/ligero'
-                        
+
                         licenses {
                             license {
                                 name = 'The Apache License, Version 2.0'
-                                url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                                url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
                             }
                         }
-                        
+
                         developers {
                             developer {
                                 id = project.findProperty('developerName')?.toLowerCase()?.replace(' ', '.') ?: 'developer'
@@ -85,7 +106,7 @@ allprojects {
                                 url = project.findProperty('developerUrl') ?: 'https://github.com/developer'
                             }
                         }
-                        
+
                         scm {
                             connection = project.findProperty('projectScmConnection') ?: 'scm:git:git://github.com/ligero-framework/ligero.git'
                             developerConnection = project.findProperty('projectScmDeveloperConnection') ?: 'scm:git:ssh://github.com:ligero-framework/ligero.git'
@@ -95,77 +116,25 @@ allprojects {
                 }
             }
         }
-        
-        // Signing configuration
+
         signing {
-            required { !version.endsWith('SNAPSHOT') && gradle.taskGraph.hasTask("publish") }
+            required { !version.endsWith('SNAPSHOT') && gradle.taskGraph.hasTask('publish') }
             sign publishing.publications.mavenJava
         }
     }
 }
 
-// Maven Central publishing configuration
+// Publicación en Maven Central.
+// NOTA (roadmap B13): OSSRH (s01.oss.sonatype.org) fue retirado; la publicación
+// debe migrarse al Central Portal (https://central.sonatype.org/publish/publish-portal-gradle/)
+// cuando se den de alta las credenciales. Se mantiene la configuración como referencia.
 nexusPublishing {
     repositories {
         sonatype {
-            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+            nexusUrl.set(uri('https://ossrh-staging-api.central.sonatype.com/service/local/'))
+            snapshotRepositoryUrl.set(uri('https://central.sonatype.com/repository/maven-snapshots/'))
             username = project.findProperty('mavenCentralUsername') ?: System.getenv('MAVEN_CENTRAL_USERNAME')
             password = project.findProperty('mavenCentralPassword') ?: System.getenv('MAVEN_CENTRAL_PASSWORD')
         }
-    }
-}
-
-// Task to create a release version
-task prepareRelease {
-    doLast {
-        String currentVersion = project.version.toString()
-        if (!currentVersion.endsWith('-SNAPSHOT')) {
-            throw new GradleException("Current version is already a release version: ${currentVersion}")
-        }
-        
-        String releaseVersion = currentVersion.replace('-SNAPSHOT', '')
-        String nextVersion = releaseVersion.split('\\.').with { 
-            it[it.size() - 1] = (it[it.size() - 1] as Integer) + 1
-            it.join('.')
-        } + '-SNAPSHOT'
-        
-        println "Current version: ${currentVersion}"
-        println "Release version: ${releaseVersion}"
-        println "Next version: ${nextVersion}"
-        
-        // Update version in gradle.properties
-        File propsFile = file('gradle.properties')
-        String propsContent = propsFile.text
-        propsContent = propsContent.replaceAll("version=${currentVersion}", "version=${releaseVersion}")
-        propsFile.text = propsContent
-        
-        println "Updated gradle.properties with release version: ${releaseVersion}"
-    }
-}
-
-// Task to prepare for next development version
-task prepareNextDevelopment {
-    doLast {
-        String currentVersion = project.version.toString()
-        if (currentVersion.endsWith('-SNAPSHOT')) {
-            throw new GradleException("Current version is already a snapshot version: ${currentVersion}")
-        }
-        
-        String nextVersion = currentVersion.split('\\.').with { 
-            it[it.size() - 1] = (it[it.size() - 1] as Integer) + 1
-            it.join('.')
-        } + '-SNAPSHOT'
-        
-        println "Current version: ${currentVersion}"
-        println "Next version: ${nextVersion}"
-        
-        // Update version in gradle.properties
-        File propsFile = file('gradle.properties')
-        String propsContent = propsFile.text
-        propsContent = propsContent.replaceAll("version=${currentVersion}", "version=${nextVersion}")
-        propsFile.text = propsContent
-        
-        println "Updated gradle.properties with next development version: ${nextVersion}"
     }
 }

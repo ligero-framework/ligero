@@ -1,9 +1,7 @@
 rootProject.name = 'ligero'
 
-// Incluir los módulos principales
-include 'core'
-include 'server'
-include 'http'
-include 'router'
-include 'json'
-include 'examples'
+// Módulos del framework
+include 'core'      // ligero-core: API pública, router, middleware, SPIs (sin dependencias externas salvo slf4j-api)
+include 'json'      // ligero-json: BodyMapper basado en Jackson
+include 'server'    // ligero-server-jdk: ServerEngine sobre com.sun.net.httpserver con virtual threads
+include 'examples'  // Aplicación de ejemplo (no se publica)

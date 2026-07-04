@@ -1,19 +1,11 @@
-dependencies {
-    // Dependencias de otros módulos del proyecto
-    implementation project(':core')
-    implementation project(':http')
-    implementation project(':router')
-    implementation project(':json')
-    
-    // Dependencias de Jackson para JSON
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.14.2'
-    
-    // Para testing
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.2'
-    testImplementation 'org.mockito:mockito-core:5.3.1'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.2'
-}
+description = 'Ligero JDK server engine: ServerEngine over com.sun.net.httpserver with virtual threads'
 
-test {
-    useJUnitPlatform()
+dependencies {
+    api project(':core')
+
+    testImplementation project(':json')
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+    testRuntimeOnly libs.slf4j.simple
 }
