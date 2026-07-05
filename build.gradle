@@ -1,0 +1,32 @@
+plugins {
+    id 'application'
+}
+
+group = 'com.ligero'
+version = '0.1.0-SNAPSHOT'
+description = 'Scaffolding CLI for the Ligero web framework'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+repositories {
+    mavenCentral()
+}
+
+application {
+    mainClass = 'com.ligero.cli.LigeroCli'
+    applicationName = 'ligero'
+}
+
+dependencies {
+    // Cero dependencias en runtime — coherente con la filosofía del framework
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation 'org.assertj:assertj-core:3.26.3'
+}
+
+test {
+    useJUnitPlatform()
+}
