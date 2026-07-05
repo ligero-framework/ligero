@@ -1,0 +1,11 @@
+description = 'Ligero auth: JWT (HS256) verification/signing, CSRF protection and sessions'
+
+dependencies {
+    api project(':core')
+
+    testImplementation project(':json')
+    testImplementation(testFixtures(project(':core')))
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+}

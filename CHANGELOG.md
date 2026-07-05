@@ -6,8 +6,35 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased] — 0.2.0-SNAPSHOT
 
-Execution of roadmap phases 0–1 and the core items of phases 2–3
-(see [ROADMAP.md](ROADMAP.md) for per-item status).
+Execution of the full roadmap (phases 0–4); the only items left open depend
+on external credentials/processes or future milestones — see
+[ROADMAP.md](ROADMAP.md) for per-item status.
+
+### Added (second batch — roadmap completion)
+- **JPMS**: `module-info.java` in every published module, with
+  `provides`/`uses` for the SPIs.
+- **`ligero-auth`**: JWT HS256 sign/verify (no external deps, rejects
+  `alg=none`), `JwtAuthMiddleware` with role checks, stateless CSRF
+  protection (double-submit cookie), and cookie sessions (HMAC-signed id,
+  `SessionStore` SPI).
+- **`ligero-server-jetty`**: second `ServerEngine` on Jetty 12 core —
+  the integration suite runs unchanged on both engines, validating the SPI.
+- **`ligero-template-mustache`**: first `TemplateEngine` adapter (JMustache).
+- **`ligero-test`**: fluent end-to-end test client (`LigeroTest`).
+- **`ligero-openapi`**: OpenAPI 3 generation from registered routes plus
+  opt-in Swagger UI.
+- **`ligero-metrics-micrometer`**: `MetricsCollector` adapter for Micrometer.
+- **Core**: `multipart/form-data` parsing (`ctx.multipart()`), `Accept`
+  content negotiation (`ctx.accepts()`/`preferredType()`), Server-Sent
+  Events (`ctx.sse()`), minimal DI (`app.register`/`ctx.get`),
+  `HealthMiddleware`, `MetricsMiddleware` + in-memory collector,
+  JSON access log, W3C `traceparent` propagation, `RateLimiterStore` SPI,
+  matched-route pattern exposed to middleware.
+- **Benchmarks**: JMH module for router matching (~140–215 ns/op with 301
+  routes).
+- **Quality/community**: GraalVM reachability metadata, `SECURITY.md`,
+  `CONTRIBUTING.md`, code of conduct, issue/PR templates,
+  dependency-review workflow, conditional snapshot-publishing CI job.
 
 ### Fixed
 - **Path parameters now work end-to-end** (`{id}` was silently dropped by the

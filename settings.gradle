@@ -4,4 +4,11 @@ rootProject.name = 'ligero'
 include 'core'      // ligero-core: API pública, router, middleware, SPIs (sin dependencias externas salvo slf4j-api)
 include 'json'      // ligero-json: BodyMapper basado en Jackson
 include 'server'    // ligero-server-jdk: ServerEngine sobre com.sun.net.httpserver con virtual threads
+include 'auth'                // ligero-auth: JWT (HS256), CSRF y sesiones
+include 'template-mustache'   // ligero-template-mustache: TemplateEngine con JMustache
+include 'testkit'             // ligero-test: utilidades de testing end-to-end
+include 'openapi'             // ligero-openapi: generación OpenAPI 3 desde las rutas
+include 'metrics-micrometer'  // ligero-metrics-micrometer: adapter MetricsCollector -> Micrometer
+include 'server-jetty'        // ligero-server-jetty: segundo ServerEngine (valida el SPI)
+include 'benchmarks'          // JMH (no se publica)
 include 'examples'  // Aplicación de ejemplo (no se publica)

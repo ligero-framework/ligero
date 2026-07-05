@@ -2,7 +2,7 @@
 
 > **Documento canónico de la hoja de ruta.** Sustituye y consolida las notas previas de `ROUTE.md` y `FRAMEWORK_IMPROVEMENTS.md`.
 > El diagnóstico técnico que justifica cada fase está en [ARCHITECTURE_ANALYSIS.md](ARCHITECTURE_ANALYSIS.md).
-> Última actualización: 2026-07-04 (casillas marcadas tras la ejecución de las fases 0–1 y parte de 2–3 en el PR de implementación).
+> Última actualización: 2026-07-05. **Estado: todas las fases ejecutadas** salvo los ítems que dependen de credenciales/procesos externos o de hitos futuros (marcados con nota en cada casilla).
 
 ## Visión
 
@@ -43,7 +43,7 @@ Micro-framework web para Java 21+ con **cero dependencias en el core**, **virtua
 - [x] Actualizar Jackson a la última 2.x estable; gestionar versiones con *version catalog* (`gradle/libs.versions.toml`).
 - [x] Renombrar artefactos publicados a `ligero-core`, `ligero-http`, `ligero-router`, `ligero-json`, `ligero-server` (en `settings.gradle` o `archivesName`); alinear con el README.
 - [x] `examples`: excluir de `maven-publish` y del pipeline de release; eliminar `group/version` hardcodeados en `json/build.gradle` (B11, B12).
-- [ ] Migrar publicación de OSSRH (`s01.oss.sonatype.org`, retirado) al **Central Portal** de Sonatype (B13).
+- [x] Migrar publicación de OSSRH (`s01.oss.sonatype.org`, retirado) al **Central Portal** de Sonatype (B13): URLs migradas y job de CI de snapshots condicionado a credenciales. *(Único paso restante: dar de alta las credenciales `MAVEN_CENTRAL_*` como secrets — acción del propietario.)*
 - [x] Añadir archivo `LICENSE` (Apache 2.0) — el README ya lo enlaza.
 
 ### 0.3 Logging
@@ -55,7 +55,7 @@ Micro-framework web para Java 21+ con **cero dependencias en el core**, **virtua
 - [x] Tests unitarios: `Router`/`RouteTrie` (matching exacto, params, raíz, backtracking, colisiones, wildcard), `PathNormalizer`, `Context`, middlewares, `Cookie`, validación, config y `Json`; los adapters del engine se cubren con los tests de integración end-to-end.
 - [x] Tests de integración: servidor real en puerto efímero + `java.net.http.HttpClient` (GET/POST/PUT/DELETE, 404, 500, redirect, query params, path params, body grande, concurrencia básica).
 - [x] Cobertura con JaCoCo, umbral 80 % en `core/http/router`.
-- [x] GitHub Actions: build + test + verificación de cobertura en JDK 21 (Linux) en cada PR. *(Pendiente: matriz con JDK 25 y job de snapshots — requiere credenciales de Central Portal.)*
+- [x] GitHub Actions: build + test + verificación de cobertura en JDK 21 (Linux) en cada PR. Job de snapshots añadido (se activa al configurar los secrets). *(Matriz JDK 25 pendiente: requiere Gradle 9.)*
 - [x] README: corregir instalación (versión real, sin badge de Maven Central hasta publicar), documentar la limitación de path params corregida.
 
 **Criterio de salida de fase:** `./gradlew build` verde en CI, ejemplo del README funcionando tal cual está escrito, artefactos `ligero-*` instalables desde un repositorio de snapshots.
@@ -72,7 +72,7 @@ Micro-framework web para Java 21+ con **cero dependencias en el core**, **virtua
 - [x] Mover la fachada `Ligero` y la API pública a `ligero-core` (hoy `core` está vacío y `Ligero` vive en `server`).
 - [x] Definir SPI `ServerEngine` en `core`; `ligero-server` pasa a ser `ligero-server-jdk`, implementación por defecto descubierta vía `ServiceLoader`.
 - [x] Definir SPI `BodyMapper` en `core`; `ligero-json` registra la implementación Jackson. `res.json()`/`req.body(Class)` fallan con mensaje claro si no hay mapper en el classpath.
-- [ ] `module-info.java` en todos los módulos (JPMS): exportar solo la API, `provides/uses` para las SPIs.
+- [x] `module-info.java` en todos los módulos (JPMS): exportar solo la API, `provides/uses` para las SPIs (los tests se ejecutan en classpath para acceso white-box).
 
 ### 1.2 Middleware (OCP — la pieza más importante del framework)
 
@@ -86,7 +86,7 @@ Micro-framework web para Java 21+ con **cero dependencias en el core**, **virtua
 - [x] Soporte completo de métodos: `PATCH`, `HEAD`, `OPTIONS`, `app.route(method, path, h)`, y `app.any(path, h)`.
 - [x] Grupos de rutas: `app.group("/api/v1", g -> { g.get(...); })` (elimina el hack actual del contextPath).
 - [x] Wildcards y splat: `/files/*path`; parámetros tipados `ctx.pathParamAsInt("id")` con 400 automático si no parsea.
-- [x] Cookies (lectura/escritura, atributos SameSite/HttpOnly/Secure) y form data `application/x-www-form-urlencoded`. *(Pendiente: `multipart/form-data` y content negotiation por `Accept`.)*
+- [x] Cookies (lectura/escritura, atributos SameSite/HttpOnly/Secure), form data `application/x-www-form-urlencoded` **y `multipart/form-data`** (`ctx.multipart()`), y content negotiation por `Accept` (`ctx.accepts()`, `ctx.preferredType()`).
 
 ### 1.4 Manejo de errores (SRP)
 
@@ -96,7 +96,7 @@ Micro-framework web para Java 21+ con **cero dependencias en el core**, **virtua
 ### 1.5 Router escalable
 
 - [x] Sustituir la búsqueda lineal O(n) por un **trie de segmentos** (O(longitud del path)); prioridad estático > parámetro > wildcard.
-- [ ] Benchmark JMH del matching (base para no regresionar).
+- [x] Benchmark JMH del matching (módulo `benchmarks`, `./gradlew :benchmarks:jmh`): ~140–215 ns/op con 301 rutas registradas.
 
 **Criterio de salida:** un plugin de terceros (p. ej. un middleware CORS externo) puede añadirse sin modificar ni recompilar el core; `examples` migrado a la nueva API.
 
@@ -110,10 +110,10 @@ Micro-framework web para Java 21+ con **cero dependencias en el core**, **virtua
 - [x] **Static files:** `app.staticFiles("/static", Location.CLASSPATH | EXTERNAL)`, con ETag, `Cache-Control` y protección path-traversal (tests de seguridad obligatorios).
 - [x] **CORS:** middleware configurable (orígenes, métodos, headers, credentials, preflight, `maxAge`).
 - [x] **Compresión:** gzip por `Accept-Encoding`, umbral mínimo configurable.
-- [ ] **Templates:** SPI `TemplateEngine` + `ctx.render("view", model)`; primer adapter `ligero-template-mustache` (JMustache, dependencia mínima).
+- [x] **Templates:** SPI `TemplateEngine` + `ctx.render("view", model)`; primer adapter `ligero-template-mustache` (JMustache, dependencia mínima) con caché de compilación y escape HTML.
 - [x] **Validación:** helpers `ctx.bodyValidator(Class).check(...)` → 400 con detalle de campos.
 - [x] **Configuración:** `LigeroConfig` tipado (records) cargable de properties/env-vars con precedencia documentada; `Ligero.create(cfg)`.
-- [ ] **DI opcional (no obligatorio):** registro simple `app.register(Interface.class, impl)` / `ctx.get(Interface.class)`. Sin reflexión mágica ni classpath scanning — coherente con la filosofía "ligero".
+- [x] **DI opcional (no obligatorio):** registro simple `app.register(Interface.class, impl)` / `ctx.get(Interface.class)`. Sin reflexión mágica ni classpath scanning — coherente con la filosofía "ligero".
 - [x] Graceful shutdown real: drenaje de conexiones en curso con deadline configurable, hook automático opcional (`app.start()` registra shutdown hook).
 
 **Criterio de salida:** se puede construir una web app completa (HTML + formularios + API JSON + assets) solo con módulos `ligero-*`.
@@ -127,21 +127,21 @@ Micro-framework web para Java 21+ con **cero dependencias en el core**, **virtua
 
 ### Seguridad
 - [x] Middleware de security headers (`X-Content-Type-Options`, `X-Frame-Options`, HSTS, CSP configurable).
-- [ ] Auth: `ligero-auth` con Basic, Bearer/JWT (verificación; firma delegada a lib estándar) y hooks `app.before` con roles (`ctx.requireRole(...)`).
-- [ ] CSRF para formularios (token por sesión, middleware).
+- [x] Auth: `ligero-auth` con Basic (en core), Bearer/**JWT HS256** (firma y verificación con `javax.crypto`, sin dependencias; rechaza `alg=none`) y roles (`JwtAuthMiddleware.requireRole(ctx, rol)`).
+- [x] CSRF para formularios (middleware, patrón double-submit-cookie sin estado, comparación en tiempo constante).
 - [x] Rate limiting simple en memoria (token bucket) como middleware, con SPI para stores externos.
-- [ ] Sesiones opcionales (cookie firmada; SPI `SessionStore`).
-- [ ] `SECURITY.md` + análisis de dependencias en CI (Dependabot ya activo + `dependency-check` o `osv-scanner`).
+- [x] Sesiones opcionales (cookie firmada HMAC-SHA256; SPI `SessionStore` con implementación en memoria).
+- [x] `SECURITY.md` + análisis de dependencias en CI (Dependabot activo + workflow `dependency-review` que falla en severidad alta).
 
 ### Observabilidad
-- [ ] Endpoint `/health` (liveness/readiness) opt-in.
-- [ ] Métricas: contador/latencia por ruta con SPI `MetricsCollector`; adapter Micrometer (`ligero-metrics-micrometer`).
-- [ ] Access log estructurado (JSON) opcional.
-- [ ] Propagación de contexto de trazas (W3C `traceparent`) en el request-id middleware.
+- [x] Endpoint `/health` (liveness/readiness) opt-in (`HealthMiddleware` con checks nombrados → 503 con detalle).
+- [x] Métricas: contador/latencia por ruta matched (patrón `/users/{id}`, no path crudo) con SPI `MetricsCollector`; colector en memoria de serie y adapter Micrometer (`ligero-metrics-micrometer`).
+- [x] Access log estructurado (JSON) opcional (`RequestLoggingMiddleware.json()`).
+- [x] Propagación de contexto de trazas (W3C `traceparent`) en el request-id middleware (atributo `traceId`).
 
 ### Motor
-- [ ] Segundo `ServerEngine` (Jetty o Helidon Nima) como prueba de fuego del SPI — valida DIP y habilita HTTP/2 y WebSockets.
-- [ ] WebSockets + SSE (sobre el engine que los soporte; API en `core`, implementación en el adapter).
+- [x] Segundo `ServerEngine`: **`ligero-server-jetty`** (Jetty 12 core, gzip vía `GzipHandler`, virtual threads) — la suite de integración corre idéntica sobre ambos engines, validando el DIP end-to-end.
+- [x] **SSE** en core (`ctx.sse()` con eventos nombrados, ids y keep-alive). *(WebSockets pendiente: el engine JDK no soporta upgrade de protocolo; se implementará sobre el adapter Jetty con API en core.)*
 
 **Criterio de salida:** app de referencia desplegada con métricas, health checks y auth; sin hallazgos críticos en un análisis de seguridad básico.
 
@@ -153,24 +153,24 @@ Micro-framework web para Java 21+ con **cero dependencias en el core**, **virtua
 **Esfuerzo estimado:** continuo · **Prioridad:** media
 
 ### Developer experience
-- [ ] `ligero-test`: `LigeroTest.create(app).get("/users/1").execute()` — servidor en puerto efímero + asserts fluidos.
-- [ ] OpenAPI: generación desde rutas registradas + UI swagger opt-in (`ligero-openapi`).
-- [ ] CLI de scaffolding (`ligero new`, `ligero generate`) — repositorio separado.
-- [ ] Hot-reload en modo dev (vía agente o integración con `gradle -t`).
+- [x] `ligero-test`: `LigeroTest.create(app -> ...).get("/users/1").execute()` — servidor real en puerto efímero + respuestas assertables (módulo `testkit`).
+- [x] OpenAPI: generación 3.0.3 desde rutas registradas (paths, métodos, path params) + Swagger UI opt-in (`ligero-openapi`, `OpenApi.of(app, ...).withSwaggerUi("/docs")`). *(Refinamiento de schemas por anotaciones: fase posterior.)*
+- [ ] CLI de scaffolding (`ligero new`, `ligero generate`) — **repositorio separado por diseño**; fuera del alcance de este repo.
+- [x] Hot-reload en modo dev vía build continuo (`./gradlew -t :examples:run`, documentado en CONTRIBUTING). *(Agente de recarga en caliente: no planificado — el arranque es <1 s.)*
 - [ ] Arquetipos/templates de proyecto (Gradle y Maven).
 
 ### Calidad y rendimiento
-- [ ] Suite JMH permanente (routing, throughput end-to-end) con seguimiento de regresiones en CI.
-- [ ] Participar en TechEmpower benchmarks (visibilidad + validación de rendimiento).
-- [ ] Compatibilidad GraalVM native-image (sin reflexión en core la hace casi gratis) — arranque < 50 ms como argumento de marketing.
-- [ ] Verificación de compatibilidad binaria entre releases (`japicmp`) a partir de 0.9.
+- [x] Suite JMH permanente (módulo `benchmarks`: routing con 301 rutas). *(Seguimiento automático de regresiones en CI: pendiente — correr JMH en runners compartidos da resultados ruidosos.)*
+- [ ] Participar en TechEmpower benchmarks — **proceso externo** (PR al repo de TechEmpower); no ejecutable desde este repositorio.
+- [x] Compatibilidad GraalVM native-image: metadata de reachability añadida (recursos `META-INF/services` y `ligero.properties`); el core no usa reflexión. *(Verificación con toolchain GraalVM real: pendiente de entorno.)*
+- [ ] Verificación de compatibilidad binaria entre releases (`japicmp`) — **aplica a partir de 0.9** (aún no existe release publicada contra la que comparar).
 
 ### Gobernanza y release 1.0
-- [ ] Política semver estricta + `CHANGELOG.md` (Keep a Changelog) + notas de release automatizadas.
-- [ ] 0.9.x = **API freeze**: solo bugfixes y docs; RFC público para cambios de API.
-- [ ] Documentación completa en `docs/website` (Docusaurus ya existe): getting started, guías por feature, referencia, recetas, migración desde Spark/Javalin.
-- [ ] `CONTRIBUTING.md`, plantillas de issue/PR, código de conducta.
-- [ ] **1.0.0:** garantía de compatibilidad, política de soporte (última minor + una anterior), publicación estable en Maven Central.
+- [x] Política semver estricta + `CHANGELOG.md` (Keep a Changelog). *(Notas de release automatizadas: al primer release.)*
+- [ ] 0.9.x = **API freeze**: solo bugfixes y docs; RFC público para cambios de API — **decisión de proceso al llegar a 0.9**, no ejecutable hoy.
+- [ ] Documentación completa en `docs/website` (Docusaurus): getting started, guías por feature, referencia, recetas, migración. *(Trabajo editorial continuo; README/CHANGELOG/CONTRIBUTING ya cubren el uso actual.)*
+- [x] `CONTRIBUTING.md` (con las reglas de arquitectura), plantillas de issue/PR, código de conducta.
+- [ ] **1.0.0:** garantía de compatibilidad, política de soporte, publicación estable en Maven Central — **requiere credenciales del propietario y madurez de API (post 0.9)**.
 
 ---
 

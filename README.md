@@ -32,8 +32,25 @@ app.start();
 - 🔗 **Middleware**: composable pipeline with built-ins for CORS, security headers, rate limiting, Basic auth, request id, access logging and static files
 - 🚨 **Error Handling**: `HttpException` hierarchy, custom exception/status handlers, no stack-trace leaks
 - ⚙️ **Typed Config**: builder > env vars (`LIGERO_*`) > `ligero.properties` > defaults
-- 🔌 **Extensible (SPI)**: pluggable server engines, JSON mappers and template engines via `ServiceLoader`
-- 🧪 **Testable**: inject a fake engine and drive the whole pipeline in-memory
+- 🔌 **Extensible (SPI)**: pluggable server engines (JDK & Jetty adapters included), JSON mappers and template engines via `ServiceLoader`
+- 🔐 **Auth**: JWT (HS256), Basic auth, stateless CSRF and signed-cookie sessions (`ligero-auth`)
+- 📈 **Observability**: health endpoint, per-route metrics (Micrometer adapter), structured access logs, W3C trace propagation
+- 📜 **OpenAPI**: generated from your routes, with opt-in Swagger UI (`ligero-openapi`)
+- 🧪 **Testable**: in-memory fake engine for unit tests, `ligero-test` for fluent end-to-end tests
+
+## Modules
+
+| Artifact | What it is |
+|---|---|
+| `ligero-core` | Public API, router, middleware, SPIs — zero deps (slf4j-api only) |
+| `ligero-server-jdk` | Default `ServerEngine` (JDK http server, virtual threads) |
+| `ligero-server-jetty` | Alternative `ServerEngine` on Jetty 12 |
+| `ligero-json` | Jackson `BodyMapper` (enables `ctx.body()` / `ctx.json()`) |
+| `ligero-auth` | JWT (HS256), CSRF, sessions |
+| `ligero-template-mustache` | `TemplateEngine` adapter (JMustache) |
+| `ligero-openapi` | OpenAPI 3 generation + Swagger UI |
+| `ligero-metrics-micrometer` | Metrics adapter for Micrometer registries |
+| `ligero-test` | End-to-end testing utilities |
 
 ## Installation
 

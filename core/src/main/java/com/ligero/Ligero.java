@@ -51,6 +51,9 @@ public final class Ligero implements AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(Ligero.class);
 
+    /** Context attribute holding the matched route pattern (e.g. {@code /users/{id}}). */
+    public static final String MATCHED_ROUTE_ATTRIBUTE = "ligero.route";
+
     private static final List<String> ANY_METHODS =
         List.of("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS");
 
@@ -60,6 +63,7 @@ public final class Ligero implements AutoCloseable {
     private final Map<Class<? extends Throwable>, ExceptionHandler<? extends Throwable>> exceptionHandlers =
         new LinkedHashMap<>();
     private final Map<Integer, Handler> statusHandlers = new HashMap<>();
+    private final Map<Class<?>, Object> services = new HashMap<>();
 
     private ServerEngine engine;
     private BodyMapper bodyMapper;
@@ -219,6 +223,16 @@ public final class Ligero implements AutoCloseable {
         return this;
     }
 
+    /**
+     * Registers a service for handler access via {@code ctx.get(type)}.
+     * Deliberately minimal DI: explicit registration, no reflection,
+     * no classpath scanning.
+     */
+    public <T> Ligero register(Class<T> type, T implementation) {
+        services.put(type, implementation);
+        return this;
+    }
+
     // ------------------------------------------------------------------
     // Lifecycle
     // ------------------------------------------------------------------
@@ -284,6 +298,11 @@ public final class Ligero implements AutoCloseable {
         return config;
     }
 
+    /** Registered routes per method (diagnostics, OpenAPI generation). */
+    public Map<String, List<String>> routes() {
+        return router.routes();
+    }
+
     // ------------------------------------------------------------------
     // Pipeline assembly
     // ------------------------------------------------------------------
@@ -291,7 +310,8 @@ public final class Ligero implements AutoCloseable {
     private HttpHandler buildRootHandler() {
         Handler chain = MiddlewarePipeline.compose(List.copyOf(middlewares), this::dispatch);
         return (request, response) -> {
-            Context ctx = new Context(request, response, config.contextPath(), bodyMapper, templateEngine);
+            Context ctx = new Context(request, response, config.contextPath(), bodyMapper,
+                templateEngine, services);
             try {
                 chain.handle(ctx);
             } catch (Throwable t) {
@@ -316,6 +336,7 @@ public final class Ligero implements AutoCloseable {
         Router.RouteMatch match = router.match(method, path);
         if (match != null) {
             ctx.pathParams().putAll(match.params());
+            ctx.attribute(MATCHED_ROUTE_ATTRIBUTE, match.routePath());
             match.handler().handle(ctx);
             return;
         }

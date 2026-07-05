@@ -37,3 +37,30 @@ jobs:
         with:
           name: test-reports-jdk${{ matrix.java }}
           path: '**/build/reports/tests/test'
+
+  publish-snapshot:
+    name: Publish snapshot
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # Publica snapshots al Central Portal solo si las credenciales existen
+      - name: Publish snapshot to Central Portal
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+        run: |
+          if [ -z "$MAVEN_CENTRAL_USERNAME" ]; then
+            echo "MAVEN_CENTRAL_USERNAME secret not configured; skipping snapshot publication."
+            exit 0
+          fi
+          ./gradlew publishToSonatype --no-daemon

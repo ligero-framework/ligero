@@ -26,7 +26,7 @@ final class RouteTrie<T> {
         String routePath;
     }
 
-    record Match<T>(T value, Map<String, String> params) {
+    record Match<T>(T value, Map<String, String> params, String routePath) {
     }
 
     /**
@@ -76,29 +76,29 @@ final class RouteTrie<T> {
     Match<T> find(String path) {
         String[] segments = PathNormalizer.segments(path);
         Map<String, String> params = new HashMap<>();
-        T value = find(root, segments, 0, params);
-        return value == null ? null : new Match<>(value, params);
+        Node<T> node = find(root, segments, 0, params);
+        return node == null ? null : new Match<>(node.value, params, node.routePath);
     }
 
-    private T find(Node<T> node, String[] segments, int index, Map<String, String> params) {
+    private Node<T> find(Node<T> node, String[] segments, int index, Map<String, String> params) {
         if (index == segments.length) {
-            return node.value;
+            return node.value == null ? null : node;
         }
         String segment = segments[index];
 
         Node<T> staticChild = node.staticChildren.get(segment);
         if (staticChild != null) {
-            T value = find(staticChild, segments, index + 1, params);
-            if (value != null) {
-                return value;
+            Node<T> found = find(staticChild, segments, index + 1, params);
+            if (found != null) {
+                return found;
             }
         }
 
         if (node.paramChild != null) {
             params.put(node.paramName, segment);
-            T value = find(node.paramChild, segments, index + 1, params);
-            if (value != null) {
-                return value;
+            Node<T> found = find(node.paramChild, segments, index + 1, params);
+            if (found != null) {
+                return found;
             }
             params.remove(node.paramName);
         }
@@ -106,7 +106,7 @@ final class RouteTrie<T> {
         if (node.wildcardChild != null && node.wildcardChild.value != null) {
             params.put(node.wildcardName, String.join("/",
                 java.util.Arrays.copyOfRange(segments, index, segments.length)));
-            return node.wildcardChild.value;
+            return node.wildcardChild;
         }
 
         return null;

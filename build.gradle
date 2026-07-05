@@ -20,7 +20,8 @@ subprojects {
     // Los artefactos se publican con el prefijo ligero- (p. ej. ligero-core).
     // El módulo server se publica como ligero-server-jdk porque es la
     // implementación del SPI ServerEngine basada en el JDK.
-    def artifactName = project.name == 'server' ? 'ligero-server-jdk' : "ligero-${project.name}"
+    def artifactOverrides = [server: 'ligero-server-jdk', testkit: 'ligero-test']
+    def artifactName = artifactOverrides.getOrDefault(project.name, "ligero-${project.name}".toString())
     base {
         archivesName = artifactName
     }
@@ -34,6 +35,15 @@ subprojects {
 
     tasks.withType(JavaCompile).configureEach {
         options.encoding = 'UTF-8'
+    }
+
+    // El código principal compila como módulo JPMS; los tests se quedan en
+    // el classpath para conservar acceso white-box a clases package-private.
+    tasks.named('compileTestJava') {
+        modularity.inferModulePath = false
+    }
+    tasks.named('test') {
+        modularity.inferModulePath = false
     }
 
     test {
@@ -55,7 +65,10 @@ subprojects {
     // Umbral de cobertura por módulo (roadmap fase 0.4: 80 % en core).
     // json y server se cubren además indirectamente por los tests de
     // integración, que JaCoCo no cuenta entre módulos.
-    def coverageMinimums = [core: 0.80, json: 0.70, server: 0.70, examples: 0.0]
+    def coverageMinimums = [core: 0.80, json: 0.70, server: 0.70, auth: 0.70,
+                            'template-mustache': 0.60, testkit: 0.60, openapi: 0.60,
+                            'metrics-micrometer': 0.60, 'server-jetty': 0.50,
+                            examples: 0.0, benchmarks: 0.0]
     jacocoTestCoverageVerification {
         dependsOn test
         violationRules {
@@ -76,7 +89,7 @@ subprojects {
     }
 
     // El módulo examples es una aplicación de demostración: no se publica.
-    if (project.name != 'examples') {
+    if (!(project.name in ['examples', 'benchmarks'])) {
         apply plugin: 'maven-publish'
         apply plugin: 'signing'
 

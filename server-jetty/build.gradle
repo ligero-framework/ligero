@@ -1,0 +1,13 @@
+description = 'Ligero Jetty server engine: second ServerEngine implementation validating the SPI'
+
+dependencies {
+    api project(':core')
+    implementation libs.jetty.server
+
+    testImplementation project(':json')
+    testImplementation(testFixtures(project(':core')))
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+    testRuntimeOnly libs.slf4j.simple
+}

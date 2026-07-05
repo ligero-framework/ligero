@@ -19,7 +19,7 @@ public final class Router {
     private final Map<String, RouteTrie<Handler>> perMethod = new HashMap<>();
 
     /** Result of a successful match. */
-    public record RouteMatch(Handler handler, Map<String, String> params) {
+    public record RouteMatch(Handler handler, Map<String, String> params, String routePath) {
     }
 
     /**
@@ -42,7 +42,7 @@ public final class Router {
             return null;
         }
         RouteTrie.Match<Handler> match = trie.find(path);
-        return match == null ? null : new RouteMatch(match.value(), match.params());
+        return match == null ? null : new RouteMatch(match.value(), match.params(), match.routePath());
     }
 
     /** Methods that would match the path — used to produce 405 responses. */

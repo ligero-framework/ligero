@@ -1,0 +1,13 @@
+description = 'Ligero testing utilities: fluent end-to-end test client'
+
+dependencies {
+    api project(':core')
+
+    testImplementation project(':server')
+    testImplementation project(':json')
+    testImplementation(testFixtures(project(':core')))
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+    testRuntimeOnly libs.slf4j.simple
+}

@@ -1,0 +1,10 @@
+description = 'Ligero MetricsCollector adapter for Micrometer registries'
+
+dependencies {
+    api project(':core')
+    api libs.micrometer.core
+
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+}

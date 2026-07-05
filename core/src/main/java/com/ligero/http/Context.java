@@ -29,13 +29,23 @@ public final class Context {
     private final Map<String, Object> attributes = new HashMap<>();
     private final BodyMapper bodyMapper;
     private final TemplateEngine templateEngine;
+    private final Map<Class<?>, Object> services;
     private Map<String, String> cookies;
     private Map<String, List<String>> formParams;
+    private byte[] cachedBodyBytes;
+    private Multipart multipart;
 
     public Context(HttpRequest request, HttpResponse response, String contextPath,
                    BodyMapper bodyMapper, TemplateEngine templateEngine) {
+        this(request, response, contextPath, bodyMapper, templateEngine, Map.of());
+    }
+
+    public Context(HttpRequest request, HttpResponse response, String contextPath,
+                   BodyMapper bodyMapper, TemplateEngine templateEngine,
+                   Map<Class<?>, Object> services) {
         this.request = request;
         this.response = response;
+        this.services = services;
         String rawPath = request.getUri();
         int q = rawPath.indexOf('?');
         if (q >= 0) {
@@ -44,6 +54,19 @@ public final class Context {
         this.path = PathNormalizer.stripContextPath(PathNormalizer.normalize(rawPath), contextPath);
         this.bodyMapper = bodyMapper;
         this.templateEngine = templateEngine;
+    }
+
+    /**
+     * Returns a service registered with {@code app.register(type, impl)}
+     * (lightweight DI: explicit registration, no reflection or scanning).
+     */
+    public <T> T get(Class<T> type) {
+        Object service = services.get(type);
+        if (service == null) {
+            throw new IllegalStateException("No service registered for " + type.getName()
+                + ". Register it with app.register(" + type.getSimpleName() + ".class, impl).");
+        }
+        return type.cast(service);
     }
 
     // ------------------------------------------------------------------
@@ -113,6 +136,43 @@ public final class Context {
         return request.getBody();
     }
 
+    /** Request body fully read as bytes (cached; needed for binary uploads). */
+    public byte[] bodyAsBytes() {
+        if (cachedBodyBytes == null) {
+            try (InputStream in = request.getBody()) {
+                cachedBodyBytes = in.readAllBytes();
+            } catch (java.io.IOException e) {
+                throw new IllegalStateException("Could not read request body", e);
+            }
+        }
+        return cachedBodyBytes;
+    }
+
+    /** Parses a {@code multipart/form-data} body (fields + uploaded files). */
+    public Multipart multipart() {
+        if (multipart == null) {
+            String contentType = header("Content-Type");
+            if (contentType == null || !contentType.toLowerCase().startsWith("multipart/form-data")) {
+                throw new BadRequestException("Request is not multipart/form-data");
+            }
+            multipart = Multipart.parse(bodyAsBytes(), contentType);
+        }
+        return multipart;
+    }
+
+    /** True when the client's {@code Accept} header admits the MIME type. */
+    public boolean accepts(String mimeType) {
+        return new Accepts(header("Accept")).accepts(mimeType);
+    }
+
+    /**
+     * Best MIME type among the offered ones according to the client's
+     * {@code Accept} header (q-values and wildcards), or {@code null}.
+     */
+    public String preferredType(List<String> offered) {
+        return new Accepts(header("Accept")).preferred(offered);
+    }
+
     /** Deserializes the JSON request body. Requires a {@link BodyMapper} on the classpath. */
     public <T> T body(Class<T> type) {
         return requireBodyMapper().readJson(request.getBodyAsString(), type);
@@ -131,7 +191,12 @@ public final class Context {
 
     public Map<String, List<String>> formParams() {
         if (formParams == null) {
-            formParams = parseUrlEncoded(request.getBodyAsString());
+            String contentType = header("Content-Type");
+            if (contentType != null && contentType.toLowerCase().startsWith("multipart/form-data")) {
+                formParams = multipart().fields();
+            } else {
+                formParams = parseUrlEncoded(request.getBodyAsString());
+            }
         }
         return formParams;
     }
@@ -214,6 +279,11 @@ public final class Context {
                 "No TemplateEngine found. Add a ligero-template-* module to the classpath.");
         }
         return html(templateEngine.render(templateName, model));
+    }
+
+    /** Starts a Server-Sent Events stream; the response is committed. */
+    public SseEmitter sse() {
+        return new SseEmitter(response);
     }
 
     // ------------------------------------------------------------------

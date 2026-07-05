@@ -10,5 +10,6 @@ dependencies {
     implementation project(':core')
     implementation project(':server')
     implementation project(':json')
+    implementation project(':openapi')
     runtimeOnly libs.slf4j.simple
 }

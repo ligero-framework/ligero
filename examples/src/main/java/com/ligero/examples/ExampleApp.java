@@ -3,9 +3,13 @@ package com.ligero.examples;
 import com.ligero.Ligero;
 import com.ligero.http.NotFoundException;
 import com.ligero.middleware.CorsMiddleware;
+import com.ligero.middleware.HealthMiddleware;
+import com.ligero.middleware.InMemoryMetricsCollector;
+import com.ligero.middleware.MetricsMiddleware;
 import com.ligero.middleware.RequestIdMiddleware;
 import com.ligero.middleware.RequestLoggingMiddleware;
 import com.ligero.middleware.SecurityHeadersMiddleware;
+import com.ligero.openapi.OpenApi;
 
 import java.io.IOException;
 import java.util.List;
@@ -44,8 +48,22 @@ public final class ExampleApp {
         app.use(new RequestLoggingMiddleware());
         app.use(SecurityHeadersMiddleware.defaults());
         app.use(CorsMiddleware.permissive());
+        app.use(HealthMiddleware.defaults());                       // GET /health
+        InMemoryMetricsCollector metrics = new InMemoryMetricsCollector();
+        app.use(new MetricsMiddleware(metrics));
+        app.use(OpenApi.of(app, "Ligero Example API", "0.2.0")      // GET /openapi.json
+            .withSwaggerUi("/docs"));                               // GET /docs
+        app.get("/metrics", ctx -> ctx.json(metrics.snapshot()));
 
         app.get("/", ctx -> ctx.text("Welcome to Ligero!"));
+
+        app.get("/events", ctx -> {
+            try (var sse = ctx.sse()) {
+                for (int i = 1; i <= 3; i++) {
+                    sse.send("tick", String.valueOf(i));
+                }
+            }
+        });
 
         app.group("/api/v1", api -> {
             api.get("/users", ctx -> ctx.json(List.copyOf(USERS.values())));

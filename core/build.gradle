@@ -1,3 +1,5 @@
+apply plugin: 'java-test-fixtures'
+
 description = 'Ligero core: public API, router, middleware pipeline and SPIs'
 
 dependencies {
@@ -9,3 +11,7 @@ dependencies {
     testImplementation libs.assertj.core
     testRuntimeOnly libs.slf4j.simple
 }
+
+// No publicar los jars de test fixtures (solo consumo interno del build)
+components.java.withVariantsFromConfiguration(configurations.testFixturesApiElements) { skip() }
+components.java.withVariantsFromConfiguration(configurations.testFixturesRuntimeElements) { skip() }
