@@ -12,6 +12,8 @@ package com.ligero.spi;
  * @param gzip           whether to gzip responses when the client accepts it
  * @param gzipMinBytes   minimum body size before compression kicks in
  * @param bodyMapper     JSON mapper for {@code HttpResponse.json}, may be null
+ * @param webSockets     WebSocket routes (path to handler); engines without
+ *                       WebSocket support must fail fast when non-empty
  */
 public record EngineConfig(
     String host,
@@ -20,5 +22,10 @@ public record EngineConfig(
     boolean virtualThreads,
     boolean gzip,
     int gzipMinBytes,
-    BodyMapper bodyMapper) {
+    BodyMapper bodyMapper,
+    java.util.Map<String, com.ligero.websocket.WsHandler> webSockets) {
+
+    public EngineConfig {
+        webSockets = webSockets == null ? java.util.Map.of() : java.util.Map.copyOf(webSockets);
+    }
 }

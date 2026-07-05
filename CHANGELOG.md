@@ -19,6 +19,9 @@ on external credentials/processes or future milestones — see
   `SessionStore` SPI).
 - **`ligero-server-jetty`**: second `ServerEngine` on Jetty 12 core —
   the integration suite runs unchanged on both engines, validating the SPI.
+- **WebSockets**: engine-agnostic API in core (`app.websocket(path, handler)`,
+  `WsHandler`/`WsSession`) implemented by the Jetty adapter; the JDK engine
+  fails fast with guidance when WebSocket routes are registered.
 - **`ligero-template-mustache`**: first `TemplateEngine` adapter (JMustache).
 - **`ligero-test`**: fluent end-to-end test client (`LigeroTest`).
 - **`ligero-openapi`**: OpenAPI 3 generation from registered routes plus

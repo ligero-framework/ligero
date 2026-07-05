@@ -3,6 +3,7 @@ description = 'Ligero Jetty server engine: second ServerEngine implementation va
 dependencies {
     api project(':core')
     implementation libs.jetty.server
+    implementation libs.jetty.websocket.server
 
     testImplementation project(':json')
     testImplementation(testFixtures(project(':core')))

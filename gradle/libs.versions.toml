@@ -17,3 +17,4 @@ assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 jmustache = { module = "com.samskivert:jmustache", version.ref = "jmustache" }
 micrometer-core = { module = "io.micrometer:micrometer-core", version.ref = "micrometer" }
 jetty-server = { module = "org.eclipse.jetty:jetty-server", version.ref = "jetty" }
+jetty-websocket-server = { module = "org.eclipse.jetty.websocket:jetty-websocket-jetty-server", version.ref = "jetty" }

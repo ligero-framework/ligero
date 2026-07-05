@@ -32,6 +32,11 @@ public final class JdkServerEngine implements ServerEngine {
         if (server != null) {
             throw new IllegalStateException("Engine already started");
         }
+        if (!config.webSockets().isEmpty()) {
+            throw new IllegalStateException(
+                "The JDK server engine does not support WebSockets. "
+                + "Add ligero-server-jetty to the classpath to serve WebSocket routes.");
+        }
         server = com.sun.net.httpserver.HttpServer.create(
             new InetSocketAddress(config.host(), config.port()), 0);
         executor = config.virtualThreads()

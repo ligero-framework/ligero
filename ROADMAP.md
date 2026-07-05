@@ -141,7 +141,7 @@ Micro-framework web para Java 21+ con **cero dependencias en el core**, **virtua
 
 ### Motor
 - [x] Segundo `ServerEngine`: **`ligero-server-jetty`** (Jetty 12 core, gzip vía `GzipHandler`, virtual threads) — la suite de integración corre idéntica sobre ambos engines, validando el DIP end-to-end.
-- [x] **SSE** en core (`ctx.sse()` con eventos nombrados, ids y keep-alive). *(WebSockets pendiente: el engine JDK no soporta upgrade de protocolo; se implementará sobre el adapter Jetty con API en core.)*
+- [x] **SSE** en core (`ctx.sse()`) y **WebSockets**: API en core (`app.websocket(path, WsHandler)`, `WsSession`) con implementación en el adapter Jetty; el engine JDK falla en arranque con mensaje claro si hay rutas WS (no soporta upgrade de protocolo).
 
 **Criterio de salida:** app de referencia desplegada con métricas, health checks y auth; sin hallazgos críticos en un análisis de seguridad básico.
 

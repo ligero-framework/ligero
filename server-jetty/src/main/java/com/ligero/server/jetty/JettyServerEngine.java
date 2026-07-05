@@ -10,6 +10,7 @@ import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.gzip.GzipHandler;
+import org.eclipse.jetty.websocket.server.WebSocketUpgradeHandler;
 import org.eclipse.jetty.util.Callback;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.slf4j.Logger;
@@ -72,10 +73,18 @@ public final class JettyServerEngine implements ServerEngine {
             GzipHandler gzip = new GzipHandler();
             gzip.setMinGzipSize(config.gzipMinBytes());
             gzip.setHandler(handler);
-            server.setHandler(gzip);
-        } else {
-            server.setHandler(handler);
+            handler = gzip;
         }
+        if (!config.webSockets().isEmpty()) {
+            // upgrade requests are handled here; everything else falls through
+            WebSocketUpgradeHandler upgrade = WebSocketUpgradeHandler.from(server, container ->
+                config.webSockets().forEach((path, wsHandler) ->
+                    container.addMapping(path, (upgradeRequest, upgradeResponse, callback) ->
+                        new JettyWsAdapter(path, wsHandler))));
+            upgrade.setHandler(handler);
+            handler = upgrade;
+        }
+        server.setHandler(handler);
 
         try {
             server.start();

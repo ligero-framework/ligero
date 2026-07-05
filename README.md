@@ -35,6 +35,7 @@ app.start();
 - 🔌 **Extensible (SPI)**: pluggable server engines (JDK & Jetty adapters included), JSON mappers and template engines via `ServiceLoader`
 - 🔐 **Auth**: JWT (HS256), Basic auth, stateless CSRF and signed-cookie sessions (`ligero-auth`)
 - 📈 **Observability**: health endpoint, per-route metrics (Micrometer adapter), structured access logs, W3C trace propagation
+- 🔁 **Real-time**: Server-Sent Events in core (`ctx.sse()`), WebSockets via the Jetty engine (`app.websocket(path, handler)`)
 - 📜 **OpenAPI**: generated from your routes, with opt-in Swagger UI (`ligero-openapi`)
 - 🧪 **Testable**: in-memory fake engine for unit tests, `ligero-test` for fluent end-to-end tests
 
@@ -44,7 +45,7 @@ app.start();
 |---|---|
 | `ligero-core` | Public API, router, middleware, SPIs — zero deps (slf4j-api only) |
 | `ligero-server-jdk` | Default `ServerEngine` (JDK http server, virtual threads) |
-| `ligero-server-jetty` | Alternative `ServerEngine` on Jetty 12 |
+| `ligero-server-jetty` | Alternative `ServerEngine` on Jetty 12 (adds WebSocket support) |
 | `ligero-json` | Jackson `BodyMapper` (enables `ctx.body()` / `ctx.json()`) |
 | `ligero-auth` | JWT (HS256), CSRF, sessions |
 | `ligero-template-mustache` | `TemplateEngine` adapter (JMustache) |

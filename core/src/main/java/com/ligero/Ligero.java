@@ -64,6 +64,7 @@ public final class Ligero implements AutoCloseable {
         new LinkedHashMap<>();
     private final Map<Integer, Handler> statusHandlers = new HashMap<>();
     private final Map<Class<?>, Object> services = new HashMap<>();
+    private final Map<String, com.ligero.websocket.WsHandler> webSockets = new LinkedHashMap<>();
 
     private ServerEngine engine;
     private BodyMapper bodyMapper;
@@ -136,6 +137,16 @@ public final class Ligero implements AutoCloseable {
     public Ligero route(String method, String path, Handler handler) {
         router.add(method, path, handler);
         log.debug("Route registered: {} {}", method.toUpperCase(), path);
+        return this;
+    }
+
+    /**
+     * Registers a WebSocket endpoint. Requires an engine with WebSocket
+     * support ({@code ligero-server-jetty}); the JDK engine fails at
+     * startup when WebSocket routes exist.
+     */
+    public Ligero websocket(String path, com.ligero.websocket.WsHandler handler) {
+        webSockets.put(com.ligero.router.PathNormalizer.normalize(path), handler);
         return this;
     }
 
@@ -256,7 +267,7 @@ public final class Ligero implements AutoCloseable {
 
         EngineConfig engineConfig = new EngineConfig(
             config.host(), config.port(), config.maxBodyBytes(), config.virtualThreads(),
-            config.gzip(), config.gzipMinBytes(), bodyMapper);
+            config.gzip(), config.gzipMinBytes(), bodyMapper, webSockets);
         engine.start(engineConfig, buildRootHandler());
         started = true;
 

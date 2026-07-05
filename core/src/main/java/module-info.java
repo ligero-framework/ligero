@@ -13,6 +13,7 @@ module com.ligero.core {
     exports com.ligero.router;
     exports com.ligero.spi;
     exports com.ligero.validation;
+    exports com.ligero.websocket;
 
     uses com.ligero.spi.ServerEngine;
     uses com.ligero.spi.BodyMapper;
