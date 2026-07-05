@@ -131,8 +131,13 @@ subprojects {
         }
 
         signing {
-            required { !version.endsWith('SNAPSHOT') && gradle.taskGraph.hasTask('publish') }
+            // Solo se firma en releases; los SNAPSHOT (y publishToMavenLocal)
+            // no requieren clave GPG configurada.
+            required = provider { !version.toString().endsWith('SNAPSHOT') }
             sign publishing.publications.mavenJava
+        }
+        tasks.withType(Sign).configureEach {
+            onlyIf { !version.toString().endsWith('SNAPSHOT') }
         }
     }
 }

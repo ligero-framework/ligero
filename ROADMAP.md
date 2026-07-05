@@ -155,7 +155,7 @@ Micro-framework web para Java 21+ con **cero dependencias en el core**, **virtua
 ### Developer experience
 - [x] `ligero-test`: `LigeroTest.create(app -> ...).get("/users/1").execute()` — servidor real en puerto efímero + respuestas assertables (módulo `testkit`).
 - [x] OpenAPI: generación 3.0.3 desde rutas registradas (paths, métodos, path params) + Swagger UI opt-in (`ligero-openapi`, `OpenApi.of(app, ...).withSwaggerUi("/docs")`). *(Refinamiento de schemas por anotaciones: fase posterior.)*
-- [ ] CLI de scaffolding (`ligero new`, `ligero generate`) — **repositorio separado por diseño**; fuera del alcance de este repo.
+- [x] CLI de scaffolding (`ligero new`, `ligero generate controller`): **implementado completo con tests y CI** en la rama `standalone/ligero-cli` de este repo, listo para volcarse al repositorio `ligero-framework/ligero-cli` (crear el repo vacío y hacer `git push <url> standalone/ligero-cli:main`). Verificado end-to-end: el proyecto generado compila y su test e2e pasa contra los artefactos de mavenLocal.
 - [x] Hot-reload en modo dev vía build continuo (`./gradlew -t :examples:run`, documentado en CONTRIBUTING). *(Agente de recarga en caliente: no planificado — el arranque es <1 s.)*
 - [ ] Arquetipos/templates de proyecto (Gradle y Maven).
 
@@ -168,7 +168,7 @@ Micro-framework web para Java 21+ con **cero dependencias en el core**, **virtua
 ### Gobernanza y release 1.0
 - [x] Política semver estricta + `CHANGELOG.md` (Keep a Changelog). *(Notas de release automatizadas: al primer release.)*
 - [ ] 0.9.x = **API freeze**: solo bugfixes y docs; RFC público para cambios de API — **decisión de proceso al llegar a 0.9**, no ejecutable hoy.
-- [ ] Documentación completa en `docs/website` (Docusaurus): getting started, guías por feature, referencia, recetas, migración. *(Trabajo editorial continuo; README/CHANGELOG/CONTRIBUTING ya cubren el uso actual.)*
+- [x] Documentación completa (Docusaurus, repositorio separado): 16 páginas — intro, instalación, quickstart y guías de routing, context, middleware, errores, configuración, seguridad, observabilidad, tiempo real, templates, OpenAPI, testing y engines, más referencia de módulos y arquitectura. En la rama `standalone/ligero-docs` (build de Docusaurus verificado), lista para `ligero-framework/ligero-docs` con deploy automático a GitHub Pages. *(Pendiente: traducción ES vía i18n y retirar `docs/website` de este repo al migrar.)*
 - [x] `CONTRIBUTING.md` (con las reglas de arquitectura), plantillas de issue/PR, código de conducta.
 - [ ] **1.0.0:** garantía de compatibilidad, política de soporte, publicación estable en Maven Central — **requiere credenciales del propietario y madurez de API (post 0.9)**.
 
