@@ -1,0 +1,33 @@
+# Default owner for everything in the repo
+* @ligero-framework/maintainers
+
+# Core framework
+/ligero-core @ligero-framework/maintainers
+
+# Server engines
+/ligero-server-jdk @ligero-framework/maintainers
+/ligero-server-jetty @ligero-framework/maintainers
+
+# Adapters and extensions
+/ligero-json @ligero-framework/maintainers
+/ligero-auth @ligero-framework/maintainers
+/ligero-template-* @ligero-framework/maintainers
+/ligero-openapi @ligero-framework/maintainers
+/ligero-metrics-micrometer @ligero-framework/maintainers
+/ligero-test @ligero-framework/maintainers
+
+# Documentation
+/docs @ligero-framework/maintainers
+/README.md @ligero-framework/maintainers
+
+# Build and CI
+/gradle @ligero-framework/maintainers
+/build.gradle @ligero-framework/maintainers
+/gradle.properties @ligero-framework/maintainers
+/.github/workflows @ligero-framework/maintainers
+
+# Governance and community
+/CONTRIBUTING.md @ligero-framework/maintainers
+/GOVERNANCE.md @ligero-framework/maintainers
+/CODE_OF_CONDUCT.md @ligero-framework/maintainers
+/SECURITY.md @ligero-framework/maintainers
