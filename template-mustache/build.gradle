@@ -1,0 +1,10 @@
+description = 'Ligero template engine adapter backed by JMustache'
+
+dependencies {
+    api project(':core')
+    implementation libs.jmustache
+
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+}

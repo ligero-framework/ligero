@@ -1,0 +1,18 @@
+plugins {
+    id 'me.champeau.jmh' version '0.7.2'
+}
+
+description = 'JMH benchmarks (router matching); not published'
+
+dependencies {
+    jmh project(':core')
+}
+
+jmh {
+    // valores de humo para CI local; para medir en serio subir iteraciones/forks
+    warmupIterations = 2
+    iterations = 3
+    fork = 1
+    timeOnIteration = '1s'
+    warmup = '1s'
+}

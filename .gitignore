@@ -97,3 +97,6 @@ hs_err_pid*
 mvnw.cmd
 mvnw
 *.log.*
+
+# Gradle wrapper jar must be committed
+!gradle/wrapper/gradle-wrapper.jar

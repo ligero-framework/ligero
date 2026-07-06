@@ -1,3 +1,5 @@
+> **⚠️ Documento histórico.** Estas notas iniciales fueron consolidadas en la hoja de ruta oficial: ver [ROADMAP.md](ROADMAP.md) y [ARCHITECTURE_ANALYSIS.md](ARCHITECTURE_ANALYSIS.md).
+
 # Ligero Framework Improvement Suggestions
 
 Based on the current state of the Ligero Framework, here are several improvements that could enhance its functionality, usability, and adoption.
