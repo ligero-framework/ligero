@@ -145,6 +145,7 @@ class BeansTest {
     }
 
     @Test
+ 
     void decoratorWrapsEveryBean() {
         List<String> decorated = new java.util.ArrayList<>();
         Beans beans = wired()

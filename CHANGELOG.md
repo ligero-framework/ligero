@@ -23,7 +23,6 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
   simply isn't on the classpath (`LIGERO_DEVTOOLS=false` also disables it).
 - `Beans.graph()` now tags nodes with the stereotype of the implementation
   class when the binding key is an unannotated interface.
-
 ### Added (dependency container)
 - **`Beans` container** in core: explicit lambda bindings (compiler-verified,
   zero reflection), lazy memoized singletons, eager `start()` that validates

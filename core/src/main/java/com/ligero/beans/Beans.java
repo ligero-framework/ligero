@@ -127,7 +127,7 @@ public final class Beans implements AutoCloseable {
         }
         return stereotypeOf(bindingType);
     }
-
+ 
     /** Closes instantiated {@link AutoCloseable} beans in reverse creation order. */
     @Override
     public void close() {
