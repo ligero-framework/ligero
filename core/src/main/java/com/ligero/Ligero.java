@@ -235,6 +235,15 @@ public final class Ligero implements AutoCloseable {
     }
 
     /**
+     * Attaches a started {@link com.ligero.beans.Beans} container: every bean
+     * becomes available to handlers via {@code ctx.get(type)}.
+     */
+    public Ligero beans(com.ligero.beans.Beans beans) {
+        beans.types().forEach(type -> services.put(type, beans.get(type)));
+        return this;
+    }
+
+    /**
      * Registers a service for handler access via {@code ctx.get(type)}.
      * Deliberately minimal DI: explicit registration, no reflection,
      * no classpath scanning.

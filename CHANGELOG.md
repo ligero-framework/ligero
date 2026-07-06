@@ -6,6 +6,18 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased] — 0.2.0-SNAPSHOT
 
+### Added (dependency container)
+- **`Beans` container** in core: explicit lambda bindings (compiler-verified,
+  zero reflection), lazy memoized singletons, eager `start()` that validates
+  the whole graph at startup, cycle detection with the full chain in the
+  error, `all(supertype)`, reverse-order `close()` of AutoCloseable beans,
+  and an instrumentation hook (`BeanDecorator`) for devtools.
+- **Stereotype annotations** (`@Component`, `@Service`, `@Repository`,
+  `@Controller`): pure metadata — they never drive injection. Together with
+  dependency edges captured from real resolution, they produce
+  `beans.graph()`, the typed graph that will power the devtools dashboard.
+- `app.beans(beans)` exposes every bean to handlers via `ctx.get(type)`.
+
 ### Added (extensions batch)
 - **`Tracer` SPI + `TracingMiddleware`** in core (vendor-neutral distributed
   tracing) and **`ligero-otel`**: OpenTelemetry adapter that joins incoming
