@@ -3,7 +3,7 @@
   
   # Ligero Framework
   
-  [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![Java](https://img.shields.io/badge/Java-21%2B-orange.svg)](https://www.oracle.com/java/technologies/javase/jdk21-archive-downloads.html) [![Documentation](https://img.shields.io/badge/Documentation-Online-brightgreen)](https://ligero-framework.github.io) [![Maven Central](https://img.shields.io/maven-central/v/com.ligero/ligero-core.svg)](https://search.maven.org/search?q=g:com.ligero)
+  [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![Java](https://img.shields.io/badge/Java-21%2B-orange.svg)](https://www.oracle.com/java/technologies/javase/jdk21-archive-downloads.html) [![Documentation](https://img.shields.io/badge/Documentation-Online-brightgreen)](https://ligero-framework.github.io/ligero-docs/) [![Maven Central](https://img.shields.io/maven-central/v/com.ligero/ligero-core.svg)](https://search.maven.org/search?q=g:com.ligero)
 
   <p><em>A lightweight Java web framework for modern applications</em></p>
 </div>
@@ -284,6 +284,11 @@ The detailed, phased roadmap lives in [ROADMAP.md](ROADMAP.md), backed by the te
 - **Phase 2 (v0.4)** — Web essentials: static files, CORS, templates, validation, config
 - **Phase 3 (v0.5)** — Production readiness: security, observability, WebSockets
 - **Phase 4 (v0.6–1.0)** — Ecosystem: testing utilities, OpenAPI, CLI, API freeze
+
+## Documentation & Tooling
+
+- 📚 Full documentation: [ligero-framework/ligero-docs](https://github.com/ligero-framework/ligero-docs) (published at [ligero-framework.github.io/ligero-docs](https://ligero-framework.github.io/ligero-docs/))
+- 🛠️ Project scaffolding: [ligero-framework/ligero-cli](https://github.com/ligero-framework/ligero-cli) — `ligero new my-api`
 
 ## Contributing
 
