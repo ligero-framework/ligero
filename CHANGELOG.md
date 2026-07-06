@@ -6,6 +6,22 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased] — 0.2.0-SNAPSHOT
 
+### Added (extensions batch)
+- **`Tracer` SPI + `TracingMiddleware`** in core (vendor-neutral distributed
+  tracing) and **`ligero-otel`**: OpenTelemetry adapter that joins incoming
+  W3C traces, names spans by matched route and records status/errors. Other
+  vendors (New Relic, Datadog, ...) plug in via the same SPI or an OTLP
+  exporter.
+- **Two more optional template adapters**: `ligero-template-freemarker` and
+  `ligero-template-pebble` (HTML auto-escaping in all three; pure
+  microservices simply omit them).
+- **Secure by default (OWASP baseline)**: security headers plus request-path
+  hygiene (null bytes, control characters, encoded traversal -> 400) applied
+  automatically; opt out with `secureDefaults(false)` /
+  `LIGERO_SECURE_DEFAULTS=false`.
+- **OWASP dependency-check**: Gradle task `dependencyCheckAggregate`
+  (fails on CVSS >= 7) plus a weekly/dispatchable CI workflow.
+
 Execution of the full roadmap (phases 0–4); the only items left open depend
 on external credentials/processes or future milestones — see
 [ROADMAP.md](ROADMAP.md) for per-item status.

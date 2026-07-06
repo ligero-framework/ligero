@@ -1,0 +1,10 @@
+description = 'Ligero template engine adapter backed by FreeMarker'
+
+dependencies {
+    api project(':core')
+    implementation libs.freemarker
+
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+}

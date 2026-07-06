@@ -19,4 +19,5 @@ module com.ligero.core {
     uses com.ligero.spi.BodyMapper;
     uses com.ligero.spi.TemplateEngine;
     uses com.ligero.spi.MetricsCollector;
+    uses com.ligero.spi.Tracer;
 }

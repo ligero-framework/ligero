@@ -31,10 +31,11 @@ app.start();
 - 🛣️ **Expressive Routing**: trie-based matching with `{params}`, `*wildcards`, route groups, automatic 405/OPTIONS
 - 🔗 **Middleware**: composable pipeline with built-ins for CORS, security headers, rate limiting, Basic auth, request id, access logging and static files
 - 🚨 **Error Handling**: `HttpException` hierarchy, custom exception/status handlers, no stack-trace leaks
+- 🛡️ **Secure by default**: OWASP-aligned baseline (security headers + request hygiene) enabled automatically, disable with `secureDefaults(false)` or `LIGERO_SECURE_DEFAULTS=false`
 - ⚙️ **Typed Config**: builder > env vars (`LIGERO_*`) > `ligero.properties` > defaults
 - 🔌 **Extensible (SPI)**: pluggable server engines (JDK & Jetty adapters included), JSON mappers and template engines via `ServiceLoader`
 - 🔐 **Auth**: JWT (HS256), Basic auth, stateless CSRF and signed-cookie sessions (`ligero-auth`)
-- 📈 **Observability**: health endpoint, per-route metrics (Micrometer adapter), structured access logs, W3C trace propagation
+- 📈 **Observability**: health endpoint, per-route metrics (Micrometer adapter), structured access logs, distributed tracing via the `Tracer` SPI (`ligero-otel` for OpenTelemetry; any vendor pluggable)
 - 🔁 **Real-time**: Server-Sent Events in core (`ctx.sse()`), WebSockets via the Jetty engine (`app.websocket(path, handler)`)
 - 📜 **OpenAPI**: generated from your routes, with opt-in Swagger UI (`ligero-openapi`)
 - 🧪 **Testable**: in-memory fake engine for unit tests, `ligero-test` for fluent end-to-end tests
@@ -49,6 +50,9 @@ app.start();
 | `ligero-json` | Jackson `BodyMapper` (enables `ctx.body()` / `ctx.json()`) |
 | `ligero-auth` | JWT (HS256), CSRF, sessions |
 | `ligero-template-mustache` | `TemplateEngine` adapter (JMustache) |
+| `ligero-template-freemarker` | `TemplateEngine` adapter (FreeMarker) |
+| `ligero-template-pebble` | `TemplateEngine` adapter (Pebble, Twig/Jinja syntax) |
+| `ligero-otel` | `Tracer` adapter for OpenTelemetry (vendor-neutral tracing) |
 | `ligero-openapi` | OpenAPI 3 generation + Swagger UI |
 | `ligero-metrics-micrometer` | Metrics adapter for Micrometer registries |
 | `ligero-test` | End-to-end testing utilities |

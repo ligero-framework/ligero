@@ -6,6 +6,9 @@ include 'json'      // ligero-json: BodyMapper basado en Jackson
 include 'server'    // ligero-server-jdk: ServerEngine sobre com.sun.net.httpserver con virtual threads
 include 'auth'                // ligero-auth: JWT (HS256), CSRF y sesiones
 include 'template-mustache'   // ligero-template-mustache: TemplateEngine con JMustache
+include 'template-freemarker' // ligero-template-freemarker: TemplateEngine con FreeMarker
+include 'template-pebble'     // ligero-template-pebble: TemplateEngine con Pebble
+include 'otel'                // ligero-otel: Tracer -> OpenTelemetry
 include 'testkit'             // ligero-test: utilidades de testing end-to-end
 include 'openapi'             // ligero-openapi: generación OpenAPI 3 desde las rutas
 include 'metrics-micrometer'  // ligero-metrics-micrometer: adapter MetricsCollector -> Micrometer

@@ -1,0 +1,12 @@
+description = 'Ligero Tracer adapter for OpenTelemetry'
+
+dependencies {
+    api project(':core')
+    api libs.otel.api
+
+    testImplementation libs.otel.sdk.testing
+    testImplementation(testFixtures(project(':core')))
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+}
