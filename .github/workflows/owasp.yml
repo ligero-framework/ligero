@@ -1,0 +1,31 @@
+name: OWASP dependency check
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # lunes 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  owasp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      # Configurar el secret NVD_API_KEY (gratuito, https://nvd.nist.gov/developers/request-an-api-key)
+      # acelera la descarga de la base de vulnerabilidades.
+      - name: OWASP dependency check
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: ./gradlew dependencyCheckAggregate --no-daemon
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: owasp-report
+          path: build/reports/dependency-check-report.html

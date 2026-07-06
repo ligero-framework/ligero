@@ -2,6 +2,21 @@
 
 plugins {
     id 'io.github.gradle-nexus.publish-plugin' version '2.0.0'
+    id 'org.owasp.dependencycheck' version '10.0.4'
+}
+
+// Análisis OWASP de dependencias (CVEs conocidas). No corre en cada build
+// (la descarga de la NVD es pesada): ./gradlew dependencyCheckAggregate,
+// o el workflow semanal owasp.yml. Falla con CVSS >= 7.
+dependencyCheck {
+    failBuildOnCVSS = 7.0f
+    nvd {
+        apiKey = System.getenv('NVD_API_KEY') ?: ''
+    }
+    analyzers {
+        assemblyEnabled = false
+        nodeEnabled = false
+    }
 }
 
 allprojects {
@@ -66,7 +81,7 @@ subprojects {
     // json y server se cubren además indirectamente por los tests de
     // integración, que JaCoCo no cuenta entre módulos.
     def coverageMinimums = [core: 0.80, json: 0.70, server: 0.70, auth: 0.70,
-                            'template-mustache': 0.60, testkit: 0.60, openapi: 0.60,
+                            'template-mustache': 0.60, 'template-freemarker': 0.60, 'template-pebble': 0.60, otel: 0.60, testkit: 0.60, openapi: 0.60,
                             'metrics-micrometer': 0.60, 'server-jetty': 0.50,
                             examples: 0.0, benchmarks: 0.0]
     jacocoTestCoverageVerification {

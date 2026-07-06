@@ -3,7 +3,7 @@
   
   # Ligero Framework
   
-  [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![Java](https://img.shields.io/badge/Java-21%2B-orange.svg)](https://www.oracle.com/java/technologies/javase/jdk21-archive-downloads.html) [![Documentation](https://img.shields.io/badge/Documentation-Online-brightgreen)](https://ligero-framework.github.io) [![Maven Central](https://img.shields.io/maven-central/v/com.ligero/ligero-core.svg)](https://search.maven.org/search?q=g:com.ligero)
+  [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![Java](https://img.shields.io/badge/Java-21%2B-orange.svg)](https://www.oracle.com/java/technologies/javase/jdk21-archive-downloads.html) [![Documentation](https://img.shields.io/badge/Documentation-Online-brightgreen)](https://ligero-framework.github.io/ligero-docs/) [![Maven Central](https://img.shields.io/maven-central/v/com.ligero/ligero-core.svg)](https://search.maven.org/search?q=g:com.ligero)
 
   <p><em>A lightweight Java web framework for modern applications</em></p>
 </div>
@@ -31,10 +31,11 @@ app.start();
 - 🛣️ **Expressive Routing**: trie-based matching with `{params}`, `*wildcards`, route groups, automatic 405/OPTIONS
 - 🔗 **Middleware**: composable pipeline with built-ins for CORS, security headers, rate limiting, Basic auth, request id, access logging and static files
 - 🚨 **Error Handling**: `HttpException` hierarchy, custom exception/status handlers, no stack-trace leaks
+- 🛡️ **Secure by default**: OWASP-aligned baseline (security headers + request hygiene) enabled automatically, disable with `secureDefaults(false)` or `LIGERO_SECURE_DEFAULTS=false`
 - ⚙️ **Typed Config**: builder > env vars (`LIGERO_*`) > `ligero.properties` > defaults
 - 🔌 **Extensible (SPI)**: pluggable server engines (JDK & Jetty adapters included), JSON mappers and template engines via `ServiceLoader`
 - 🔐 **Auth**: JWT (HS256), Basic auth, stateless CSRF and signed-cookie sessions (`ligero-auth`)
-- 📈 **Observability**: health endpoint, per-route metrics (Micrometer adapter), structured access logs, W3C trace propagation
+- 📈 **Observability**: health endpoint, per-route metrics (Micrometer adapter), structured access logs, distributed tracing via the `Tracer` SPI (`ligero-otel` for OpenTelemetry; any vendor pluggable)
 - 🔁 **Real-time**: Server-Sent Events in core (`ctx.sse()`), WebSockets via the Jetty engine (`app.websocket(path, handler)`)
 - 📜 **OpenAPI**: generated from your routes, with opt-in Swagger UI (`ligero-openapi`)
 - 🧪 **Testable**: in-memory fake engine for unit tests, `ligero-test` for fluent end-to-end tests
@@ -49,6 +50,9 @@ app.start();
 | `ligero-json` | Jackson `BodyMapper` (enables `ctx.body()` / `ctx.json()`) |
 | `ligero-auth` | JWT (HS256), CSRF, sessions |
 | `ligero-template-mustache` | `TemplateEngine` adapter (JMustache) |
+| `ligero-template-freemarker` | `TemplateEngine` adapter (FreeMarker) |
+| `ligero-template-pebble` | `TemplateEngine` adapter (Pebble, Twig/Jinja syntax) |
+| `ligero-otel` | `Tracer` adapter for OpenTelemetry (vendor-neutral tracing) |
 | `ligero-openapi` | OpenAPI 3 generation + Swagger UI |
 | `ligero-metrics-micrometer` | Metrics adapter for Micrometer registries |
 | `ligero-test` | End-to-end testing utilities |
@@ -284,6 +288,11 @@ The detailed, phased roadmap lives in [ROADMAP.md](ROADMAP.md), backed by the te
 - **Phase 2 (v0.4)** — Web essentials: static files, CORS, templates, validation, config
 - **Phase 3 (v0.5)** — Production readiness: security, observability, WebSockets
 - **Phase 4 (v0.6–1.0)** — Ecosystem: testing utilities, OpenAPI, CLI, API freeze
+
+## Documentation & Tooling
+
+- 📚 Full documentation: [ligero-framework/ligero-docs](https://github.com/ligero-framework/ligero-docs) (published at [ligero-framework.github.io/ligero-docs](https://ligero-framework.github.io/ligero-docs/))
+- 🛠️ Project scaffolding: [ligero-framework/ligero-cli](https://github.com/ligero-framework/ligero-cli) — `ligero new my-api`
 
 ## Contributing
 

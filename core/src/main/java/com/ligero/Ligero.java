@@ -319,7 +319,15 @@ public final class Ligero implements AutoCloseable {
     // ------------------------------------------------------------------
 
     private HttpHandler buildRootHandler() {
-        Handler chain = MiddlewarePipeline.compose(List.copyOf(middlewares), this::dispatch);
+        List<Middleware> pipeline = new ArrayList<>();
+        if (config.secureDefaults()) {
+            // OWASP-aligned baseline, on unless secureDefaults(false):
+            // path hygiene first, then security headers on every response
+            pipeline.add(new com.ligero.middleware.RequestHygieneMiddleware());
+            pipeline.add(com.ligero.middleware.SecurityHeadersMiddleware.defaults());
+        }
+        pipeline.addAll(middlewares);
+        Handler chain = MiddlewarePipeline.compose(pipeline, this::dispatch);
         return (request, response) -> {
             Context ctx = new Context(request, response, config.contextPath(), bodyMapper,
                 templateEngine, services);

@@ -25,6 +25,10 @@ import java.util.function.Function;
  * @param gzip           gzip responses when the client accepts it (default false)
  * @param gzipMinBytes   minimum response size to compress (default 1024)
  * @param shutdownGrace  graceful shutdown window (default 10 s)
+ * @param secureDefaults apply the OWASP-aligned security baseline
+ *                       automatically: security headers on every response and
+ *                       request-path hygiene checks (default true; disable
+ *                       explicitly if you provide your own)
  */
 public record LigeroConfig(
     String host,
@@ -34,7 +38,8 @@ public record LigeroConfig(
     boolean virtualThreads,
     boolean gzip,
     int gzipMinBytes,
-    Duration shutdownGrace) {
+    Duration shutdownGrace,
+    boolean secureDefaults) {
 
     public static final String PROPERTIES_RESOURCE = "ligero.properties";
 
@@ -66,6 +71,7 @@ public record LigeroConfig(
         private Boolean gzip;
         private Integer gzipMinBytes;
         private Duration shutdownGrace;
+        private Boolean secureDefaults;
         private Map<String, String> env = System.getenv();
         private Properties classpathProperties;
 
@@ -109,6 +115,12 @@ public record LigeroConfig(
             return this;
         }
 
+        /** Disables (or re-enables) the automatic security baseline. */
+        public Builder secureDefaults(boolean secureDefaults) {
+            this.secureDefaults = secureDefaults;
+            return this;
+        }
+
         /** Overrides the environment source — intended for tests. */
         public Builder environment(Map<String, String> env) {
             this.env = env;
@@ -126,7 +138,9 @@ public record LigeroConfig(
                 resolve(gzip, "LIGERO_GZIP", "ligero.gzip", props, Boolean::parseBoolean, false),
                 resolve(gzipMinBytes, "LIGERO_GZIP_MIN_BYTES", "ligero.gzipMinBytes", props, Integer::parseInt, 1024),
                 resolve(shutdownGrace, "LIGERO_SHUTDOWN_GRACE_SECONDS", "ligero.shutdownGraceSeconds", props,
-                    s -> Duration.ofSeconds(Long.parseLong(s)), Duration.ofSeconds(10)));
+                    s -> Duration.ofSeconds(Long.parseLong(s)), Duration.ofSeconds(10)),
+                resolve(secureDefaults, "LIGERO_SECURE_DEFAULTS", "ligero.secureDefaults", props,
+                    Boolean::parseBoolean, true));
         }
 
         private <T> T resolve(T explicit, String envKey, String propKey, Properties props,

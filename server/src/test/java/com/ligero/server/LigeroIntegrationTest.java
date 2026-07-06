@@ -287,9 +287,11 @@ class LigeroIntegrationTest {
         assertThat(ok.statusCode()).isEqualTo(200);
         assertThat(ok.body()).contains("console.log");
 
-        // encoded traversal: the raw URI keeps %2e%2e, must not escape the root
+        // encoded traversal: rejected up-front by the secure-defaults hygiene
+        // middleware (400); with the baseline disabled it would fall through
+        // to a 404 from the traversal-safe static handler
         HttpResponse<String> attack = get(base + "/static/%2e%2e/outside.txt");
-        assertThat(attack.statusCode()).isEqualTo(404);
+        assertThat(attack.statusCode()).isEqualTo(400);
     }
 
     @Test
