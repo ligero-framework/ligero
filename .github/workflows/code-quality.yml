@@ -33,12 +33,17 @@ jobs:
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
+        if: secrets.CODECOV_TOKEN != ''
         with:
           files: ./ligero-core/build/reports/jacoco/test/jacocoTestReport.xml
           flags: unittests
           name: codecov-umbrella
-          fail_ci_if_error: true
+          fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Skip Codecov upload
+        if: secrets.CODECOV_TOKEN == ''
+        run: echo "Codecov token not configured. Coverage reports are still available in build artifacts."
 
       - name: Publish test results
         if: always()
