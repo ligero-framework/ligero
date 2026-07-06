@@ -1,0 +1,12 @@
+description = 'Ligero optional annotation processor: generates explicit bind() wiring at compile time (no runtime reflection)'
+
+dependencies {
+    // Needs the stereotype/@Provides annotations and the types the generated
+    // code references (Beans, Ligero, LigeroModule) on the compile classpath.
+    implementation project(':core')
+
+    testImplementation project(':core')
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+}

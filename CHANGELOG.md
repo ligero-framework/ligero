@@ -6,6 +6,20 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased] — 0.2.0-SNAPSHOT
 
+### Added (optional compile-time DI)
+- **`ligero-processor`**: an *opt-in* annotation processor that reads the
+  stereotype annotations and `@Provides` static methods at **compile time**
+  and generates the same explicit `bind(...)` wiring you would write by hand
+  — a `LigeroModule` per package plus a single `GeneratedModules.all()`. No
+  classpath scanning, no runtime reflection: the generated code is byte-for-
+  byte what the explicit style produces, so startup and native-image
+  behavior are unchanged. Turn it on by adding the `annotationProcessor`
+  dependency; remove it and you are back to hand-written wiring.
+- Stereotypes gained an optional `as()` attribute (binding key when a class
+  implements several interfaces); new `@Provides` (static bean factories,
+  e.g. a `DataSource`) and `@Inject` (constructor disambiguation) markers,
+  both `SOURCE`-retained (compile-time only).
+
 ### Added (modules)
 - **`LigeroModule` + `Modules.install(...)`**: feature modules Angular-style,
   without the magic — a module is a plain class declaring its beans and its
