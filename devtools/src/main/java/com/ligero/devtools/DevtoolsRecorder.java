@@ -61,8 +61,8 @@ final class DevtoolsRecorder implements BeanDecorator {
         if (trace == null || method.getDeclaringClass() == Object.class) {
             return invoke(bean, method, args);
         }
-        RequestTrace.Call call =
-            trace.enter(beanName, declaredBy, stereotype, method.getName(), preview(args));
+        RequestTrace.Call call = trace.enter(beanName, declaredBy, stereotype,
+            method.getName(), args == null ? "" : preview(args));
         long start = System.nanoTime();
         try {
             Object result = invoke(bean, method, args);
