@@ -7,6 +7,8 @@ module com.ligero.core {
     requires transitive org.slf4j;
 
     exports com.ligero;
+    exports com.ligero.beans;
+    exports com.ligero.beans.stereotype;
     exports com.ligero.config;
     exports com.ligero.http;
     exports com.ligero.middleware;
