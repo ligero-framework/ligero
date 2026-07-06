@@ -128,11 +128,20 @@ class BeansTest {
         Beans beans = wired().start();
         BeanGraph graph = beans.graph();
 
+        // Repo is bound as an interface without annotation: the stereotype
+        // comes from the instantiated class (@Repository InMemoryRepo).
         assertThat(graph.nodes()).extracting(BeanGraph.Node::stereotype)
-            .containsExactlyInAnyOrder("bean", "service", "controller"); // Repo interface has no annotation
+            .containsExactlyInAnyOrder("repository", "service", "controller");
         assertThat(graph.edges()).contains(
             new BeanGraph.Edge(GreetingService.class.getName(), Repo.class.getName()),
             new BeanGraph.Edge(GreetingController.class.getName(), GreetingService.class.getName()));
+    }
+
+    @Test
+    void graphBeforeInstantiationFallsBackToBindingTypeStereotype() {
+        Beans beans = wired().buildLazy();
+        assertThat(beans.graph().nodes()).extracting(BeanGraph.Node::stereotype)
+            .containsExactlyInAnyOrder("bean", "service", "controller");
     }
 
     @Test

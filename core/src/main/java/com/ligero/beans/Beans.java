@@ -107,9 +107,25 @@ public final class Beans implements AutoCloseable {
     /** Typed dependency graph (nodes tagged by stereotype, edges from real resolution). */
     public BeanGraph graph() {
         List<BeanGraph.Node> nodes = factories.keySet().stream()
-            .map(type -> new BeanGraph.Node(type.getName(), stereotypeOf(type)))
+            .map(type -> new BeanGraph.Node(type.getName(), stereotypeFor(type)))
             .toList();
         return new BeanGraph(nodes, List.copyOf(edges));
+    }
+
+    /**
+     * Stereotype annotations usually live on the implementation class, not on
+     * the interface the bean is bound as — prefer the instantiated class when
+     * it carries one (decorator proxies don't, hence the fallback).
+     */
+    private String stereotypeFor(Class<?> bindingType) {
+        Object instance = singletons.get(bindingType);
+        if (instance != null) {
+            String stereotype = stereotypeOf(instance.getClass());
+            if (!"bean".equals(stereotype)) {
+                return stereotype;
+            }
+        }
+        return stereotypeOf(bindingType);
     }
 
     /** Closes instantiated {@link AutoCloseable} beans in reverse creation order. */

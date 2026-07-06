@@ -1,0 +1,13 @@
+description = 'Ligero devtools: development dashboard (bean graph + per-request layer traces)'
+
+dependencies {
+    api project(':core')
+
+    testImplementation project(':server')
+    testImplementation project(':testkit')
+    testImplementation(testFixtures(project(':core')))
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+    testRuntimeOnly libs.slf4j.simple
+}
