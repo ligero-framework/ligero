@@ -6,6 +6,17 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased] — 0.2.0-SNAPSHOT
 
+### Added (devtools)
+- **`ligero-devtools`**: visual debugger for development served at
+  `/ligero/dev` — bean dependency graph colored by stereotype plus live
+  per-request traces through the layers (controller -> service ->
+  repository) with arguments, return values and timing per call, streamed
+  over SSE. Interface-typed beans are spied with JDK proxies through the
+  `BeanDecorator` hook; production carries zero overhead because the module
+  simply isn't on the classpath (`LIGERO_DEVTOOLS=false` also disables it).
+- `Beans.graph()` now tags nodes with the stereotype of the implementation
+  class when the binding key is an unannotated interface.
+
 ### Added (dependency container)
 - **`Beans` container** in core: explicit lambda bindings (compiler-verified,
   zero reflection), lazy memoized singletons, eager `start()` that validates
