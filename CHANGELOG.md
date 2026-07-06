@@ -6,6 +6,13 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased] — 0.2.0-SNAPSHOT
 
+### Added (modules)
+- **`LigeroModule` + `Modules.install(...)`**: feature modules Angular-style,
+  without the magic — a module is a plain class declaring its beans and its
+  routes; the app startup just lists modules. All modules share one `Beans`
+  container (cross-module dependencies resolve naturally; duplicates fail
+  fast) and wiring lives in the modules, never in the startup class.
+
 ### Added (devtools)
 - **`ligero-devtools`**: visual debugger for development served at
   `/ligero/dev` — bean dependency graph colored by stereotype plus live
