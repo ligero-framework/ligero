@@ -57,6 +57,13 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
   listing every violation. Opt-in (Bean Validation uses reflection); the
   core's `ctx.bodyValidator(...)` remains for reflection-free checks.
 
+### Added (HTTP/2)
+- **HTTP/2 on the Jetty engine**: `ligero-server-jetty` now speaks HTTP/2
+  cleartext (h2c) on the same port as HTTP/1.1 — h2c-capable clients
+  negotiate HTTP/2 (upgrade or prior-knowledge), everyone else keeps HTTP/1.1,
+  no code change. (The JDK engine can't do HTTP/2 — `com.sun.net.httpserver`
+  is HTTP/1.1 only — so HTTP/2 apps use the Jetty engine.)
+
 ### Added (modules)
 - **`LigeroModule` + `Modules.install(...)`**: feature modules Angular-style,
   without the magic — a module is a plain class declaring its beans and its

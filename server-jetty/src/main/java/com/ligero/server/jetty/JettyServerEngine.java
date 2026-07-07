@@ -4,7 +4,10 @@ import com.ligero.http.HttpHandler;
 import com.ligero.spi.EngineConfig;
 import com.ligero.spi.ServerEngine;
 
+import org.eclipse.jetty.http2.server.HTTP2CServerConnectionFactory;
 import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.HttpConfiguration;
+import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.server.Server;
@@ -43,7 +46,12 @@ public final class JettyServerEngine implements ServerEngine {
             threadPool.setVirtualThreadsExecutor(Executors.newVirtualThreadPerTaskExecutor());
         }
         server = new Server(threadPool);
-        connector = new ServerConnector(server);
+        // Speak HTTP/1.1 and HTTP/2 cleartext (h2c) on the same port: h2c-capable
+        // clients get HTTP/2 (upgrade or prior-knowledge), everyone else HTTP/1.1.
+        HttpConfiguration httpConfig = new HttpConfiguration();
+        HttpConnectionFactory http11 = new HttpConnectionFactory(httpConfig);
+        HTTP2CServerConnectionFactory h2c = new HTTP2CServerConnectionFactory(httpConfig);
+        connector = new ServerConnector(server, http11, h2c);
         connector.setHost(config.host());
         connector.setPort(config.port());
         server.addConnector(connector);

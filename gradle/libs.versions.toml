@@ -26,6 +26,7 @@ jmustache = { module = "com.samskivert:jmustache", version.ref = "jmustache" }
 micrometer-core = { module = "io.micrometer:micrometer-core", version.ref = "micrometer" }
 jetty-server = { module = "org.eclipse.jetty:jetty-server", version.ref = "jetty" }
 jetty-websocket-server = { module = "org.eclipse.jetty.websocket:jetty-websocket-jetty-server", version.ref = "jetty" }
+jetty-http2-server = { module = "org.eclipse.jetty.http2:jetty-http2-server", version.ref = "jetty" }
 freemarker = { module = "org.freemarker:freemarker", version.ref = "freemarker" }
 pebble = { module = "io.pebbletemplates:pebble", version.ref = "pebble" }
 otel-api = { module = "io.opentelemetry:opentelemetry-api", version.ref = "otel" }
