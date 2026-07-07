@@ -43,6 +43,12 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
   ORM, no reflection; failures wrap the SQL in a `JdbcException`. Verified
   against H2.
 
+### Added (data)
+- **`ligero-migrations`**: `Migrations.run(dataSource)` applies Flyway
+  migrations from `classpath:db/migration` at startup — one call, before you
+  serve traffic. Optional and unopinionated (bring Liquibase or run from CI
+  instead). Verified against H2.
+
 ### Added (modules)
 - **`LigeroModule` + `Modules.install(...)`**: feature modules Angular-style,
   without the magic — a module is a plain class declaring its beans and its

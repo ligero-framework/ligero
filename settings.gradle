@@ -14,6 +14,7 @@ include 'openapi'             // ligero-openapi: generación OpenAPI 3 desde las
 include 'metrics-micrometer'  // ligero-metrics-micrometer: adapter MetricsCollector -> Micrometer
 include 'server-jetty'        // ligero-server-jetty: segundo ServerEngine (valida el SPI)
 include 'jdbc'                // ligero-jdbc: helper liviano sobre DataSource (query -> record)
+include 'migrations'          // ligero-migrations: migraciones de BD con Flyway
 include 'devtools'            // ligero-devtools: dashboard de desarrollo (grafo de beans + trazas de requests)
 include 'processor'          // ligero-processor: DI opcional en compilación (genera los bind() explícitos)
 include 'benchmarks'          // JMH (no se publica)

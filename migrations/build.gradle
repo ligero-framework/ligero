@@ -1,0 +1,11 @@
+description = 'Ligero migrations: run Flyway database migrations at startup (optional)'
+
+dependencies {
+    api project(':core')
+    api libs.flyway.core
+
+    testImplementation libs.h2
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+}
