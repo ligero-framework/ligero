@@ -14,6 +14,8 @@ flyway = "9.22.3"
 hibernateValidator = "8.0.1.Final"
 expressly = "5.0.0"
 snakeyaml = "2.3"
+jakartaPersistence = "3.1.0"
+hibernate = "6.6.4.Final"
 
 [libraries]
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
@@ -36,4 +38,6 @@ flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
 hibernate-validator = { module = "org.hibernate.validator:hibernate-validator", version.ref = "hibernateValidator" }
 expressly = { module = "org.glassfish.expressly:expressly", version.ref = "expressly" }
 snakeyaml = { module = "org.yaml:snakeyaml", version.ref = "snakeyaml" }
+jakarta-persistence = { module = "jakarta.persistence:jakarta.persistence-api", version.ref = "jakartaPersistence" }
+hibernate-core = { module = "org.hibernate.orm:hibernate-core", version.ref = "hibernate" }
 otel-sdk-testing = { module = "io.opentelemetry:opentelemetry-sdk-testing", version.ref = "otel" }

@@ -75,6 +75,15 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
   `${ENV:-default}`. Precedence stays small and predictable: **builder > env
   (`LIGERO_*`) > YAML (profile > base) > `ligero.properties` > defaults**.
   Pure microservices omit the module and nothing changes.
+### Added (data)
+- **`ligero-jpa`**: a thin, explicit helper over a JPA
+  `EntityManagerFactory` — `Jpa.forUnit("app")`, `jpa.tx(em -> ...)` (commit
+  on success, rollback on error), `jpa.read(em -> ...)` with a short-lived
+  entity manager, `AutoCloseable`. No open-session-in-view, no thread-locals.
+  Only the JPA API is a compile dependency; you bring the provider
+  (Hibernate, EclipseLink, ...) and JDBC driver. Verified against Hibernate
+  on in-memory H2. Prefer jOOQ/JDBC/Spring Data instead? Bind it as a bean —
+  nothing here is mandatory.
 
 ### Added (modules)
 - **`LigeroModule` + `Modules.install(...)`**: feature modules Angular-style,
