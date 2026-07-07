@@ -83,7 +83,7 @@ subprojects {
     def coverageMinimums = [core: 0.80, json: 0.70, server: 0.70, auth: 0.70,
                             'template-mustache': 0.60, 'template-freemarker': 0.60, 'template-pebble': 0.60, otel: 0.60, testkit: 0.60, openapi: 0.60,
                             'metrics-micrometer': 0.60, 'server-jetty': 0.50,
-                            devtools: 0.60, processor: 0.0,
+                            devtools: 0.60, processor: 0.0, jdbc: 0.85,
                             examples: 0.0, benchmarks: 0.0]
     jacocoTestCoverageVerification {
         dependsOn test

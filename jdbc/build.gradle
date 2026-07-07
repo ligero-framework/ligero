@@ -1,0 +1,10 @@
+description = 'Ligero JDBC: a tiny, explicit helper over a DataSource (query -> record, transactions)'
+
+dependencies {
+    api project(':core')
+
+    testImplementation libs.h2
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+}

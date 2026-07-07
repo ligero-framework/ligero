@@ -35,6 +35,14 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
   JSON fields are ignored on read (`FAIL_ON_UNKNOWN_PROPERTIES` off) — a
   friendlier default for evolving APIs.
 
+### Added (data)
+- **`ligero-jdbc`**: a tiny, explicit helper over a `DataSource` —
+  `query`/`queryOne` map rows to your records via a `RowMapper`, `update`
+  returns affected rows, `insert` returns the generated key, and `tx(...)`
+  runs a unit of work (commit on success, rollback on any exception). No
+  ORM, no reflection; failures wrap the SQL in a `JdbcException`. Verified
+  against H2.
+
 ### Added (modules)
 - **`LigeroModule` + `Modules.install(...)`**: feature modules Angular-style,
   without the magic — a module is a plain class declaring its beans and its
