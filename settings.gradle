@@ -20,5 +20,6 @@ include 'devtools'            // ligero-devtools: dashboard de desarrollo (grafo
 include 'processor'          // ligero-processor: DI opcional en compilación (genera los bind() explícitos)
 include 'config-yaml'        // ligero-config-yaml: ConfigSource desde ligero.yml + perfiles (SnakeYAML)
 include 'jpa'                // ligero-jpa: helper liviano sobre JPA/Hibernate (EntityManagerFactory + transacciones)
+include 'redis'              // ligero-redis: stores distribuidos (rate-limit + sesiones) sobre Redis
 include 'benchmarks'          // JMH (no se publica)
 include 'examples'  // Aplicación de ejemplo (no se publica)

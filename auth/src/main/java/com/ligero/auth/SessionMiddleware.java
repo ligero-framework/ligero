@@ -61,7 +61,12 @@ public final class SessionMiddleware implements Middleware {
                 .withSameSite("Lax"));
         }
         ctx.attribute(ATTRIBUTE, session);
-        chain.proceed();
+        try {
+            chain.proceed();
+        } finally {
+            // flush attribute changes (no-op for the in-memory store)
+            store.save(session);
+        }
     }
 
     /** Returns the session for a valid signed cookie, or null (tampered/unknown). */

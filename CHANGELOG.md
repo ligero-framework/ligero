@@ -84,6 +84,16 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
   (Hibernate, EclipseLink, ...) and JDBC driver. Verified against Hibernate
   on in-memory H2. Prefer jOOQ/JDBC/Spring Data instead? Bind it as a bean —
   nothing here is mandatory.
+### Added (distributed stores)
+- **`ligero-redis`**: Redis-backed implementations of the store SPIs so
+  rate limits and sessions are shared across app instances.
+  `RedisRateLimiterStore` is an atomic fixed-window counter (`INCR` +
+  `EXPIRE`); `RedisSessionStore` keeps each session as a Redis hash with a
+  sliding TTL. Both sit behind a tiny `RedisOps` seam (Jedis adapter
+  provided, fakeable in tests). A new `SessionStore.save(...)` hook (no-op
+  default, called by `SessionMiddleware` after each request) lets
+  distributed stores flush attribute changes; `Session`'s constructor is
+  now public so out-of-package stores can rebuild sessions.
 
 ### Added (modules)
 - **`LigeroModule` + `Modules.install(...)`**: feature modules Angular-style,
