@@ -49,6 +49,14 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
   serve traffic. Optional and unopinionated (bring Liquibase or run from CI
   instead). Verified against H2.
 
+### Added (validation)
+- **`ligero-validation`**: annotation-based request validation via Jakarta
+  Bean Validation (Hibernate Validator). Annotate a request record with the
+  standard constraints (`@NotBlank`, `@Email`, `@Min`, …) and
+  `Validate.orThrow(ctx.body(T.class))` turns invalid input into a `400`
+  listing every violation. Opt-in (Bean Validation uses reflection); the
+  core's `ctx.bodyValidator(...)` remains for reflection-free checks.
+
 ### Added (modules)
 - **`LigeroModule` + `Modules.install(...)`**: feature modules Angular-style,
   without the magic — a module is a plain class declaring its beans and its
