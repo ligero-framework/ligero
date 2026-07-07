@@ -100,6 +100,97 @@ class LigeroProcessorTest {
         assertThat(diagnostics.toString()).contains("constructors").contains("@Inject");
     }
 
+    @Test
+    void componentWithAsKeyAndInjectConstructor() throws IOException {
+        Path src = Files.createDirectories(dir.resolve("src/demo"));
+        write(src, "A.java", "package demo; public interface A {}");
+        write(src, "B.java", "package demo; public interface B {}");
+        write(src, "Dep.java", "package demo; public interface Dep {}");
+        write(src, "Multi.java", """
+            package demo;
+            import com.ligero.beans.stereotype.Component;
+            import com.ligero.beans.Inject;
+            @Component(as = A.class)
+            public class Multi implements A, B {
+                public Multi() {}
+                @Inject public Multi(Dep dep) {}
+            }""");
+        Path gen = Files.createDirectories(dir.resolve("generated"));
+        Path out = Files.createDirectories(dir.resolve("classes"));
+
+        assertThat(compileWithProcessor(src, gen, out)).isTrue();
+        // as() picks the key A; @Inject picks the (Dep) constructor
+        assertThat(Files.readString(gen.resolve("demo/LigeroGeneratedModule.java")))
+            .contains("builder.bind(demo.A.class, b -> new demo.Multi(b.get(demo.Dep.class)));");
+    }
+
+    @Test
+    void controllerWithoutRegisterMountsNoRoute() throws IOException {
+        Path src = Files.createDirectories(dir.resolve("src/demo"));
+        write(src, "Bare.java", """
+            package demo;
+            import com.ligero.beans.stereotype.Controller;
+            @Controller public class Bare {
+                public Bare() {}
+            }""");
+        Path gen = Files.createDirectories(dir.resolve("generated"));
+        Path out = Files.createDirectories(dir.resolve("classes"));
+
+        assertThat(compileWithProcessor(src, gen, out)).isTrue();
+        String module = Files.readString(gen.resolve("demo/LigeroGeneratedModule.java"));
+        assertThat(module).contains("builder.bind(demo.Bare.class, b -> new demo.Bare());");
+        // no register(Ligero) -> routes() body stays empty
+        assertThat(module).doesNotContain(".register(app);");
+    }
+
+    @Test
+    void providesMustBeStatic() throws IOException {
+        Path src = Files.createDirectories(dir.resolve("src/demo"));
+        write(src, "Config.java", """
+            package demo;
+            import com.ligero.beans.Provides;
+            import javax.sql.DataSource;
+            public class Config {
+                @Provides DataSource ds() { return null; }
+            }""");
+        StringWriter diagnostics = new StringWriter();
+        boolean ok = compileWithProcessor(src, freshDir("generated"), freshDir("classes"), diagnostics);
+        assertThat(ok).isFalse();
+        assertThat(diagnostics.toString()).contains("static");
+    }
+
+    @Test
+    void abstractClassIsRejected() throws IOException {
+        Path src = Files.createDirectories(dir.resolve("src/demo"));
+        write(src, "AbstractSvc.java", """
+            package demo;
+            import com.ligero.beans.stereotype.Service;
+            @Service public abstract class AbstractSvc {}""");
+        StringWriter diagnostics = new StringWriter();
+        boolean ok = compileWithProcessor(src, freshDir("generated"), freshDir("classes"), diagnostics);
+        assertThat(ok).isFalse();
+        assertThat(diagnostics.toString()).contains("concrete class");
+    }
+
+    @Test
+    void nonInjectableConstructorParamIsRejected() throws IOException {
+        Path src = Files.createDirectories(dir.resolve("src/demo"));
+        write(src, "NeedsInt.java", """
+            package demo;
+            import com.ligero.beans.stereotype.Service;
+            @Service public class NeedsInt {
+                public NeedsInt(int port) {}
+            }""");
+        StringWriter diagnostics = new StringWriter();
+        boolean ok = compileWithProcessor(src, freshDir("generated"), freshDir("classes"), diagnostics);
+        assertThat(ok).isFalse();
+        assertThat(diagnostics.toString()).contains("injectable");
+    }
+
+    private Path freshDir(String name) throws IOException {
+        return Files.createDirectories(dir.resolve(name));
+    }
+
     private boolean compileWithProcessor(Path srcDir, Path genDir, Path outDir) throws IOException {
         return compileWithProcessor(srcDir, genDir, outDir, new StringWriter());
     }
