@@ -2,6 +2,7 @@
 module com.ligero.json {
     requires com.ligero.core;
     requires com.fasterxml.jackson.databind;
+    requires com.fasterxml.jackson.datatype.jsr310;
 
     exports com.ligero.json;
 
