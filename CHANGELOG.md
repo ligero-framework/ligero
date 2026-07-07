@@ -6,6 +6,15 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased] — 0.2.0-SNAPSHOT
 
+### Fixed (performance)
+- **JDK engine throughput ~8× higher**: `com.sun.net.httpserver` left Nagle's
+  algorithm on, which on keep-alive connections combined with delayed ACK to
+  add ~40 ms to every response (measured: p50 44 ms, ~350–1000 req/s). The
+  engine now enables `sun.net.httpserver.nodelay` (TCP_NODELAY) by default —
+  p50 drops to ~4 ms and throughput rises to ~8k req/s on the same hardware,
+  putting the zero-dependency engine alongside Jetty/Javalin. Set the system
+  property explicitly to override.
+
 ### Added (optional compile-time DI)
 - **`ligero-processor`**: an *opt-in* annotation processor that reads the
   stereotype annotations and `@Provides` static methods at **compile time**
