@@ -17,6 +17,7 @@ module com.ligero.core {
     exports com.ligero.validation;
     exports com.ligero.websocket;
 
+    uses com.ligero.spi.ConfigSource;
     uses com.ligero.spi.ServerEngine;
     uses com.ligero.spi.BodyMapper;
     uses com.ligero.spi.TemplateEngine;

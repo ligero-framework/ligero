@@ -1,0 +1,10 @@
+description = 'Ligero YAML config: ConfigSource loading ligero.yml + ligero-<profile>.yml (SnakeYAML)'
+
+dependencies {
+    api project(':core')
+    implementation libs.snakeyaml
+
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+}

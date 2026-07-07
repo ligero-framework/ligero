@@ -63,6 +63,18 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
   negotiate HTTP/2 (upgrade or prior-knowledge), everyone else keeps HTTP/1.1,
   no code change. (The JDK engine can't do HTTP/2 — `com.sun.net.httpserver`
   is HTTP/1.1 only — so HTTP/2 apps use the Jetty engine.)
+### Added (YAML config + profiles)
+- **`ConfigSource` SPI + `Config`** in core: an optional, format-agnostic
+  configuration source (discovered via `ServiceLoader`) plus a typed
+  app-facing facade (`Config.load().get/getInt/getBoolean/profile`). The
+  core stays dependency-free; framework settings now also read canonical
+  `server.*` / `security.*` keys from any source.
+- **`ligero-config-yaml`** (SnakeYAML): loads `ligero.yml` and a
+  `ligero-<profile>.yml` overlay (profile from `LIGERO_PROFILE` or
+  `-Dligero.profile`), flattens nested keys, and interpolates
+  `${ENV:-default}`. Precedence stays small and predictable: **builder > env
+  (`LIGERO_*`) > YAML (profile > base) > `ligero.properties` > defaults**.
+  Pure microservices omit the module and nothing changes.
 
 ### Added (modules)
 - **`LigeroModule` + `Modules.install(...)`**: feature modules Angular-style,

@@ -18,5 +18,6 @@ include 'migrations'          // ligero-migrations: migraciones de BD con Flyway
 include 'validation'          // ligero-validation: Bean Validation (Hibernate Validator) -> 400
 include 'devtools'            // ligero-devtools: dashboard de desarrollo (grafo de beans + trazas de requests)
 include 'processor'          // ligero-processor: DI opcional en compilación (genera los bind() explícitos)
+include 'config-yaml'        // ligero-config-yaml: ConfigSource desde ligero.yml + perfiles (SnakeYAML)
 include 'benchmarks'          // JMH (no se publica)
 include 'examples'  // Aplicación de ejemplo (no se publica)
