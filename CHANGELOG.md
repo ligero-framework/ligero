@@ -28,6 +28,12 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
   implements several interfaces); new `@Provides` (static bean factories,
   e.g. a `DataSource`) and `@Inject` (constructor disambiguation) markers,
   both `SOURCE`-retained (compile-time only).
+### Fixed (JSON)
+- **`ligero-json` now serializes `java.time`**: `Instant`, `LocalDate`,
+  `LocalDateTime`, ... round-trip as ISO-8601 strings (the Jackson
+  `jsr310` module is registered, `WRITE_DATES_AS_TIMESTAMPS` off). Unknown
+  JSON fields are ignored on read (`FAIL_ON_UNKNOWN_PROPERTIES` off) — a
+  friendlier default for evolving APIs.
 
 ### Added (modules)
 - **`LigeroModule` + `Modules.install(...)`**: feature modules Angular-style,
