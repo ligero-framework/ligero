@@ -1,0 +1,4 @@
+app:
+  name: ligero-yaml-test
+server:
+  port: 8088

@@ -2,6 +2,7 @@
 module com.ligero.server.jetty {
     requires com.ligero.core;
     requires org.eclipse.jetty.server;
+    requires org.eclipse.jetty.http2.server;
     requires org.eclipse.jetty.websocket.server;
     requires org.eclipse.jetty.websocket.api;
     requires org.slf4j;

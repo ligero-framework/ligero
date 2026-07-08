@@ -9,7 +9,8 @@ public final class Session {
     private final String id;
     private final Map<String, Object> attributes = new ConcurrentHashMap<>();
 
-    Session(String id) {
+    /** Public so out-of-package {@link SessionStore}s (e.g. Redis) can rebuild sessions. */
+    public Session(String id) {
         this.id = id;
     }
 

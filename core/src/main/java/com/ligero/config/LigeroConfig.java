@@ -74,6 +74,7 @@ public record LigeroConfig(
         private Boolean secureDefaults;
         private Map<String, String> env = System.getenv();
         private Properties classpathProperties;
+        private Config config;
 
         public Builder host(String host) {
             this.host = host;
@@ -127,23 +128,36 @@ public record LigeroConfig(
             return this;
         }
 
+        /** Overrides the config sources — intended for tests. */
+        public Builder config(Config config) {
+            this.config = config;
+            return this;
+        }
+
         public LigeroConfig build() {
             Properties props = classpathProperties();
+            Config cfg = config != null ? config : Config.load();
             return new LigeroConfig(
-                resolve(host, "LIGERO_HOST", "ligero.host", props, s -> s, "0.0.0.0"),
-                resolve(port, "LIGERO_PORT", "ligero.port", props, Integer::parseInt, 8080),
-                resolve(contextPath, "LIGERO_CONTEXT_PATH", "ligero.contextPath", props, s -> s, "/"),
-                resolve(maxBodyBytes, "LIGERO_MAX_BODY_BYTES", "ligero.maxBodyBytes", props, Long::parseLong, 10L * 1024 * 1024),
-                resolve(virtualThreads, "LIGERO_VIRTUAL_THREADS", "ligero.virtualThreads", props, Boolean::parseBoolean, true),
-                resolve(gzip, "LIGERO_GZIP", "ligero.gzip", props, Boolean::parseBoolean, false),
-                resolve(gzipMinBytes, "LIGERO_GZIP_MIN_BYTES", "ligero.gzipMinBytes", props, Integer::parseInt, 1024),
-                resolve(shutdownGrace, "LIGERO_SHUTDOWN_GRACE_SECONDS", "ligero.shutdownGraceSeconds", props,
+                resolve(host, "LIGERO_HOST", "server.host", "ligero.host", cfg, props, s -> s, "0.0.0.0"),
+                resolve(port, "LIGERO_PORT", "server.port", "ligero.port", cfg, props, Integer::parseInt, 8080),
+                resolve(contextPath, "LIGERO_CONTEXT_PATH", "server.contextPath", "ligero.contextPath", cfg, props, s -> s, "/"),
+                resolve(maxBodyBytes, "LIGERO_MAX_BODY_BYTES", "server.maxBodyBytes", "ligero.maxBodyBytes", cfg, props, Long::parseLong, 10L * 1024 * 1024),
+                resolve(virtualThreads, "LIGERO_VIRTUAL_THREADS", "server.virtualThreads", "ligero.virtualThreads", cfg, props, Boolean::parseBoolean, true),
+                resolve(gzip, "LIGERO_GZIP", "server.gzip", "ligero.gzip", cfg, props, Boolean::parseBoolean, false),
+                resolve(gzipMinBytes, "LIGERO_GZIP_MIN_BYTES", "server.gzipMinBytes", "ligero.gzipMinBytes", cfg, props, Integer::parseInt, 1024),
+                resolve(shutdownGrace, "LIGERO_SHUTDOWN_GRACE_SECONDS", "server.shutdownGraceSeconds", "ligero.shutdownGraceSeconds", cfg, props,
                     s -> Duration.ofSeconds(Long.parseLong(s)), Duration.ofSeconds(10)),
-                resolve(secureDefaults, "LIGERO_SECURE_DEFAULTS", "ligero.secureDefaults", props,
+                resolve(secureDefaults, "LIGERO_SECURE_DEFAULTS", "security.secureDefaults", "ligero.secureDefaults", cfg, props,
                     Boolean::parseBoolean, true));
         }
 
-        private <T> T resolve(T explicit, String envKey, String propKey, Properties props,
+        /**
+         * Precedence (highest wins): explicit builder call &gt; environment
+         * variable ({@code LIGERO_*}) &gt; config source ({@code server.*} —
+         * e.g. YAML) &gt; classpath {@code ligero.properties} &gt; default.
+         */
+        private <T> T resolve(T explicit, String envKey, String sourceKey, String propKey,
+                              Config config, Properties props,
                               Function<String, T> parser, T defaultValue) {
             if (explicit != null) {
                 return explicit;
@@ -151,6 +165,10 @@ public record LigeroConfig(
             String fromEnv = env.get(envKey);
             if (fromEnv != null && !fromEnv.isBlank()) {
                 return parser.apply(fromEnv.trim());
+            }
+            String fromSource = config.get(sourceKey).orElse(null);
+            if (fromSource != null && !fromSource.isBlank()) {
+                return parser.apply(fromSource.trim());
             }
             String fromProps = props.getProperty(propKey);
             if (fromProps != null && !fromProps.isBlank()) {

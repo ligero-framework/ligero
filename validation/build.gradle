@@ -1,0 +1,11 @@
+description = 'Ligero validation: annotation-based request validation (Jakarta Bean Validation / Hibernate Validator)'
+
+dependencies {
+    api project(':core')
+    api libs.hibernate.validator      // pulls jakarta.validation-api transitively
+    runtimeOnly libs.expressly        // Jakarta EL implementation for message interpolation
+
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+}

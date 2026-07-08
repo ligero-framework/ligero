@@ -1,14 +1,23 @@
 package com.ligero.json;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 /**
  * Utilidades para trabajar con JSON.
  */
 public class Json {
-    private static final ObjectMapper mapper = new ObjectMapper();
-    
+    private static final ObjectMapper mapper = new ObjectMapper()
+        // java.time support: serialize Instant/LocalDate/... as ISO-8601 strings
+        // (e.g. "2026-07-07T10:15:30Z") rather than failing or emitting numbers.
+        .registerModule(new JavaTimeModule())
+        .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+        // DX default: ignore unknown JSON fields instead of 400-ing on them.
+        .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+
     private Json() {
         // Clase de utilidad, no se debe instanciar
     }
