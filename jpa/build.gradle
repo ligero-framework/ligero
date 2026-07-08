@@ -1,0 +1,16 @@
+description = 'Ligero JPA: a thin helper over an EntityManagerFactory (bring your own JPA provider, e.g. Hibernate)'
+
+dependencies {
+    api project(':core')
+    // Only the JPA API is compiled against; the app brings a provider
+    // (Hibernate, EclipseLink, ...) and a JDBC driver at runtime.
+    api libs.jakarta.persistence
+
+    // Tests run against a real provider (Hibernate) on in-memory H2.
+    testImplementation libs.hibernate.core
+    testRuntimeOnly libs.h2
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+    testRuntimeOnly libs.slf4j.simple
+}

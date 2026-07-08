@@ -11,5 +11,13 @@ public interface SessionStore {
     /** Returns the session or {@code null} when unknown/expired. */
     Session find(String id);
 
+    /**
+     * Flushes a session's current state. A no-op for the in-memory store
+     * (the returned object is the stored one); distributed stores (Redis)
+     * override it to write attribute changes back after each request.
+     */
+    default void save(Session session) {
+    }
+
     void delete(String id);
 }

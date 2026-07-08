@@ -28,6 +28,72 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
   implements several interfaces); new `@Provides` (static bean factories,
   e.g. a `DataSource`) and `@Inject` (constructor disambiguation) markers,
   both `SOURCE`-retained (compile-time only).
+### Fixed (JSON)
+- **`ligero-json` now serializes `java.time`**: `Instant`, `LocalDate`,
+  `LocalDateTime`, ... round-trip as ISO-8601 strings (the Jackson
+  `jsr310` module is registered, `WRITE_DATES_AS_TIMESTAMPS` off). Unknown
+  JSON fields are ignored on read (`FAIL_ON_UNKNOWN_PROPERTIES` off) — a
+  friendlier default for evolving APIs.
+
+### Added (data)
+- **`ligero-jdbc`**: a tiny, explicit helper over a `DataSource` —
+  `query`/`queryOne` map rows to your records via a `RowMapper`, `update`
+  returns affected rows, `insert` returns the generated key, and `tx(...)`
+  runs a unit of work (commit on success, rollback on any exception). No
+  ORM, no reflection; failures wrap the SQL in a `JdbcException`. Verified
+  against H2.
+
+### Added (data)
+- **`ligero-migrations`**: `Migrations.run(dataSource)` applies Flyway
+  migrations from `classpath:db/migration` at startup — one call, before you
+  serve traffic. Optional and unopinionated (bring Liquibase or run from CI
+  instead). Verified against H2.
+
+### Added (validation)
+- **`ligero-validation`**: annotation-based request validation via Jakarta
+  Bean Validation (Hibernate Validator). Annotate a request record with the
+  standard constraints (`@NotBlank`, `@Email`, `@Min`, …) and
+  `Validate.orThrow(ctx.body(T.class))` turns invalid input into a `400`
+  listing every violation. Opt-in (Bean Validation uses reflection); the
+  core's `ctx.bodyValidator(...)` remains for reflection-free checks.
+
+### Added (HTTP/2)
+- **HTTP/2 on the Jetty engine**: `ligero-server-jetty` now speaks HTTP/2
+  cleartext (h2c) on the same port as HTTP/1.1 — h2c-capable clients
+  negotiate HTTP/2 (upgrade or prior-knowledge), everyone else keeps HTTP/1.1,
+  no code change. (The JDK engine can't do HTTP/2 — `com.sun.net.httpserver`
+  is HTTP/1.1 only — so HTTP/2 apps use the Jetty engine.)
+### Added (YAML config + profiles)
+- **`ConfigSource` SPI + `Config`** in core: an optional, format-agnostic
+  configuration source (discovered via `ServiceLoader`) plus a typed
+  app-facing facade (`Config.load().get/getInt/getBoolean/profile`). The
+  core stays dependency-free; framework settings now also read canonical
+  `server.*` / `security.*` keys from any source.
+- **`ligero-config-yaml`** (SnakeYAML): loads `ligero.yml` and a
+  `ligero-<profile>.yml` overlay (profile from `LIGERO_PROFILE` or
+  `-Dligero.profile`), flattens nested keys, and interpolates
+  `${ENV:-default}`. Precedence stays small and predictable: **builder > env
+  (`LIGERO_*`) > YAML (profile > base) > `ligero.properties` > defaults**.
+  Pure microservices omit the module and nothing changes.
+### Added (data)
+- **`ligero-jpa`**: a thin, explicit helper over a JPA
+  `EntityManagerFactory` — `Jpa.forUnit("app")`, `jpa.tx(em -> ...)` (commit
+  on success, rollback on error), `jpa.read(em -> ...)` with a short-lived
+  entity manager, `AutoCloseable`. No open-session-in-view, no thread-locals.
+  Only the JPA API is a compile dependency; you bring the provider
+  (Hibernate, EclipseLink, ...) and JDBC driver. Verified against Hibernate
+  on in-memory H2. Prefer jOOQ/JDBC/Spring Data instead? Bind it as a bean —
+  nothing here is mandatory.
+### Added (distributed stores)
+- **`ligero-redis`**: Redis-backed implementations of the store SPIs so
+  rate limits and sessions are shared across app instances.
+  `RedisRateLimiterStore` is an atomic fixed-window counter (`INCR` +
+  `EXPIRE`); `RedisSessionStore` keeps each session as a Redis hash with a
+  sliding TTL. Both sit behind a tiny `RedisOps` seam (Jedis adapter
+  provided, fakeable in tests). A new `SessionStore.save(...)` hook (no-op
+  default, called by `SessionMiddleware` after each request) lets
+  distributed stores flush attribute changes; `Session`'s constructor is
+  now public so out-of-package stores can rebuild sessions.
 
 ### Added (modules)
 - **`LigeroModule` + `Modules.install(...)`**: feature modules Angular-style,

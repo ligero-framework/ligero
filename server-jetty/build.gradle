@@ -4,6 +4,7 @@ dependencies {
     api project(':core')
     implementation libs.jetty.server
     implementation libs.jetty.websocket.server
+    implementation libs.jetty.http2.server   // HTTP/2 cleartext (h2c) alongside HTTP/1.1
 
     testImplementation project(':json')
     testImplementation(testFixtures(project(':core')))

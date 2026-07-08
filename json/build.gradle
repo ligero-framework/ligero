@@ -3,6 +3,7 @@ description = 'Ligero JSON: Jackson-based BodyMapper implementation'
 dependencies {
     api project(':core')
     implementation libs.jackson.databind
+    implementation libs.jackson.jsr310
 
     testImplementation libs.junit.jupiter
     testRuntimeOnly libs.junit.launcher
