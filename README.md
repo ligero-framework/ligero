@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/website/static/img/Ligero.svg" alt="Ligero Logo" width="200">
+  <img src="assets/ligero.svg" alt="Ligero Logo" width="200">
   
   # Ligero Framework
   
