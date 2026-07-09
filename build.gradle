@@ -20,7 +20,7 @@ dependencyCheck {
 }
 
 allprojects {
-    group = project.findProperty('group') ?: 'com.ligero'
+    group = project.findProperty('group') ?: 'com.ligeroframework'
     version = rootProject.findProperty('version') ?: '0.2.0-SNAPSHOT'
 
     repositories {

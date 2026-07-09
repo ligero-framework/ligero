@@ -8,7 +8,7 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [0.3.0] — 2026-07-09
 
-First release published to Maven Central (`com.ligero:*:0.3.0`).
+First release published to Maven Central (`com.ligeroframework:*:0.3.0`).
 
 ### Fixed (performance)
 - **JDK engine throughput ~8× higher**: `com.sun.net.httpserver` left Nagle's

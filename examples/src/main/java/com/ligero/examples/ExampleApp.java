@@ -1,6 +1,8 @@
 package com.ligero.examples;
 
 import com.ligero.Ligero;
+import com.ligero.beans.Beans;
+import com.ligero.devtools.Devtools;
 import com.ligero.http.NotFoundException;
 import com.ligero.middleware.CorsMiddleware;
 import com.ligero.middleware.HealthMiddleware;
@@ -39,15 +41,21 @@ public final class ExampleApp {
 
     public static void main(String[] args) throws IOException {
         USERS.put(IDS.incrementAndGet(), new User(IDS.get(), "Ada Lovelace"));
+        Devtools devtools = Devtools.create();
 
+        Beans beans = Beans.builder()
+            .instrument(devtools.recorder())   // spies interface-typed beans
+            .start();
         Ligero app = Ligero.create(8080);
-
+        devtools.install(app, beans);
         // Cross-cutting concerns are middleware — the core stays closed for
         // modification, open for extension.
         app.use(new RequestIdMiddleware());
         app.use(new RequestLoggingMiddleware());
         app.use(SecurityHeadersMiddleware.defaults());
         app.use(CorsMiddleware.permissive());
+        app.use(OpenApi.of(app, "My API", "1.0.0")     // serves GET /openapi.json
+            .withSwaggerUi("/docs"));
         app.use(HealthMiddleware.defaults());                       // GET /health
         InMemoryMetricsCollector metrics = new InMemoryMetricsCollector();
         app.use(new MetricsMiddleware(metrics));
