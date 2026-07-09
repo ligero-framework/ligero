@@ -301,7 +301,7 @@ Check out the [examples directory](examples/src/main/java/com/ligero/examples) f
 
 ## Roadmap
 
-The detailed, phased roadmap lives in [ROADMAP.md](ROADMAP.md), backed by the technical assessment in [ARCHITECTURE_ANALYSIS.md](ARCHITECTURE_ANALYSIS.md). Highlights:
+The detailed, phased roadmap lives in [ROADMAP.md](ROADMAP.md). Highlights:
 
 - **Phase 0 (v0.2)** — Stabilization: bug fixes, dependency cleanup, tests, CI
 - **Phase 1 (v0.3)** — Extensible core: middleware chain, server/JSON SPIs, trie-based router
