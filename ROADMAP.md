@@ -1,7 +1,6 @@
 # Hoja de Ruta — Ligero Framework
 
-> **Documento canónico de la hoja de ruta.** Sustituye y consolida las notas previas de `ROUTE.md` y `FRAMEWORK_IMPROVEMENTS.md`.
-> El diagnóstico técnico que justifica cada fase está en [ARCHITECTURE_ANALYSIS.md](ARCHITECTURE_ANALYSIS.md).
+> **Documento canónico de la hoja de ruta.**
 > Última actualización: 2026-07-05. **Estado: todas las fases ejecutadas** salvo los ítems que dependen de credenciales/procesos externos o de hitos futuros (marcados con nota en cada casilla).
 
 ## Visión
@@ -25,7 +24,7 @@ Micro-framework web para Java 21+ con **cero dependencias en el core**, **virtua
 **Objetivo:** que lo que ya existe funcione, compile limpio y sea consumible como dependencia.
 **Esfuerzo estimado:** 2–3 semanas · **Prioridad:** crítica
 
-### 0.1 Corrección de bugs (referencias en ARCHITECTURE_ANALYSIS.md §3)
+### 0.1 Corrección de bugs
 
 - [x] **B1 — Path params rotos:** eliminar el chequeo `instanceof WrappedHttpRequest` en `Router.handle`; el router construye el request con params y lo pasa al handler (o `Context` mutable en Fase 1). Test de regresión end-to-end: `GET /users/42` debe devolver `id=42` a través del servidor real.
 - [x] **B2 — Quitar `--enable-preview`** de compilación, tests y `JavaExec` (no se usa ninguna API preview). Verificar que los `.class` publicados no llevan flag preview.
