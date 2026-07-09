@@ -39,15 +39,35 @@ app.start();
 - 🔁 **Real-time**: Server-Sent Events in core (`ctx.sse()`), WebSockets via the Jetty engine (`app.websocket(path, handler)`)
 - 📜 **OpenAPI**: generated from your routes, with opt-in Swagger UI (`ligero-openapi`)
 - 🧪 **Testable**: in-memory fake engine for unit tests, `ligero-test` for fluent end-to-end tests
+- 🧭 **Dependency injection & modules**: explicit, compile-checked wiring (no reflection) with an optional compile-time processor; feature modules (`LigeroModule`) that keep wiring out of `main()`
+- 🔬 **Visual devtools**: `/ligero/dev` shows a live bean graph and per-request traces (`ligero-devtools`)
+- 🗄️ **Data, your way**: `ligero-jdbc` (SQL → records, no ORM), `ligero-jpa` (Hibernate), and `ligero-migrations` (Flyway) — mix and match
+- ⚙️ **YAML config + profiles**: `ligero.yml` with per-profile overlays and `${ENV:-default}` interpolation (`ligero-config-yaml`)
+- ✅ **Validation**: annotation-based request validation → automatic 400 (`ligero-validation`)
+- 🌐 **HTTP/2**: h2c on the Jetty engine, one line to switch
+- 📈 **Scales out**: Redis-backed rate-limit and session stores shared across instances (`ligero-redis`)
+
+> 📖 **New to Ligero?** Follow the **[Learning Path](https://ligero-framework.github.io/ligero-docs/learning-path)** — a guided route from your first route to a production service.
 
 ## Modules
 
+Everything except `ligero-core` and an engine is optional — add a module when
+you need it, carry nothing you don't.
+
 | Artifact | What it is |
 |---|---|
-| `ligero-core` | Public API, router, middleware, SPIs — zero deps (slf4j-api only) |
-| `ligero-server-jdk` | Default `ServerEngine` (JDK http server, virtual threads) |
-| `ligero-server-jetty` | Alternative `ServerEngine` on Jetty 12 (adds WebSocket support) |
-| `ligero-json` | Jackson `BodyMapper` (enables `ctx.body()` / `ctx.json()`) |
+| `ligero-core` | Public API, router, middleware, DI (`Beans`), feature modules, SPIs — zero deps (slf4j-api only) |
+| `ligero-server-jdk` | Default `ServerEngine` (JDK http server, virtual threads, TCP_NODELAY) |
+| `ligero-server-jetty` | Alternative `ServerEngine` on Jetty 12 — adds **HTTP/2 (h2c)** and WebSockets |
+| `ligero-json` | Jackson `BodyMapper` (`ctx.body()` / `ctx.json()`), with `java.time` support |
+| `ligero-processor` | Optional compile-time annotation processor that generates the DI wiring |
+| `ligero-devtools` | `/ligero/dev` dashboard — live bean graph + per-request traces |
+| `ligero-config-yaml` | `ligero.yml` + profiles, `${ENV:-default}` interpolation (`ConfigSource` SPI) |
+| `ligero-jdbc` | Tiny SQL helper — query → record, transactions, no ORM |
+| `ligero-jpa` | Thin JPA/Hibernate helper (bring your own provider) |
+| `ligero-migrations` | Schema migrations at startup via Flyway |
+| `ligero-validation` | Annotation-based request validation (Bean Validation / Hibernate Validator) → 400 |
+| `ligero-redis` | Distributed rate-limit + session stores for scaling out |
 | `ligero-auth` | JWT (HS256), CSRF, sessions |
 | `ligero-template-mustache` | `TemplateEngine` adapter (JMustache) |
 | `ligero-template-freemarker` | `TemplateEngine` adapter (FreeMarker) |
