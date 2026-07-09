@@ -147,6 +147,14 @@ subprojects {
         }
 
         signing {
+            // Clave GPG en memoria para CI (armored key + passphrase por
+            // -PsigningKey / -PsigningPassword, es decir ORG_GRADLE_PROJECT_signingKey).
+            // Si no hay clave (build local / SNAPSHOT), no se firma.
+            def signingKey = findProperty('signingKey')
+            def signingPassword = findProperty('signingPassword')
+            if (signingKey) {
+                useInMemoryPgpKeys(signingKey.toString(), signingPassword?.toString())
+            }
             // Solo se firma en releases; los SNAPSHOT (y publishToMavenLocal)
             // no requieren clave GPG configurada.
             required = provider { !version.toString().endsWith('SNAPSHOT') }
