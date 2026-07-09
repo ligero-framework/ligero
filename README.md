@@ -3,7 +3,7 @@
   
   # Ligero Framework
   
-  [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![Java](https://img.shields.io/badge/Java-21%2B-orange.svg)](https://www.oracle.com/java/technologies/javase/jdk21-archive-downloads.html) [![Documentation](https://img.shields.io/badge/Documentation-Online-brightgreen)](https://ligero-framework.github.io/ligero-docs/) [![Maven Central](https://img.shields.io/maven-central/v/com.ligero/ligero-core.svg)](https://search.maven.org/search?q=g:com.ligero)
+  [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![Java](https://img.shields.io/badge/Java-21%2B-orange.svg)](https://www.oracle.com/java/technologies/javase/jdk21-archive-downloads.html) [![Documentation](https://img.shields.io/badge/Documentation-Online-brightgreen)](https://doc.ligeroframework.com/) [![Maven Central](https://img.shields.io/maven-central/v/com.ligeroframework/ligero-core.svg)](https://search.maven.org/search?q=g:com.ligeroframework)
 
   <p><em>A lightweight Java web framework for modern applications</em></p>
 </div>
@@ -47,7 +47,7 @@ app.start();
 - 🌐 **HTTP/2**: h2c on the Jetty engine, one line to switch
 - 📈 **Scales out**: Redis-backed rate-limit and session stores shared across instances (`ligero-redis`)
 
-> 📖 **New to Ligero?** Follow the **[Learning Path](https://ligero-framework.github.io/ligero-docs/learning-path)** — a guided route from your first route to a production service.
+> 📖 **New to Ligero?** Follow the **[Learning Path](https://doc.ligeroframework.com/learning-path)** — a guided route from your first route to a production service.
 
 ## Modules
 
@@ -86,26 +86,26 @@ you need it, carry nothing you don't.
 ### Gradle
 
 ```groovy
-implementation 'com.ligero:ligero-core:0.2.0-SNAPSHOT'       // API
-runtimeOnly    'com.ligero:ligero-server-jdk:0.2.0-SNAPSHOT' // server engine (SPI)
-runtimeOnly    'com.ligero:ligero-json:0.2.0-SNAPSHOT'       // JSON mapper (SPI, optional)
+implementation 'com.ligeroframework:ligero-core:0.2.0-SNAPSHOT'       // API
+runtimeOnly    'com.ligeroframework:ligero-server-jdk:0.2.0-SNAPSHOT' // server engine (SPI)
+runtimeOnly    'com.ligeroframework:ligero-json:0.2.0-SNAPSHOT'       // JSON mapper (SPI, optional)
 ```
 
 ### Maven
 
 ```xml
 <dependency>
-    <groupId>com.ligero</groupId>
+    <groupId>com.ligeroframework</groupId>
     <artifactId>ligero-core</artifactId>
     <version>0.2.0-SNAPSHOT</version>
 </dependency>
 <dependency>
-    <groupId>com.ligero</groupId>
+    <groupId>com.ligeroframework</groupId>
     <artifactId>ligero-server-jdk</artifactId>
     <version>0.2.0-SNAPSHOT</version>
 </dependency>
 <dependency>
-    <groupId>com.ligero</groupId>
+    <groupId>com.ligeroframework</groupId>
     <artifactId>ligero-json</artifactId>
     <version>0.2.0-SNAPSHOT</version>
 </dependency>
@@ -311,7 +311,7 @@ The detailed, phased roadmap lives in [ROADMAP.md](ROADMAP.md). Highlights:
 
 ## Documentation & Tooling
 
-- 📚 Full documentation: [ligero-framework/ligero-docs](https://github.com/ligero-framework/ligero-docs) (published at [ligero-framework.github.io/ligero-docs](https://ligero-framework.github.io/ligero-docs/))
+- 📚 Full documentation: [ligero-framework/ligero-docs](https://github.com/ligero-framework/ligero-docs) (published at [doc.ligeroframework.com](https://doc.ligeroframework.com/))
 - 🛠️ Project scaffolding: [ligero-framework/ligero-cli](https://github.com/ligero-framework/ligero-cli) — `ligero new my-api`
 
 ## Contributing

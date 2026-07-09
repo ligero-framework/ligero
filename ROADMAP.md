@@ -167,7 +167,7 @@ Micro-framework web para Java 21+ con **cero dependencias en el core**, **virtua
 ### Gobernanza y release 1.0
 - [x] Política semver estricta + `CHANGELOG.md` (Keep a Changelog). *(Notas de release automatizadas: al primer release.)*
 - [ ] 0.9.x = **API freeze**: solo bugfixes y docs; RFC público para cambios de API — **decisión de proceso al llegar a 0.9**, no ejecutable hoy.
-- [x] Documentación completa (Docusaurus, repositorio separado): 16 páginas — intro, instalación, quickstart y guías de routing, context, middleware, errores, configuración, seguridad, observabilidad, tiempo real, templates, OpenAPI, testing y engines, más referencia de módulos y arquitectura. **Publicada en [ligero-framework/ligero-docs](https://github.com/ligero-framework/ligero-docs)** (build de Docusaurus verificado) con deploy automático a GitHub Pages. *(Pendiente: habilitar Pages en el repo, traducción ES vía i18n, y retirar `docs/website` de este repo.)*
+- [x] Documentación completa (Docusaurus, repositorio separado): 16 páginas — intro, instalación, quickstart y guías de routing, context, middleware, errores, configuración, seguridad, observabilidad, tiempo real, templates, OpenAPI, testing y engines, más referencia de módulos y arquitectura. **Publicada en [ligero-framework/ligero-docs](https://github.com/ligero-framework/ligero-docs)** (build de Docusaurus verificado) con deploy automático a GitHub Pages. *(Traducción ES vía i18n: pendiente.)*
 - [x] `CONTRIBUTING.md` (con las reglas de arquitectura), plantillas de issue/PR, código de conducta.
 - [ ] **1.0.0:** garantía de compatibilidad, política de soporte, publicación estable en Maven Central — **requiere credenciales del propietario y madurez de API (post 0.9)**.
 

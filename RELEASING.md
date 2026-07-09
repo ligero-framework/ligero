@@ -4,7 +4,7 @@ How to cut a coordinated release across the four repositories:
 
 | Repo | What ships | Where |
 |---|---|---|
-| **[ligero](https://github.com/ligero-framework/ligero)** | the framework modules | Maven Central (`com.ligero:*`) |
+| **[ligero](https://github.com/ligero-framework/ligero)** | the framework modules | Maven Central (`com.ligeroframework:*`) |
 | **[ligero-cli](https://github.com/ligero-framework/ligero-cli)** | the `ligero` scaffolding CLI | GitHub Release (dist) |
 | **[ligero-examples](https://github.com/ligero-framework/ligero-examples)** | runnable example apps | Git tag |
 | **[ligero-docs](https://github.com/ligero-framework/ligero-docs)** | the documentation site | GitHub Pages |
@@ -29,7 +29,7 @@ Dependencies flow downhill — release in this order:
 
 ## 0. Prerequisites (one-time)
 
-- A **Central Portal** (Sonatype) account with the `com.ligero` namespace
+- A **Central Portal** (Sonatype) account with the `com.ligeroframework` namespace
   verified — see [MAVEN_CENTRAL_PUBLISHING.md](MAVEN_CENTRAL_PUBLISHING.md).
 - A **GPG key** published to a public keyserver.
 - Secrets configured on the `ligero` repo:
@@ -54,7 +54,7 @@ Dependencies flow downhill — release in this order:
      -PmavenCentralPassword="$MAVEN_CENTRAL_PASSWORD"
    ```
    Verify on [central.sonatype.com](https://central.sonatype.com) and, once
-   synced, at `https://repo1.maven.org/maven2/com/ligero/`.
+   synced, at `https://repo1.maven.org/maven2/com/ligeroframework/`.
 7. **GitHub Release:** create it from tag `vX.Y.Z` — notes are auto-categorized
    via [`.github/release.yml`](.github/release.yml).
 8. **Post-release:** on `main`, bump `version` to the next `-SNAPSHOT`

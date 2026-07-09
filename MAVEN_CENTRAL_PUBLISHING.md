@@ -14,7 +14,7 @@ Before you can publish to Maven Central, you need:
 ### 1. Create a Sonatype OSSRH Account
 
 1. Sign up at [Sonatype JIRA](https://issues.sonatype.org/secure/Signup)
-2. Create a New Project ticket requesting access to publish under `com.ligero` group ID
+2. Create a New Project ticket requesting access to publish under `com.ligeroframework` group ID
 3. Prove ownership of the domain (if you're using a domain-based group ID)
 4. Wait for approval (this may take a few days)
 
