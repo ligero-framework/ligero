@@ -6,12 +6,19 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-07-10
+
 ### Added
 - **Startup banner**: `Ligero.start()` now prints a themed banner (the whale +
   wordmark in ANSI colors) followed by a Spring-Boot-style
   `Ligero started in Xs (JVM running for Ys) on http://… · engine · virtual threads`
   line. Colors auto-disable when stdout isn't a terminal or `NO_COLOR` is set;
   `LIGERO_BANNER=plain` forces no color and `LIGERO_BANNER=off` hides it.
+
+### Changed
+- **Maven coordinates**: the group id is **`com.ligeroframework`** (e.g.
+  `com.ligeroframework:ligero-core:0.5.0`). The Java package is unchanged
+  (`com.ligero`). Update your dependency coordinates when upgrading.
 
 ## [0.3.0] — 2026-07-09
 
