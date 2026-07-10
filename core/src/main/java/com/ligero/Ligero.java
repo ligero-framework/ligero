@@ -262,6 +262,8 @@ public final class Ligero implements AutoCloseable {
         if (started) {
             throw new IllegalStateException("Server is already running");
         }
+        long startNanos = System.nanoTime();
+        Banner.print(System.out);
         if (engine == null) {
             engine = ServiceLoader.load(ServerEngine.class).findFirst()
                 .orElseThrow(() -> new IllegalStateException(
@@ -280,8 +282,8 @@ public final class Ligero implements AutoCloseable {
         engine.start(engineConfig, buildRootHandler());
         started = true;
 
-        log.info("Ligero started on http://{}:{}{}", config.host(), engine.port(),
-            "/".equals(config.contextPath()) ? "" : config.contextPath());
+        log.info(Banner.startedLine(config.host(), engine.port(), config.contextPath(),
+            engine, config.virtualThreads(), startNanos));
         if (log.isDebugEnabled()) {
             router.routes().forEach((method, paths) ->
                 paths.forEach(path -> log.debug("  {} {}", method, path)));
