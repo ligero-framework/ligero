@@ -18,8 +18,8 @@
     --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
   }
   * { box-sizing: border-box; margin: 0; }
-  html, body { height: 100%; }
-  body { background: radial-gradient(1200px 600px at 80% -10%, #1a2030 0%, var(--bg) 55%) fixed;
+  html { background: var(--bg); }
+  body { min-height: 100vh; background: radial-gradient(1200px 600px at 80% -10%, #1a2030 0%, var(--bg) 55%) fixed;
     color: var(--text); font: 14px/1.55 var(--ui); -webkit-font-smoothing: antialiased; }
   a { color: var(--controller); }
 
