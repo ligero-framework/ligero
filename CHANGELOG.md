@@ -6,6 +6,39 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-07-11
+
+### Added
+- **Interactive devtools dashboard** (`ligero-devtools`). The `/ligero/dev`
+  page is now a graph-centred workbench, not just a static viewer:
+  - **Run any route from the browser** — a Postman-style request panel edits
+    path params, query and a JSON body and sends the call, then shows the
+    response (status, timing, JSON body).
+  - **Bean graph with per-request highlighting** — selecting a request lights
+    up its whole *dependency graph* (the transitive closure of beans it can
+    reach); sending it then overlays the actual *execution path* in the HTTP
+    method's colour (GET green, POST blue, …), so branches a run didn't take
+    stay visible as dependencies but aren't part of the execution.
+  - **Per-node detail** — clicking a bean shows, for the selected run, each of
+    its invocations with **arguments and return value as real JSON** plus
+    timing, and its stereotype/dependencies.
+  - **Requests + History** tabs, live updates over SSE, and full **light/dark
+    themes** with a toggle.
+- **`JsonValue`** — a small, dependency-free reflective JSON serializer inside
+  `ligero-devtools` that renders any layer's arguments and results as real
+  JSON (records, beans, collections, maps) with depth/size caps and cycle
+  guards, replacing the previous `toString` preview.
+- **Correlation header `X-Ligero-Dev`** — when the dashboard fires a request it
+  stamps this header; `TraceMiddleware` uses it as the trace id so the browser
+  can match the trace it receives to the request it sent.
+
+### Changed
+- **`Context.json/text/html` remember the response body** under the
+  `Context.RESPONSE_BODY_ATTRIBUTE` attribute (a single map put; no
+  serialization unless something reads it) so devtools can show the
+  controller's result as JSON. `RequestTrace` now also carries the matched
+  route pattern and the request inputs.
+
 ## [0.5.0] — 2026-07-10
 
 ### Added
