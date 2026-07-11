@@ -167,6 +167,7 @@ const COLORS = { controller: 'var(--controller)', service: 'var(--service)', rep
 
 let GRAPH = { nodes: [], edges: [], unspied: [] }, ROUTES = [], TRACES = [], layout = null;
 let selectedRouteIdx = null, currentTraceId = null, selectedNode = null;
+let focus = null;   // { nodes, edges } dependency closure to light up (dim the rest); null = whole graph
 let leftTab = 'routes', rightTab = 'request';
 const routeState = {};   // idx -> { pp:{}, query, body }
 const pendingRun = new Set();   // ids we fired from Send, to auto-select when their trace arrives
@@ -220,25 +221,47 @@ function pathOf(trace) {
     nodes.add(fqn); stack[c.depth] = fqn; if (c.depth === 0) entryTargets.add(fqn); else { const p = stack[c.depth - 1]; if (p) edges.add(p + ' ' + fqn); } });
   return { nodes, edges, entryTargets };
 }
+// beans a request enters directly (its depth-0 calls)
+function entryBeans(trace) {
+  const bySimple = {}; GRAPH.nodes.forEach(n => bySimple[simple(n.type)] = n.type);
+  const set = new Set(); if (trace) trace.calls.forEach(c => { if (c.depth === 0) { const f = bySimple[c.declaredBy]; if (f) set.add(f); } });
+  return set;
+}
+// the full static dependency closure reachable from a set of entry beans
+function closureFrom(entry) {
+  const adj = {}; GRAPH.edges.forEach(e => { (adj[e.from] = adj[e.from] || []).push(e.to); });
+  const nodes = new Set(entry), edges = new Set(), stack = [...entry];
+  while (stack.length) { const c = stack.pop(); (adj[c] || []).forEach(to => { edges.add(c + ' ' + to); if (!nodes.has(to)) { nodes.add(to); stack.push(to); } }); }
+  return { nodes, edges };
+}
 function renderGraph() {
-  const g = GRAPH, L = layout, trace = currentTrace(), path = pathOf(trace), active = !!trace;
-  const mc = trace ? methodColor(trace.method) : 'var(--accent)';   // path colour = method colour
+  // Two independent layers:
+  //   focus  = the request's dependency closure -> lit; everything else -> dim.
+  //   trace  = the actual execution path (only after Send) -> hot, method-coloured.
+  const g = GRAPH, L = layout, trace = currentTrace(), exec = !!trace, path = pathOf(trace);
+  const mc = trace ? methodColor(trace.method) : 'var(--accent)';
+  const hasFocus = !!focus;
+  const dimEdge = (f, t) => hasFocus && !focus.edges.has(f + ' ' + t);
+  const dimNode = ty => hasFocus && !focus.nodes.has(ty);
   let s = `<svg width="${L.width}" height="${L.height}" viewBox="0 0 ${L.width} ${L.height}"><defs>`
     + '<marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--edge)"/></marker>'
     + `<marker id="arwh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${mc}"/></marker></defs>`;
   for (const e of g.edges) { const a = L.pos[e.from], b = L.pos[e.to]; if (!a || !b) continue;
-    const hot = path.edges.has(e.from + ' ' + e.to), cls = 'edge' + (hot ? ' hot' : active ? ' dim' : '');
+    const onPath = exec && path.edges.has(e.from + ' ' + e.to);
+    let cls = 'edge', style = '';
+    if (onPath) { cls += ' hot'; style = ` style="stroke:${mc}"`; } else if (dimEdge(e.from, e.to)) cls += ' dim';
     const x1 = a.x + NODE.W, y1 = a.y + NODE.H / 2, x2 = b.x, y2 = b.y + NODE.H / 2, mx = (x1 + x2) / 2;
-    s += `<path class="${cls}"${hot ? ` style="stroke:${mc}"` : ''} marker-end="url(#${hot ? 'arwh' : 'arw'})" d="M${x1} ${y1}C${mx} ${y1},${mx} ${y2},${x2} ${y2}"/>`; }
-  if (active) { const targets = [...path.entryTargets].map(t => L.pos[t]).filter(Boolean);
+    s += `<path class="${cls}"${style} marker-end="url(#${onPath ? 'arwh' : 'arw'})" d="M${x1} ${y1}C${mx} ${y1},${mx} ${y2},${x2} ${y2}"/>`; }
+  if (exec) { const targets = [...path.entryTargets].map(t => L.pos[t]).filter(Boolean);   // entry arrow only once executed
     if (targets.length) { const ey = targets.reduce((s2, t) => s2 + t.y + NODE.H / 2, 0) / targets.length;
       const ex = 12, ew = NODE.ENTRY - 26, eh = 34, etop = ey - eh / 2;
       for (const t of targets) { const x1 = ex + ew, y1 = ey, x2 = t.x, y2 = t.y + NODE.H / 2, mx = (x1 + x2) / 2;
         s += `<path class="edge hot" style="stroke:${mc}" marker-end="url(#arwh)" d="M${x1} ${y1}C${mx} ${y1},${mx} ${y2},${x2} ${y2}"/>`; }
       s += `<g class="gnode entry hot${selectedNode === '__http__' ? ' sel' : ''}" onclick="clickNode('__http__')"><rect style="fill:${mc}" x="${ex}" y="${etop}" width="${ew}" height="${eh}" stroke="${mc}"/>`
         + `<text x="${ex + ew / 2}" y="${etop + eh / 2 + 4}" text-anchor="middle">▶ ${esc(trace.method)}</text></g>`; } }
-  for (const type in L.pos) { const { x, y, n } = L.pos[type], color = stColor(n.stereotype), inPath = path.nodes.has(type);
-    let cls = 'gnode'; if (active) cls += inPath ? ' hot' : ' dim'; if (selectedNode === type) cls += ' sel';
+  for (const type in L.pos) { const { x, y, n } = L.pos[type], color = stColor(n.stereotype);
+    const onPath = exec && path.nodes.has(type);
+    let cls = 'gnode'; if (onPath) cls += ' hot'; else if (dimNode(type)) cls += ' dim'; if (selectedNode === type) cls += ' sel';
     const count = trace ? trace.calls.filter(c => simple(type) === c.declaredBy).length : 0;
     s += `<g class="${cls}" onclick="clickNode('${type}')"><title>${esc(type)}</title>`
       + `<rect x="${x}" y="${y}" width="${NODE.W}" height="${NODE.H}" stroke="${color}"/>`
@@ -273,15 +296,17 @@ function setRightTab(t) { if (t === 'node' && !selectedNode) return; rightTab = 
   document.getElementById('rt-node').classList.toggle('sel', t === 'node'); renderRight(); }
 
 function selectRoute(gi) {
-  selectedRouteIdx = gi;
+  // Selecting a request shows its dependency graph — every bean it can reach —
+  // but NOT an execution path: which branch runs is only known after Send.
+  selectedRouteIdx = gi; selectedNode = null; currentTraceId = null;
+  document.getElementById('rt-node').style.display = 'none';
   const r = ROUTES[gi];
-  // auto-paint the graph with this route's most recent run, if it has one
-  const t = TRACES.find(x => x.method === r.method && (x.route || x.path) === r.path);
-  if (t) { setCurrentTrace(t.id); }
-  else { currentTraceId = null; selectedNode = null; document.getElementById('rt-node').style.display = 'none';
-    document.getElementById('graph-hint').textContent = 'Run this request to light up its path';
-    renderGraph(); rightTab = 'request'; setRightTab('request'); }
-  renderLeft();
+  const last = TRACES.find(x => x.method === r.method && (x.route || x.path) === r.path);
+  focus = last ? closureFrom(entryBeans(last)) : null;
+  document.getElementById('graph-hint').textContent = last
+    ? 'Dependency graph for this request · Send to trace the execution path'
+    : 'Run this request to map its dependencies and path';
+  renderGraph(); rightTab = 'request'; setRightTab('request'); renderLeft();
 }
 
 function captureEditor() {
@@ -376,11 +401,13 @@ async function runRequest() {
 function onNewTrace(t, fromRun) {
   const isRun = fromRun || pendingRun.has(t.id); pendingRun.delete(t.id);
   const i = TRACES.findIndex(x => x.id === t.id); if (i >= 0) TRACES[i] = t; else TRACES.unshift(t);
-  if (isRun || currentTraceId == null) setCurrentTrace(t.id);
-  else { renderLeft(); }
+  if (isRun) { const gi = ROUTES.findIndex(r => r.method === t.method && r.path === (t.route || t.path)); if (gi >= 0) selectedRouteIdx = gi; setCurrentTrace(t.id); }
+  else renderLeft();   // external traffic just lands in History; it doesn't hijack the view
 }
-function setCurrentTrace(id) { currentTraceId = id; selectedNode = null; document.getElementById('rt-node').style.display = 'none';
-  document.getElementById('graph-hint').textContent = 'Path highlighted · click a node for its arguments & response';
+function setCurrentTrace(id) { const t = TRACES.find(x => x.id === id); if (!t) return;
+  currentTraceId = id; selectedNode = null; document.getElementById('rt-node').style.display = 'none';
+  focus = closureFrom(entryBeans(t));   // light the dep graph, plus the execution path on top
+  document.getElementById('graph-hint').textContent = 'Execution path highlighted (bold) over the dependency graph · click a node for detail';
   renderGraph(); renderLeft(); if (rightTab === 'node') rightTab = 'request'; setRightTab('request'); }
 
 function selectHistory(id) { const t = TRACES.find(x => x.id === id); if (!t) return;
@@ -399,7 +426,9 @@ async function boot() {
   else { [GRAPH, ROUTES, TRACES] = await Promise.all(['/api/graph', '/api/routes', '/api/requests'].map(u => fetch(base + u).then(r => r.json()))); }
   layout = computeLayout(GRAPH);
   renderLeft(); renderRight(); renderGraph();
-  if (TRACES.length) setCurrentTrace(TRACES[0].id);
+  // open on a request's dependency graph (not an execution path)
+  if (TRACES.length) { const t = TRACES[0], gi = ROUTES.findIndex(r => r.method === t.method && r.path === (t.route || t.path));
+    if (gi >= 0) selectRoute(gi); }
   const live = document.getElementById('live');
   if (OFFLINE) { live.classList.add('on'); live.textContent = 'sample data'; }
   else { const es = new EventSource(base + '/api/stream');
