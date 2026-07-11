@@ -129,11 +129,26 @@
   .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
   .notice { background: var(--panel); border: 1px solid var(--border); border-radius: 9px;
     padding: 10px 14px; color: var(--muted); font-size: 12.5px; margin-bottom: 14px; }
+  .beans-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
+  @media (max-width: 900px) { .beans-layout { grid-template-columns: 1fr; } }
   #graph-box { background: linear-gradient(180deg, var(--panel), var(--bg-2)); border: 1px solid var(--border);
     border-radius: var(--radius); overflow: auto; padding: 6px; }
   svg text { fill: var(--text); font: 12px var(--mono); }
   svg .edge { stroke: #3a4157; stroke-width: 1.4; fill: none; }
   svg .node-rect { rx: 8; fill: #1e2330; stroke-width: 1.6; }
+  svg g[data-bean] { cursor: pointer; }
+  svg g[data-bean]:hover .node-rect { fill: #262c3c; }
+  svg .node-rect.sel { fill: #2a3346; stroke-width: 2.6; }
+  #bean-detail { padding: 16px; position: sticky; top: 16px; }
+  .bd-name { font: 600 15px var(--mono); color: #fff; word-break: break-all; margin-bottom: 3px; }
+  .bd-fqn { font: 11px var(--mono); color: var(--faint); word-break: break-all; margin-bottom: 14px; }
+  .bd-row { margin: 11px 0; font-size: 12.5px; }
+  .bd-row .k { display: block; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 4px; }
+  .bd-chip { font: 700 10px var(--mono); text-transform: uppercase; padding: 2px 8px; border-radius: 5px; }
+  .bd-list { list-style: none; padding: 0; margin: 0; }
+  .bd-list li { font: 12px var(--mono); padding: 2px 0; color: var(--text); }
+  .bd-list li::before { content: "→ "; color: var(--faint); }
+  .bd-none { color: var(--faint); font-size: 12px; }
 
   /* ---- Requests list ---- */
   .req-item { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; overflow: hidden;
@@ -189,7 +204,13 @@
       <span><i style="background:var(--bean)"></i>bean</span>
     </div>
     <div id="unspied" class="notice" style="display:none"></div>
-    <div id="graph-box"></div>
+    <div class="beans-layout">
+      <div id="graph-box"></div>
+      <div id="bean-detail" class="card">
+        <div class="side-h">Bean detail</div>
+        <div class="bd-none" style="padding:0 0 4px">Click a node to inspect its type, stereotype and dependencies.</div>
+      </div>
+    </div>
   </section>
 
   <!-- ============ REQUESTS ============ -->
@@ -363,8 +384,35 @@ function flowHtml(t) {
 }
 
 /* ============ BEANS GRAPH ============ */
+let graphData = null;
+
+function selectBean(type) {
+  const g = graphData; if (!g) return;
+  const node = g.nodes.find(n => n.type === type);
+  const stereo = (node && node.stereotype) || 'bean';
+  const color = COLORS[stereo] || COLORS.bean;
+  const deps = g.edges.filter(e => e.from === type).map(e => e.to);
+  const users = g.edges.filter(e => e.to === type).map(e => e.from);
+  const traceable = !g.unspied.includes(type);
+  const list = arr => arr.length
+    ? `<ul class="bd-list">${arr.map(x => `<li>${simple(x)}</li>`).join('')}</ul>`
+    : '<span class="bd-none">none</span>';
+  document.getElementById('bean-detail').innerHTML =
+    `<div class="side-h">Bean detail</div>
+     <div class="bd-name">${simple(type)}</div><div class="bd-fqn">${type}</div>
+     <div class="bd-row"><span class="k">Stereotype</span>
+       <span class="bd-chip" style="color:${color};background:${color}22">${stereo}</span></div>
+     <div class="bd-row"><span class="k">Traceable</span>
+       ${traceable ? '<span style="color:var(--service)">yes — its calls are spied</span>'
+                   : '<span style="color:var(--repository)">no — bound as a concrete class</span>'}</div>
+     <div class="bd-row"><span class="k">Depends on</span>${list(deps)}</div>
+     <div class="bd-row"><span class="k">Used by</span>${list(users)}</div>`;
+  document.querySelectorAll('#graph-box .node-rect').forEach(r =>
+    r.classList.toggle('sel', r.dataset.for === type));
+}
+
 async function drawGraph() {
-  const g = await (await fetch(base + '/api/graph')).json();
+  const g = graphData = await (await fetch(base + '/api/graph')).json();
   if (g.unspied.length) {
     const div = document.getElementById('unspied');
     div.style.display = 'block';
@@ -404,8 +452,8 @@ async function drawGraph() {
   for (const t in pos) {
     const { x, y, n } = pos[t];
     const color = COLORS[n.stereotype] || COLORS.bean;
-    s += `<g><title>${t} (${n.stereotype})</title>`
-      + `<rect class="node-rect" x="${x}" y="${y}" width="${BW}" height="${BH}" stroke="${color}"/>`
+    s += `<g data-bean onclick="selectBean('${t}')"><title>${t} (${n.stereotype})</title>`
+      + `<rect class="node-rect" data-for="${t}" x="${x}" y="${y}" width="${BW}" height="${BH}" stroke="${color}"/>`
       + `<text x="${x + BW / 2}" y="${y + BH / 2 + 4}" text-anchor="middle">${simple(t)}</text></g>`;
   }
   document.getElementById('graph-box').innerHTML = s + '</svg>';
