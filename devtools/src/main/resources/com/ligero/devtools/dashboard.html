@@ -6,56 +6,37 @@
 <title>Ligero Devtools</title>
 <style>
   :root {
-    --bg: #eef1f7; --surface: #ffffff; --surface-2: #f4f6fb; --elevated: #ffffff;
-    --border: #dce1ec; --border-2: #c8d0df; --text: #1b2130; --muted: #5c6678; --faint: #8b95a8;
-    --accent: #0ea56f; --accent-soft: rgba(14,165,111,.12); --edge: #b9c2d4;
-    --controller: #2f7ef0; --service: #10a06a; --repository: #e08a00;
-    --component: #7c5cf0; --bean: #64748b; --error: #e0483f;
+    --bg: #eef1f7; --surface: #ffffff; --surface-2: #f4f6fb; --border: #dce1ec; --border-2: #c8d0df;
+    --text: #1b2130; --muted: #5c6678; --faint: #8b95a8; --accent: #0ea56f; --accent-soft: rgba(14,165,111,.12); --edge: #b9c2d4;
+    --controller: #2f7ef0; --service: #10a06a; --repository: #e08a00; --component: #7c5cf0; --bean: #64748b; --error: #e0483f;
     --node-fill: #ffffff; --node-fill-2: #f4f6fb; --shadow: 0 8px 30px rgba(30,40,70,.10);
     --ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
-    color-scheme: light;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace; color-scheme: light;
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0d0f15; --surface: #14171f; --surface-2: #1a1e28; --elevated: #1c2029;
-      --border: #262b39; --border-2: #333a4d; --text: #e6eaf2; --muted: #8b95ad; --faint: #59617a;
-      --accent: #34d399; --accent-soft: rgba(52,211,153,.14); --edge: #39415a;
-      --controller: #5aa9f7; --service: #34d399; --repository: #f5b642;
-      --component: #b79bf5; --bean: #8a93ab; --error: #ef6b73;
-      --node-fill: #1c212e; --node-fill-2: #161b26; --shadow: 0 10px 34px rgba(0,0,0,.4);
-      color-scheme: dark;
-    }
-  }
+  @media (prefers-color-scheme: dark) { :root {
+    --bg: #0d0f15; --surface: #14171f; --surface-2: #1a1e28; --border: #262b39; --border-2: #333a4d;
+    --text: #e6eaf2; --muted: #8b95ad; --faint: #59617a; --accent: #34d399; --accent-soft: rgba(52,211,153,.14); --edge: #39415a;
+    --controller: #5aa9f7; --service: #34d399; --repository: #f5b642; --component: #b79bf5; --bean: #8a93ab; --error: #ef6b73;
+    --node-fill: #1c212e; --node-fill-2: #161b26; --shadow: 0 10px 34px rgba(0,0,0,.4); color-scheme: dark; } }
   :root[data-theme="light"] {
-    --bg: #eef1f7; --surface: #ffffff; --surface-2: #f4f6fb; --elevated: #ffffff;
-    --border: #dce1ec; --border-2: #c8d0df; --text: #1b2130; --muted: #5c6678; --faint: #8b95a8;
-    --accent: #0ea56f; --accent-soft: rgba(14,165,111,.12); --edge: #b9c2d4;
-    --controller: #2f7ef0; --service: #10a06a; --repository: #e08a00;
-    --component: #7c5cf0; --bean: #64748b; --error: #e0483f;
-    --node-fill: #ffffff; --node-fill-2: #f4f6fb; --shadow: 0 8px 30px rgba(30,40,70,.10);
-    color-scheme: light;
-  }
+    --bg: #eef1f7; --surface: #ffffff; --surface-2: #f4f6fb; --border: #dce1ec; --border-2: #c8d0df;
+    --text: #1b2130; --muted: #5c6678; --faint: #8b95a8; --accent: #0ea56f; --accent-soft: rgba(14,165,111,.12); --edge: #b9c2d4;
+    --controller: #2f7ef0; --service: #10a06a; --repository: #e08a00; --component: #7c5cf0; --bean: #64748b; --error: #e0483f;
+    --node-fill: #ffffff; --node-fill-2: #f4f6fb; --shadow: 0 8px 30px rgba(30,40,70,.10); color-scheme: light; }
   :root[data-theme="dark"] {
-    --bg: #0d0f15; --surface: #14171f; --surface-2: #1a1e28; --elevated: #1c2029;
-    --border: #262b39; --border-2: #333a4d; --text: #e6eaf2; --muted: #8b95ad; --faint: #59617a;
-    --accent: #34d399; --accent-soft: rgba(52,211,153,.14); --edge: #39415a;
-    --controller: #5aa9f7; --service: #34d399; --repository: #f5b642;
-    --component: #b79bf5; --bean: #8a93ab; --error: #ef6b73;
-    --node-fill: #1c212e; --node-fill-2: #161b26; --shadow: 0 10px 34px rgba(0,0,0,.4);
-    color-scheme: dark;
-  }
+    --bg: #0d0f15; --surface: #14171f; --surface-2: #1a1e28; --border: #262b39; --border-2: #333a4d;
+    --text: #e6eaf2; --muted: #8b95ad; --faint: #59617a; --accent: #34d399; --accent-soft: rgba(52,211,153,.14); --edge: #39415a;
+    --controller: #5aa9f7; --service: #34d399; --repository: #f5b642; --component: #b79bf5; --bean: #8a93ab; --error: #ef6b73;
+    --node-fill: #1c212e; --node-fill-2: #161b26; --shadow: 0 10px 34px rgba(0,0,0,.4); color-scheme: dark; }
 
   * { box-sizing: border-box; margin: 0; }
   html, body { height: 100%; }
-  body { background: var(--bg); color: var(--text); font: 14px/1.5 var(--ui);
-    -webkit-font-smoothing: antialiased; display: flex; flex-direction: column; }
+  body { background: var(--bg); color: var(--text); font: 14px/1.5 var(--ui); -webkit-font-smoothing: antialiased;
+    display: flex; flex-direction: column; overflow: hidden; }
   button { font-family: inherit; }
 
-  /* ---- 1. Header ---- */
-  header { display: flex; align-items: center; gap: 14px; padding: 12px 20px;
-    background: var(--surface); border-bottom: 1px solid var(--border); flex: none; }
-  .brand { display: flex; align-items: center; gap: 9px; font-weight: 650; font-size: 15.5px; letter-spacing: .2px; }
+  header { display: flex; align-items: center; gap: 14px; padding: 11px 20px; background: var(--surface); border-bottom: 1px solid var(--border); flex: none; }
+  .brand { display: flex; align-items: center; gap: 9px; font-weight: 650; font-size: 15.5px; }
   .brand .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 9px var(--accent); }
   .brand em { color: var(--accent); font-style: normal; }
   .pill { font-size: 11px; color: var(--muted); border: 1px solid var(--border-2); padding: 3px 10px; border-radius: 999px; }
@@ -63,115 +44,81 @@
   #live { font-size: 12px; color: var(--faint); display: flex; align-items: center; gap: 7px; }
   #live::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--faint); transition: .3s; }
   #live.on { color: var(--muted); } #live.on::before { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
-  .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px;
-    border: 1px solid var(--border-2); background: var(--surface-2); color: var(--text); border-radius: 9px; cursor: pointer; transition: .15s; }
+  .icon-btn { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border-2); background: var(--surface-2); color: var(--text); border-radius: 9px; cursor: pointer; }
   .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
 
-  /* ---- 2. Sub-header: requests ---- */
-  #reqbar { display: flex; align-items: center; gap: 8px; padding: 10px 20px; background: var(--surface);
-    border-bottom: 1px solid var(--border); overflow-x: auto; flex: none; scrollbar-width: thin; }
-  #reqbar .lbl { font: 600 10px var(--ui); text-transform: uppercase; letter-spacing: .7px; color: var(--faint); flex: none; margin-right: 2px; }
-  .new-btn { flex: none; display: inline-flex; align-items: center; gap: 6px; border: 1px dashed var(--border-2);
-    background: transparent; color: var(--muted); padding: 6px 12px; border-radius: 8px; cursor: pointer; font: 500 12.5px var(--ui); transition: .15s; }
-  .new-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .chip { flex: none; display: flex; align-items: center; gap: 8px; padding: 6px 11px; border: 1px solid var(--border);
-    background: var(--surface-2); border-radius: 9px; cursor: pointer; transition: .15s; white-space: nowrap; }
-  .chip:hover { border-color: var(--border-2); }
-  .chip.sel { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 1px var(--accent) inset; }
-  .chip .path { font: 12px var(--mono); color: var(--text); }
-  .chip .st { width: 7px; height: 7px; border-radius: 50%; }
-  .chip .t { font: 11px var(--mono); color: var(--faint); }
-  .verb { font: 700 10px var(--mono); letter-spacing: .3px; padding: 2px 6px; border-radius: 5px; color: #fff; }
+  .verb { font: 700 10px var(--mono); letter-spacing: .3px; padding: 2px 6px; border-radius: 5px; color: #fff; flex: none; }
   .v-get { background: var(--service); } .v-post { background: var(--controller); } .v-put { background: var(--repository); }
   .v-delete { background: var(--error); } .v-patch { background: var(--component); } .v-other { background: var(--bean); }
 
-  /* ---- 3. Stage: graph + 4. detail ---- */
-  #stage { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 400px; min-height: 0; }
-  @media (max-width: 860px) { #stage { grid-template-columns: 1fr; grid-template-rows: 1fr auto; } }
-  #graph-wrap { position: relative; overflow: auto; padding: 22px; }
-  .legend { position: absolute; top: 16px; left: 22px; display: flex; gap: 14px; flex-wrap: wrap;
-    font-size: 11.5px; color: var(--muted); z-index: 2; }
+  /* ---- graph (top) ---- */
+  #graph-wrap { position: relative; flex: 1 1 auto; min-height: 0; overflow: auto; padding: 20px; background:
+    radial-gradient(1000px 500px at 78% -20%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 60%); }
+  .legend { position: absolute; top: 14px; left: 20px; display: flex; gap: 13px; flex-wrap: wrap; font-size: 11.5px; color: var(--muted); z-index: 2; }
   .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: middle; }
-  .graph-hint { position: absolute; bottom: 16px; left: 22px; font-size: 12px; color: var(--faint); z-index: 2; }
-
-  svg { display: block; }
-  svg text { fill: var(--text); font: 12px var(--mono); pointer-events: none; }
+  .graph-hint { position: absolute; top: 14px; right: 20px; font-size: 11.5px; color: var(--faint); z-index: 2; }
+  svg { display: block; } svg text { fill: var(--text); font: 12px var(--mono); pointer-events: none; }
   .edge { stroke: var(--edge); stroke-width: 1.5; fill: none; transition: opacity .2s, stroke .2s; }
-  .edge.hot { stroke: var(--accent); stroke-width: 2.6; }
-  .edge.dim { opacity: .18; }
-  @media (prefers-reduced-motion: no-preference) {
-    .edge.hot { stroke-dasharray: 7 5; animation: flow 1s linear infinite; }
-    @keyframes flow { to { stroke-dashoffset: -24; } }
-  }
-  .gnode { cursor: pointer; }
-  .gnode rect { rx: 9; fill: var(--node-fill); stroke-width: 1.7; transition: opacity .2s, stroke-width .15s; }
-  .gnode:hover rect { fill: var(--node-fill-2); }
-  .gnode.hot rect { stroke-width: 2.6; }
-  .gnode.dim { opacity: .28; }
+  .edge.hot { stroke: var(--accent); stroke-width: 2.6; } .edge.dim { opacity: .16; }
+  @media (prefers-reduced-motion: no-preference) { .edge.hot { stroke-dasharray: 7 5; animation: flow 1s linear infinite; } @keyframes flow { to { stroke-dashoffset: -24; } } }
+  .gnode { cursor: pointer; } .gnode rect { rx: 9; fill: var(--node-fill); stroke-width: 1.7; transition: opacity .2s, stroke-width .15s; }
+  .gnode:hover rect { fill: var(--node-fill-2); } .gnode.hot rect { stroke-width: 2.6; } .gnode.dim { opacity: .26; }
   .gnode.sel rect { stroke-width: 3; filter: drop-shadow(0 0 7px var(--accent)); }
   .gnode .cnt { fill: var(--accent); font-weight: 700; }
-  .entry rect { fill: var(--accent); }
-  .entry text { fill: #04231a; font-weight: 700; }
-  :root[data-theme="dark"] .entry text, :root:not([data-theme="light"]) .entry text { fill: #04231a; }
+  .entry rect { fill: var(--accent); } .entry text { fill: #04231a; font-weight: 700; }
+  :root[data-theme="dark"] .entry text { fill: #04231a; }
+  @media (prefers-color-scheme: dark) { .entry text { fill: #04231a; } }
 
-  /* ---- Detail panel ---- */
-  #detail { background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 18px 18px 32px; }
-  @media (max-width: 860px) { #detail { border-left: none; border-top: 1px solid var(--border); max-height: 44vh; } }
-  .d-eyebrow { font: 600 10px var(--ui); text-transform: uppercase; letter-spacing: .8px; color: var(--faint); margin-bottom: 6px; }
-  .d-title { display: flex; align-items: center; gap: 9px; margin-bottom: 3px; }
-  .d-title h2 { font: 650 16px var(--mono); color: var(--text); word-break: break-all; }
-  .d-fqn { font: 11px var(--mono); color: var(--faint); word-break: break-all; margin-bottom: 14px; }
-  .chipst { font: 700 10px var(--mono); text-transform: uppercase; padding: 2px 8px; border-radius: 5px; }
-  .metaline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font: 12px var(--mono); color: var(--muted); margin-bottom: 14px; }
+  /* ---- workbench (bottom) ---- */
+  #workbench { flex: none; height: clamp(300px, 44vh, 560px); display: flex; border-top: 1px solid var(--border); background: var(--surface); min-height: 0; }
+  .wb-left { width: 300px; flex: none; border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
+  .wb-right { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .tabs { display: flex; gap: 3px; padding: 9px 10px 0; border-bottom: 1px solid var(--border); flex: none; }
+  .tab { padding: 7px 13px; border-radius: 8px 8px 0 0; font: 600 12.5px var(--ui); color: var(--muted); cursor: pointer; border: 1px solid transparent; border-bottom: none; position: relative; top: 1px; }
+  .tab:hover { color: var(--text); } .tab.sel { color: var(--text); background: var(--surface-2); border-color: var(--border); }
+  .tab.sel::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--accent); }
+  .wb-scroll { flex: 1; overflow-y: auto; min-height: 0; }
+
+  /* left lists */
+  .row { display: flex; align-items: center; gap: 9px; padding: 9px 14px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background .12s; }
+  .row:hover { background: var(--surface-2); } .row.sel { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+  .row .path { font: 12px var(--mono); color: var(--text); word-break: break-all; flex: 1; }
+  .row .st { width: 7px; height: 7px; border-radius: 50%; flex: none; } .row .t { font: 10.5px var(--mono); color: var(--faint); flex: none; }
+  .list-empty { color: var(--faint); font-size: 12px; padding: 20px 14px; }
+
+  /* right panel */
+  .rp-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); flex: none; }
+  .rp-head .url { font: 13px var(--mono); word-break: break-all; }
+  .send { margin-left: auto; background: var(--accent); color: #04231a; font: 650 13px var(--ui); border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; flex: none; }
+  .send:hover { filter: brightness(1.06); } .send:disabled { opacity: .5; }
+  .rp-body { flex: 1; overflow-y: auto; padding: 16px; min-height: 0; }
+  .rp-empty { color: var(--faint); text-align: center; padding: 60px 20px; font-size: 13px; }
+  .field { margin-bottom: 15px; } .field > label { display: block; font: 600 10px var(--ui); text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 6px; }
+  .field .hint { text-transform: none; letter-spacing: 0; color: var(--faint); font-weight: 400; }
+  input, textarea { width: 100%; background: var(--bg); color: var(--text); font: 12.5px var(--mono); border: 1px solid var(--border-2); border-radius: 8px; padding: 9px 11px; }
+  textarea { min-height: 120px; resize: vertical; } input:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .params { display: grid; grid-template-columns: 130px 1fr; gap: 8px 10px; align-items: center; } .params .pn { font: 12px var(--mono); color: var(--repository); }
+
+  .resp { margin-top: 6px; border-top: 1px solid var(--border); padding-top: 16px; }
+  .resp .meta { display: flex; align-items: center; gap: 12px; font: 12px var(--mono); color: var(--muted); margin-bottom: 10px; }
   .code { font: 700 12px var(--mono); padding: 2px 9px; border-radius: 6px; }
-  .status-2 { color: #063d2a; background: #b7f0d8; } .status-3 { color: #06263f; background: #bcdcfb; }
-  .status-4 { color: #3d2a06; background: #f6e2b0; } .status-5 { color: #3d0c08; background: #f6c3bf; }
-  :root[data-theme="dark"] .status-2, :root:not([data-theme="light"]) .status-2 { color: #04231a; background: var(--service); }
-  :root[data-theme="dark"] .status-3, :root:not([data-theme="light"]) .status-3 { color: #04223b; background: var(--controller); }
-  :root[data-theme="dark"] .status-4, :root:not([data-theme="light"]) .status-4 { color: #2a1c02; background: var(--repository); }
-  :root[data-theme="dark"] .status-5, :root:not([data-theme="light"]) .status-5 { color: #2a0806; background: var(--error); }
-  @media (prefers-color-scheme: dark) {
-    .status-2 { color: #04231a; background: var(--service); } .status-3 { color: #04223b; background: var(--controller); }
-    .status-4 { color: #2a1c02; background: var(--repository); } .status-5 { color: #2a0806; background: var(--error); }
-  }
+  .status-2 { color: #04231a; background: var(--service); } .status-3 { color: #04223b; background: var(--controller); }
+  .status-4 { color: #2a1c02; background: var(--repository); } .status-5 { color: #2a0806; background: var(--error); }
+  .lbl { font: 600 10px var(--ui); text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin: 14px 0 6px; }
+  .lbl:first-child { margin-top: 0; }
+  pre.json { font: 12px/1.5 var(--mono); background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 11px 13px; overflow-x: auto; white-space: pre; color: var(--text); }
+  .j-key { color: var(--controller); } .j-str { color: var(--service); } .j-num { color: var(--repository); } .j-bool { color: var(--component); } .j-null { color: var(--faint); }
 
-  .d-section { margin-top: 16px; }
-  .d-section > .k { font: 600 10px var(--ui); text-transform: uppercase; letter-spacing: .6px; color: var(--muted); display: block; margin-bottom: 6px; }
-  .d-list { list-style: none; padding: 0; margin: 0; }
-  .d-list li { font: 12px var(--mono); padding: 2px 0; color: var(--text); }
-  .d-list li::before { content: "→ "; color: var(--faint); }
-  .d-none { color: var(--faint); font-size: 12px; }
-  pre.json { font: 12px/1.5 var(--mono); background: var(--surface-2); border: 1px solid var(--border);
-    border-radius: 9px; padding: 11px 13px; overflow-x: auto; white-space: pre; color: var(--text); }
-  .j-key { color: var(--controller); } .j-str { color: var(--service); } .j-num { color: var(--repository); }
-  .j-bool { color: var(--component); } .j-null { color: var(--faint); }
-
-  .invocation { border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 9px;
-    padding: 10px 12px; margin-bottom: 10px; background: var(--surface-2); }
-  .invocation .sig { font: 12.5px var(--mono); color: var(--text); margin-bottom: 8px; }
-  .invocation .sig b { color: var(--text); } .invocation .dur { color: var(--faint); float: right; }
-  .invocation .lbl { font: 600 9.5px var(--ui); text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin: 8px 0 4px; }
+  .d-title { display: flex; align-items: center; gap: 9px; margin-bottom: 3px; }
+  .d-title h2 { font: 650 15px var(--mono); word-break: break-all; }
+  .chipst { font: 700 10px var(--mono); text-transform: uppercase; padding: 2px 8px; border-radius: 5px; }
+  .d-fqn { font: 11px var(--mono); color: var(--faint); word-break: break-all; margin-bottom: 4px; }
+  .invocation { border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 9px; padding: 10px 12px; margin-bottom: 10px; background: var(--surface-2); }
+  .invocation .sig { font: 12.5px var(--mono); } .invocation .dur { color: var(--faint); float: right; }
   .err-line { color: var(--error); font: 12px var(--mono); }
-
-  .empty-detail { color: var(--faint); text-align: center; padding: 48px 16px; font-size: 13px; }
-
-  /* ---- Compose modal ---- */
-  .overlay { position: fixed; inset: 0; background: rgba(6,9,16,.55); display: none; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
-  .overlay.open { display: flex; }
-  .modal { width: 520px; max-width: 100%; max-height: 88vh; overflow-y: auto; background: var(--surface);
-    border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 22px; }
-  .modal h3 { font-size: 15px; margin-bottom: 14px; }
-  .field { margin-bottom: 14px; } .field label { display: block; font: 600 10px var(--ui); text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 6px; }
-  select, input, textarea { width: 100%; background: var(--bg); color: var(--text); font: 12.5px var(--mono);
-    border: 1px solid var(--border-2); border-radius: 8px; padding: 9px 11px; }
-  textarea { min-height: 92px; resize: vertical; }
-  input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-  .params { display: grid; grid-template-columns: 130px 1fr; gap: 8px 10px; align-items: center; }
-  .params .pn { font: 12px var(--mono); color: var(--repository); }
-  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
-  .btn { padding: 9px 18px; border-radius: 8px; border: 1px solid var(--border-2); background: var(--surface-2); color: var(--text); cursor: pointer; font: 600 13px var(--ui); }
-  .btn.primary { background: var(--accent); border-color: var(--accent); color: #04231a; }
-  .btn:hover { filter: brightness(1.05); }
+  .d-list { list-style: none; padding: 0; margin: 0; } .d-list li { font: 12px var(--mono); padding: 2px 0; } .d-list li::before { content: "→ "; color: var(--faint); }
+  .d-none { color: var(--faint); font-size: 12px; }
 </style>
 </head>
 <body>
@@ -183,38 +130,34 @@
   <button class="icon-btn" id="theme-btn" title="Toggle theme" onclick="toggleTheme()">◐</button>
 </header>
 
-<div id="reqbar">
-  <span class="lbl">Requests</span>
-  <button class="new-btn" onclick="openCompose()">＋ New request</button>
-  <span id="chips" style="display:contents"></span>
-</div>
-
-<div id="stage">
-  <div id="graph-wrap">
-    <div class="legend">
-      <span><i style="background:var(--controller)"></i>controller</span>
-      <span><i style="background:var(--service)"></i>service</span>
-      <span><i style="background:var(--repository)"></i>repository</span>
-      <span><i style="background:var(--component)"></i>component</span>
-      <span><i style="background:var(--bean)"></i>bean</span>
-    </div>
-    <div id="graph-box"></div>
-    <div class="graph-hint" id="graph-hint">Select a request above to light up its path · click any node for detail</div>
+<!-- top: the bean graph, lights up the executed request's path -->
+<div id="graph-wrap">
+  <div class="legend">
+    <span><i style="background:var(--controller)"></i>controller</span>
+    <span><i style="background:var(--service)"></i>service</span>
+    <span><i style="background:var(--repository)"></i>repository</span>
+    <span><i style="background:var(--component)"></i>component</span>
+    <span><i style="background:var(--bean)"></i>bean</span>
   </div>
-  <aside id="detail"><div class="empty-detail">Pick a request, then click a node in the graph to inspect the arguments and response of each layer.</div></aside>
+  <div class="graph-hint" id="graph-hint">Run a request to light up its path</div>
+  <div id="graph-box"></div>
 </div>
 
-<div class="overlay" id="overlay" onclick="if(event.target===this)closeCompose()">
-  <div class="modal">
-    <h3>Send a request</h3>
-    <div class="field"><label>Route</label><select id="c-route" onchange="composeRoute()"></select></div>
-    <div id="c-params-wrap" class="field" style="display:none"><label>Path parameters</label><div id="c-params" class="params"></div></div>
-    <div class="field"><label>Query</label><input id="c-query" placeholder="page=1&size=20"></div>
-    <div id="c-body-wrap" class="field" style="display:none"><label>Body — JSON</label><textarea id="c-body" placeholder='{ "name": "Ada" }'></textarea></div>
-    <div class="modal-actions">
-      <button class="btn" onclick="closeCompose()">Cancel</button>
-      <button class="btn primary" onclick="sendCompose()">Send</button>
+<!-- bottom: workbench — left = requests, right = editor / node detail -->
+<div id="workbench">
+  <div class="wb-left">
+    <div class="tabs">
+      <div class="tab sel" id="lt-routes" onclick="setLeftTab('routes')">Requests</div>
+      <div class="tab" id="lt-history" onclick="setLeftTab('history')">History</div>
     </div>
+    <div class="wb-scroll" id="left-list"></div>
+  </div>
+  <div class="wb-right">
+    <div class="tabs">
+      <div class="tab sel" id="rt-request" onclick="setRightTab('request')">Request</div>
+      <div class="tab" id="rt-node" onclick="setRightTab('node')" style="display:none">Node</div>
+    </div>
+    <div id="right-panel" style="flex:1; display:flex; flex-direction:column; min-height:0;"></div>
   </div>
 </div>
 
@@ -222,258 +165,235 @@
 const OFFLINE = !!window.__LIGERO_OFFLINE__;
 const base = location.pathname.replace(/\/$/, '');
 const appRoot = base.slice(0, base.length - '/ligero/dev'.length);
-const COLORS = { controller: 'var(--controller)', service: 'var(--service)', repository: 'var(--repository)',
-  component: 'var(--component)', bean: 'var(--bean)' };
+const COLORS = { controller: 'var(--controller)', service: 'var(--service)', repository: 'var(--repository)', component: 'var(--component)', bean: 'var(--bean)' };
 
-let GRAPH = { nodes: [], edges: [], unspied: [] }, ROUTES = [], TRACES = [];
-let layout = null, selectedTraceId = null, selectedNode = null;
+let GRAPH = { nodes: [], edges: [], unspied: [] }, ROUTES = [], TRACES = [], layout = null;
+let selectedRouteIdx = null, currentTraceId = null, selectedNode = null;
+let leftTab = 'routes', rightTab = 'request';
+const routeState = {};   // idx -> { pp:{}, query, body }
+const pendingRun = new Set();   // ids we fired from Send, to auto-select when their trace arrives
 
-const simple = f => (f || '').split(/[.$]/).pop();   // leaf name: strips package and nesting
+const simple = f => (f || '').split(/[.$]/).pop();
 const esc = t => (t ?? '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;');
 const fmtUs = us => us == null ? '' : us >= 1000 ? (us / 1000).toFixed(us >= 10000 ? 0 : 1) + ' ms' : us + ' µs';
 const verbClass = m => ['get', 'post', 'put', 'delete', 'patch'].includes(m.toLowerCase()) ? 'v-' + m.toLowerCase() : 'v-other';
 const stColor = s => COLORS[s] || COLORS.bean;
+const pathParamsOf = p => [...p.matchAll(/[:{*]([a-zA-Z0-9_]+)}?/g)].map(m => m[1]);
+const appRoutes = () => ROUTES.filter(r => !r.path.startsWith('/ligero/dev'));
+const currentTrace = () => TRACES.find(t => t.id === currentTraceId) || null;
 
 /* ---- theme ---- */
-function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
-  document.getElementById('theme-btn').textContent = t === 'dark' ? '☾' : '☀'; }
-function toggleTheme() { const cur = document.documentElement.getAttribute('data-theme')
-    || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+function applyTheme(t) { document.documentElement.setAttribute('data-theme', t); document.getElementById('theme-btn').textContent = t === 'dark' ? '☾' : '☀'; }
+function toggleTheme() { const cur = document.documentElement.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   const next = cur === 'dark' ? 'light' : 'dark'; try { localStorage.setItem('ligero-theme', next); } catch (e) {} applyTheme(next); }
-(function () { let t; try { t = localStorage.getItem('ligero-theme'); } catch (e) {}
-  applyTheme(t || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')); })();
+(function () { let t; try { t = localStorage.getItem('ligero-theme'); } catch (e) {} applyTheme(t || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')); })();
 
 /* ---- JSON viewer ---- */
 function jsonHtml(v) {
   if (v === undefined) return '<span class="j-null">—</span>';
-  const s = JSON.stringify(v, null, 2);
-  if (s === undefined) return '<span class="j-null">undefined</span>';
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;')
-    .replace(/"(\\.|[^"\\])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g, m => {
-      let c = 'j-num';
-      if (/^"/.test(m)) c = /:$/.test(m) ? 'j-key' : 'j-str';
-      else if (/true|false/.test(m)) c = 'j-bool'; else if (/null/.test(m)) c = 'j-null';
-      return `<span class="${c}">${m}</span>`;
-    });
+  const s = JSON.stringify(v, null, 2); if (s === undefined) return '<span class="j-null">undefined</span>';
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"(\\.|[^"\\])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g, m => {
+    let c = 'j-num'; if (/^"/.test(m)) c = /:$/.test(m) ? 'j-key' : 'j-str'; else if (/true|false/.test(m)) c = 'j-bool'; else if (/null/.test(m)) c = 'j-null';
+    return `<span class="${c}">${m}</span>`; });
 }
 const jsonBlock = v => `<pre class="json">${jsonHtml(v)}</pre>`;
 
-/* ---- graph layout (dependency levels, left = consumers) ---- */
-const NODE = { W: 178, H: 40, GX: 96, GY: 26, PAD: 34, ENTRY: 150 };
+/* ================= GRAPH (top) ================= */
+const NODE = { W: 178, H: 40, GX: 96, GY: 26, PAD: 30, ENTRY: 150 };
 function computeLayout(g) {
-  const deps = {}; g.nodes.forEach(n => deps[n.type] = []);
-  g.edges.forEach(e => { if (deps[e.from]) deps[e.from].push(e.to); });
-  const level = {}, depth = t => {
-    if (t in level) return level[t]; level[t] = 0;
-    level[t] = deps[t].length ? 1 + Math.max(...deps[t].map(depth)) : 0; return level[t];
-  };
+  const deps = {}; g.nodes.forEach(n => deps[n.type] = []); g.edges.forEach(e => { if (deps[e.from]) deps[e.from].push(e.to); });
+  const level = {}, depth = t => { if (t in level) return level[t]; level[t] = 0; level[t] = deps[t].length ? 1 + Math.max(...deps[t].map(depth)) : 0; return level[t]; };
   g.nodes.forEach(n => depth(n.type));
   const maxLevel = Math.max(0, ...Object.values(level)), cols = [];
   g.nodes.forEach(n => { const c = maxLevel - level[n.type]; (cols[c] = cols[c] || []).push(n); });
   const pos = {};
-  cols.forEach((col, ci) => col.forEach((n, ri) =>
-    pos[n.type] = { x: NODE.PAD + NODE.ENTRY + ci * (NODE.W + NODE.GX), y: NODE.PAD + ri * (NODE.H + NODE.GY), n }));
+  cols.forEach((col, ci) => col.forEach((n, ri) => pos[n.type] = { x: NODE.PAD + NODE.ENTRY + ci * (NODE.W + NODE.GX), y: NODE.PAD + ri * (NODE.H + NODE.GY), n }));
   const width = NODE.PAD * 2 + NODE.ENTRY + cols.length * NODE.W + Math.max(0, cols.length - 1) * NODE.GX;
   const height = NODE.PAD * 2 + Math.max(1, ...cols.map(c => c.length)) * (NODE.H + NODE.GY) - NODE.GY;
-  return { pos, width: Math.max(width, 480), height: Math.max(height, 200) };
+  return { pos, width: Math.max(width, 480), height: Math.max(height, 180) };
 }
-
-/* ---- which nodes/edges a trace exercised ---- */
 function pathOf(trace) {
   const bySimple = {}; GRAPH.nodes.forEach(n => bySimple[simple(n.type)] = n.type);
   const nodes = new Set(), edges = new Set(), entryTargets = new Set(), stack = [];
-  if (trace) trace.calls.forEach(c => {
-    const fqn = bySimple[c.declaredBy]; if (!fqn) return;
-    nodes.add(fqn); stack[c.depth] = fqn;
-    if (c.depth === 0) entryTargets.add(fqn);
-    else { const parent = stack[c.depth - 1]; if (parent) edges.add(parent + ' ' + fqn); }
-  });
+  if (trace) trace.calls.forEach(c => { const fqn = bySimple[c.declaredBy]; if (!fqn) return;
+    nodes.add(fqn); stack[c.depth] = fqn; if (c.depth === 0) entryTargets.add(fqn); else { const p = stack[c.depth - 1]; if (p) edges.add(p + ' ' + fqn); } });
   return { nodes, edges, entryTargets };
 }
-
-/* ---- render the graph ---- */
 function renderGraph() {
-  const g = GRAPH, L = layout, trace = currentTrace();
-  const path = pathOf(trace), active = !!trace;
-  let s = `<svg width="${L.width}" height="${L.height}" viewBox="0 0 ${L.width} ${L.height}">`
-    + '<defs>'
+  const g = GRAPH, L = layout, trace = currentTrace(), path = pathOf(trace), active = !!trace;
+  let s = `<svg width="${L.width}" height="${L.height}" viewBox="0 0 ${L.width} ${L.height}"><defs>`
     + '<marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--edge)"/></marker>'
-    + '<marker id="arwh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--accent)"/></marker>'
-    + '</defs>';
-
-  // dependency edges
-  for (const e of g.edges) {
-    const a = L.pos[e.from], b = L.pos[e.to]; if (!a || !b) continue;
-    const hot = path.edges.has(e.from + ' ' + e.to);
-    const cls = 'edge' + (hot ? ' hot' : active ? ' dim' : '');
+    + '<marker id="arwh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--accent)"/></marker></defs>';
+  for (const e of g.edges) { const a = L.pos[e.from], b = L.pos[e.to]; if (!a || !b) continue;
+    const hot = path.edges.has(e.from + ' ' + e.to), cls = 'edge' + (hot ? ' hot' : active ? ' dim' : '');
     const x1 = a.x + NODE.W, y1 = a.y + NODE.H / 2, x2 = b.x, y2 = b.y + NODE.H / 2, mx = (x1 + x2) / 2;
-    s += `<path class="${cls}" marker-end="url(#${hot ? 'arwh' : 'arw'})" d="M${x1} ${y1}C${mx} ${y1},${mx} ${y2},${x2} ${y2}"/>`;
-  }
-  // entry node + edges (only when a request is selected)
-  if (active) {
-    const targets = [...path.entryTargets].map(t => L.pos[t]).filter(Boolean);
-    if (targets.length) {
-      const ey = targets.reduce((s2, t) => s2 + t.y + NODE.H / 2, 0) / targets.length;
-      const ex = 14, ew = NODE.ENTRY - 24, eh = 34, etop = ey - eh / 2;
-      for (const t of targets) {
-        const x1 = ex + ew, y1 = ey, x2 = t.x, y2 = t.y + NODE.H / 2, mx = (x1 + x2) / 2;
-        s += `<path class="edge hot" marker-end="url(#arwh)" d="M${x1} ${y1}C${mx} ${y1},${mx} ${y2},${x2} ${y2}"/>`;
-      }
-      const sel = selectedNode === '__http__' ? ' sel' : '';
-      s += `<g class="gnode entry hot${sel}" onclick="selectNode('__http__')"><rect x="${ex}" y="${etop}" width="${ew}" height="${eh}" stroke="var(--accent)"/>`
-        + `<text x="${ex + ew / 2}" y="${etop + eh / 2 + 4}" text-anchor="middle">▶ ${esc(trace.method)}</text></g>`;
-    }
-  }
-  // bean nodes
-  for (const type in L.pos) {
-    const { x, y, n } = L.pos[type], color = stColor(n.stereotype);
-    const inPath = path.nodes.has(type);
-    let cls = 'gnode';
-    if (active) cls += inPath ? ' hot' : ' dim';
-    if (selectedNode === type) cls += ' sel';
+    s += `<path class="${cls}" marker-end="url(#${hot ? 'arwh' : 'arw'})" d="M${x1} ${y1}C${mx} ${y1},${mx} ${y2},${x2} ${y2}"/>`; }
+  if (active) { const targets = [...path.entryTargets].map(t => L.pos[t]).filter(Boolean);
+    if (targets.length) { const ey = targets.reduce((s2, t) => s2 + t.y + NODE.H / 2, 0) / targets.length;
+      const ex = 12, ew = NODE.ENTRY - 26, eh = 34, etop = ey - eh / 2;
+      for (const t of targets) { const x1 = ex + ew, y1 = ey, x2 = t.x, y2 = t.y + NODE.H / 2, mx = (x1 + x2) / 2;
+        s += `<path class="edge hot" marker-end="url(#arwh)" d="M${x1} ${y1}C${mx} ${y1},${mx} ${y2},${x2} ${y2}"/>`; }
+      s += `<g class="gnode entry hot${selectedNode === '__http__' ? ' sel' : ''}" onclick="clickNode('__http__')"><rect x="${ex}" y="${etop}" width="${ew}" height="${eh}" stroke="var(--accent)"/>`
+        + `<text x="${ex + ew / 2}" y="${etop + eh / 2 + 4}" text-anchor="middle">▶ ${esc(trace.method)}</text></g>`; } }
+  for (const type in L.pos) { const { x, y, n } = L.pos[type], color = stColor(n.stereotype), inPath = path.nodes.has(type);
+    let cls = 'gnode'; if (active) cls += inPath ? ' hot' : ' dim'; if (selectedNode === type) cls += ' sel';
     const count = trace ? trace.calls.filter(c => simple(type) === c.declaredBy).length : 0;
-    s += `<g class="${cls}" onclick="selectNode('${type}')"><title>${esc(type)}</title>`
+    s += `<g class="${cls}" onclick="clickNode('${type}')"><title>${esc(type)}</title>`
       + `<rect x="${x}" y="${y}" width="${NODE.W}" height="${NODE.H}" stroke="${color}"/>`
       + `<text x="${x + NODE.W / 2}" y="${y + NODE.H / 2 + 4}" text-anchor="middle">${esc(simple(type))}</text>`
-      + (count ? `<text class="cnt" x="${x + NODE.W - 12}" y="${y + 14}" text-anchor="middle">${count}</text>` : '')
-      + `</g>`;
-  }
+      + (count ? `<text class="cnt" x="${x + NODE.W - 12}" y="${y + 14}" text-anchor="middle">${count}</text>` : '') + `</g>`; }
   document.getElementById('graph-box').innerHTML = s + '</svg>';
 }
 
-/* ---- requests sub-header ---- */
-function currentTrace() { return TRACES.find(t => t.id === selectedTraceId) || null; }
-function renderChips() {
-  const box = document.getElementById('chips');
-  if (!TRACES.length) { box.innerHTML = '<span class="d-none" style="padding:0 6px">no requests yet</span>'; return; }
-  box.innerHTML = TRACES.map(t =>
-    `<span class="chip${t.id === selectedTraceId ? ' sel' : ''}" onclick="selectTrace('${t.id}')">
-       <span class="verb ${verbClass(t.method)}">${esc(t.method)}</span>
-       <span class="path">${esc(t.path)}</span>
-       <span class="st" style="background:${t.status < 400 ? 'var(--service)' : 'var(--error)'}"></span>
-       <span class="t">${fmtUs(t.durationUs)}</span></span>`).join('');
-}
-function selectTrace(id) { selectedTraceId = id; selectedNode = null; renderChips(); renderGraph(); renderDetail();
-  document.getElementById('graph-hint').textContent = 'Highlighted: the path this request took · click a node for its arguments & response'; }
-
-/* ---- node / request detail (section 4) ---- */
-function selectNode(type) { selectedNode = type; renderGraph(); renderDetail(); }
-
-function renderDetail() {
-  const el = document.getElementById('detail'), trace = currentTrace();
-  if (!trace && !selectedNode) {
-    el.innerHTML = '<div class="empty-detail">Pick a request, then click a node in the graph to inspect the arguments and response of each layer.</div>';
-    return;
+/* ================= LEFT: requests / history ================= */
+function setLeftTab(t) { leftTab = t; document.getElementById('lt-routes').classList.toggle('sel', t === 'routes');
+  document.getElementById('lt-history').classList.toggle('sel', t === 'history'); renderLeft(); }
+function renderLeft() {
+  const box = document.getElementById('left-list');
+  if (leftTab === 'routes') {
+    const rs = appRoutes();
+    box.innerHTML = rs.length ? rs.map((r, i) => {
+      const gi = ROUTES.indexOf(r);
+      return `<div class="row${selectedRouteIdx === gi ? ' sel' : ''}" onclick="selectRoute(${gi})">
+        <span class="verb ${verbClass(r.method)}">${esc(r.method)}</span><span class="path">${esc(r.path)}</span></div>`; }).join('')
+      : '<div class="list-empty">no routes registered</div>';
+  } else {
+    box.innerHTML = TRACES.length ? TRACES.map(t => `<div class="row${currentTraceId === t.id ? ' sel' : ''}" onclick="selectHistory('${t.id}')">
+      <span class="verb ${verbClass(t.method)}">${esc(t.method)}</span><span class="path">${esc(t.path)}</span>
+      <span class="st" style="background:${t.status < 400 ? 'var(--service)' : 'var(--error)'}"></span><span class="t">${fmtUs(t.durationUs)}</span></div>`).join('')
+      : '<div class="list-empty">no requests yet — run one from the Requests tab</div>';
   }
-  // HTTP entry node OR no node selected -> request summary
-  if (!selectedNode || selectedNode === '__http__') { el.innerHTML = requestDetail(trace); return; }
-  el.innerHTML = nodeDetail(selectedNode, trace);
 }
 
-function requestDetail(t) {
-  if (!t) return '<div class="empty-detail">Select a request.</div>';
-  return `<div class="d-eyebrow">Request</div>
-    <div class="d-title"><span class="verb ${verbClass(t.method)}">${esc(t.method)}</span>
-      <h2 style="font-size:14px">${esc(t.route || t.path)}</h2></div>
-    <div class="metaline"><span class="code status-${Math.floor(t.status / 100)}">${t.status}</span>
-      <span>${fmtUs(t.durationUs)} total</span><span>${t.calls.length} layer${t.calls.length === 1 ? '' : 's'}</span></div>
-    <div class="d-section"><span class="k">Request</span>${jsonBlock(t.request)}</div>
-    ${t.response !== undefined && t.response !== null ? `<div class="d-section"><span class="k">Response</span>${jsonBlock(t.response)}</div>` : ''}`;
+/* ================= RIGHT: request editor / node detail ================= */
+function setRightTab(t) { if (t === 'node' && !selectedNode) return; rightTab = t;
+  document.getElementById('rt-request').classList.toggle('sel', t === 'request');
+  document.getElementById('rt-node').classList.toggle('sel', t === 'node'); renderRight(); }
+
+function selectRoute(gi) { selectedRouteIdx = gi; rightTab = 'request'; setRightTab('request'); renderLeft(); }
+
+function captureEditor() {
+  if (selectedRouteIdx == null) return;
+  const st = routeState[selectedRouteIdx] || (routeState[selectedRouteIdx] = { pp: {} });
+  document.querySelectorAll('#right-panel [data-pp]').forEach(i => st.pp[i.dataset.pp] = i.value);
+  const q = document.getElementById('ed-query'); if (q) st.query = q.value;
+  const b = document.getElementById('ed-body'); if (b) st.body = b.value;
 }
 
-function nodeDetail(type, t) {
+function renderRight() {
+  const panel = document.getElementById('right-panel');
+  document.getElementById('rt-node').style.display = selectedNode ? '' : 'none';
+  if (rightTab === 'node' && selectedNode) { panel.innerHTML = nodePanel(); return; }
+  if (selectedRouteIdx == null) { panel.innerHTML = '<div class="rp-body"><div class="rp-empty">Pick a request on the left to configure and run it.</div></div>'; return; }
+  panel.innerHTML = requestPanel(ROUTES[selectedRouteIdx]);
+}
+
+function requestPanel(r) {
+  const params = pathParamsOf(r.path), hasBody = !['GET', 'HEAD', 'DELETE'].includes(r.method.toUpperCase());
+  const st = routeState[selectedRouteIdx] || (routeState[selectedRouteIdx] = seedState(r));
+  let form = '';
+  if (params.length) form += `<div class="field"><label>Path parameters</label><div class="params">`
+    + params.map(p => `<span class="pn">${esc(p)}</span><input data-pp="${esc(p)}" value="${esc(st.pp[p] || '')}" placeholder="${esc(p)}">`).join('') + `</div></div>`;
+  form += `<div class="field"><label>Query <span class="hint">— name=value&amp;name2=value2</span></label><input id="ed-query" value="${esc(st.query || '')}" placeholder="page=1&size=20"></div>`;
+  if (hasBody) form += `<div class="field"><label>Body <span class="hint">— JSON</span></label><textarea id="ed-body" placeholder='{ "name": "Ada" }'>${esc(st.body || '')}</textarea></div>`;
+
+  const t = currentTrace(), showResp = t && t.method === r.method && t.route === r.path;
+  let resp = '';
+  if (showResp) resp = `<div class="resp"><div class="meta"><span class="code status-${Math.floor(t.status / 100)}">${t.status}</span>
+      <span>${fmtUs(t.durationUs)}</span><span>${t.calls.length} layer${t.calls.length === 1 ? '' : 's'}</span>
+      <span style="color:var(--faint)">click a node in the graph above for its detail</span></div>
+      <div class="lbl">Response</div>${jsonBlock(t.response)}</div>`;
+
+  return `<div class="rp-head"><span class="verb ${verbClass(r.method)}">${esc(r.method)}</span><span class="url">${esc(r.path)}</span>
+      <button class="send" onclick="runRequest()">Send</button></div>
+    <div class="rp-body">${form}${resp}</div>`;
+}
+
+function nodePanel() {
+  const type = selectedNode, t = currentTrace();
+  if (type === '__http__') {
+    if (!t) return '<div class="rp-body"><div class="rp-empty">No request selected.</div></div>';
+    return `<div class="rp-head"><span class="verb ${verbClass(t.method)}">${esc(t.method)}</span><span class="url">${esc(t.route || t.path)}</span>
+        <span class="code status-${Math.floor(t.status / 100)}" style="margin-left:auto">${t.status}</span></div>
+      <div class="rp-body"><div class="lbl">Request</div>${jsonBlock(t.request)}
+        ${t.response != null ? `<div class="lbl">Response</div>${jsonBlock(t.response)}` : ''}</div>`;
+  }
   const node = GRAPH.nodes.find(n => n.type === type), stereo = (node && node.stereotype) || 'bean', color = stColor(stereo);
-  const deps = GRAPH.edges.filter(e => e.from === type).map(e => e.to);
-  const users = GRAPH.edges.filter(e => e.to === type).map(e => e.from);
+  const deps = GRAPH.edges.filter(e => e.from === type).map(e => e.to), users = GRAPH.edges.filter(e => e.to === type).map(e => e.from);
   const traceable = !GRAPH.unspied.includes(type);
   const list = a => a.length ? `<ul class="d-list">${a.map(x => `<li>${esc(simple(x))}</li>`).join('')}</ul>` : '<span class="d-none">none</span>';
-  let html = `<div class="d-eyebrow">Bean</div>
-    <div class="d-title"><h2>${esc(simple(type))}</h2><span class="chipst" style="color:${color};background:${color}22">${stereo}</span></div>
-    <div class="d-fqn">${esc(type)}</div>`;
-
-  if (t) {
-    const calls = t.calls.filter(c => c.declaredBy === simple(type));
-    html += `<div class="d-section"><span class="k">In this request — ${calls.length} call${calls.length === 1 ? '' : 's'}</span>`;
-    if (!calls.length) html += '<span class="d-none">this bean was not called by the selected request</span>';
-    else html += calls.map(c => `<div class="invocation">
-        <div class="sig"><b>${esc(c.bean)}</b>.${esc(c.method)}()<span class="dur">${fmtUs(c.durationUs)}</span></div>
+  let inReq = '';
+  if (t) { const calls = t.calls.filter(c => c.declaredBy === simple(type));
+    inReq = `<div class="lbl">In this request — ${calls.length} call${calls.length === 1 ? '' : 's'}</div>`;
+    inReq += calls.length ? calls.map(c => `<div class="invocation"><div class="sig"><b>${esc(c.bean)}</b>.${esc(c.method)}()<span class="dur">${fmtUs(c.durationUs)}</span></div>
         <div class="lbl">Arguments</div>${jsonBlock(c.args)}
-        ${c.error ? `<div class="lbl">Error</div><div class="err-line">${esc(c.error)}</div>`
-                  : `<div class="lbl">Returns</div>${jsonBlock(c.result)}`}</div>`).join('');
-    html += `</div>`;
-  }
-  html += `<div class="d-section"><span class="k">Traceable</span>${traceable
-      ? '<span style="color:var(--service)">yes — its calls are spied</span>'
-      : '<span style="color:var(--repository)">no — bound as a concrete class</span>'}</div>
-    <div class="d-section"><span class="k">Depends on</span>${list(deps)}</div>
-    <div class="d-section"><span class="k">Used by</span>${list(users)}</div>`;
-  return html;
+        ${c.error ? `<div class="lbl">Error</div><div class="err-line">${esc(c.error)}</div>` : `<div class="lbl">Returns</div>${jsonBlock(c.result)}`}</div>`).join('')
+      : '<span class="d-none">this bean was not called by the selected request</span>'; }
+  return `<div class="rp-head"><div class="d-title"><h2>${esc(simple(type))}</h2><span class="chipst" style="color:${color};background:${color}22">${stereo}</span></div></div>
+    <div class="rp-body"><div class="d-fqn">${esc(type)}</div>${inReq}
+      <div class="lbl">Traceable</div>${traceable ? '<span style="color:var(--service)">yes — its calls are spied</span>' : '<span style="color:var(--repository)">no — bound as a concrete class</span>'}
+      <div class="lbl">Depends on</div>${list(deps)}<div class="lbl">Used by</div>${list(users)}</div>`;
 }
 
-/* ---- compose / send ---- */
-const pathParamsOf = p => [...p.matchAll(/[:{*]([a-zA-Z0-9_]+)}?/g)].map(m => m[1]);
-function appRoutes() { return ROUTES.filter(r => !r.path.startsWith('/ligero/dev')); }
-function openCompose() {
-  const sel = document.getElementById('c-route');
-  sel.innerHTML = appRoutes().map((r, i) => `<option value="${i}">${r.method}  ${r.path}</option>`).join('');
-  composeRoute(); document.getElementById('overlay').classList.add('open');
+function seedState(r) {
+  const s = { pp: {} }, sample = window.SAMPLES && window.SAMPLES[r.method + ' ' + r.path];
+  if (sample) { Object.assign(s.pp, sample.pp || {}); s.query = sample.query || ''; s.body = sample.body || ''; }
+  return s;
 }
-function closeCompose() { document.getElementById('overlay').classList.remove('open'); }
-function composeRoute() {
-  const r = appRoutes()[+document.getElementById('c-route').value]; if (!r) return;
-  const params = pathParamsOf(r.path), pw = document.getElementById('c-params-wrap');
-  pw.style.display = params.length ? 'block' : 'none';
-  document.getElementById('c-params').innerHTML = params.map(p =>
-    `<span class="pn">${esc(p)}</span><input data-cp="${esc(p)}" placeholder="${esc(p)}">`).join('');
-  document.getElementById('c-body-wrap').style.display =
-    ['GET', 'HEAD', 'DELETE'].includes(r.method.toUpperCase()) ? 'none' : 'block';
-}
-async function sendCompose() {
-  const r = appRoutes()[+document.getElementById('c-route').value]; if (!r) return;
-  let path = r.path;
-  document.querySelectorAll('[data-cp]').forEach(inp =>
-    path = path.replace(new RegExp('[:{*]' + inp.dataset.cp + '}?'), encodeURIComponent(inp.value || '')));
-  const query = document.getElementById('c-query').value || '';
-  const bodyEl = document.getElementById('c-body');
-  const id = (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '' + Math.random()).slice(0, 8);
-  closeCompose();
+
+/* ================= run a request ================= */
+async function runRequest() {
+  const r = ROUTES[selectedRouteIdx]; if (!r) return;
+  captureEditor(); const st = routeState[selectedRouteIdx];
+  let path = r.path; pathParamsOf(r.path).forEach(p => path = path.replace(new RegExp('[:{*]' + p + '}?'), encodeURIComponent((st.pp || {})[p] || '')));
+  const query = st.query || '', id = (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '' + Math.random()).slice(0, 8);
   if (OFFLINE) {
-    const sample = TRACES_ALL.find(t => t.method === r.method && t.route === r.path);
-    if (sample) { const clone = JSON.parse(JSON.stringify(sample)); clone.id = id; clone.startedAt = Date.now();
-      onNewTrace(clone); } else alert('This offline demo has sample traces for the /api/v1 routes only.');
-    return;
+    const sample = (window.BAKED.traces || []).find(t => t.method === r.method && t.route === r.path);
+    if (!sample) { alert('This offline demo has sample traces for the /api/v1 routes only.'); return; }
+    const clone = JSON.parse(JSON.stringify(sample)); clone.id = id; clone.startedAt = Date.now(); onNewTrace(clone, true); return;
   }
+  const btn = document.querySelector('.send'); if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+  pendingRun.add(id);   // the trace comes back over SSE — select it when it lands
   const url = appRoot + path + (query ? (path.includes('?') ? '&' : '?') + query : '');
   const opts = { method: r.method, headers: { 'X-Ligero-Dev': id } };
-  if (bodyEl && bodyEl.value.trim()) { opts.body = bodyEl.value; opts.headers['Content-Type'] = 'application/json'; }
-  try { await fetch(url, opts); } catch (e) { alert('Request failed: ' + e.message); }
-  // the trace arrives via SSE and is auto-selected by onNewTrace
-}
-function onNewTrace(t) {
-  const i = TRACES.findIndex(x => x.id === t.id);
-  if (i >= 0) TRACES[i] = t; else TRACES.unshift(t);
-  renderChips(); if (selectedTraceId === t.id || i < 0) selectTrace(t.id);
+  if (st.body && st.body.trim()) { opts.body = st.body; opts.headers['Content-Type'] = 'application/json'; }
+  try { await fetch(url, opts); } catch (e) { alert('Request failed: ' + e.message); if (btn) { btn.disabled = false; btn.textContent = 'Send'; } }
+  // trace arrives via SSE -> onNewTrace selects it
 }
 
-/* ---- boot ---- */
-let TRACES_ALL = [];
-async function boot() {
-  if (OFFLINE) { GRAPH = window.BAKED.graph; ROUTES = window.BAKED.routes; TRACES = window.BAKED.traces.slice(); TRACES_ALL = window.BAKED.traces; }
-  else {
-    [GRAPH, ROUTES, TRACES] = await Promise.all(
-      ['/api/graph', '/api/routes', '/api/requests'].map(u => fetch(base + u).then(r => r.json())));
-  }
-  layout = computeLayout(GRAPH);
-  renderChips(); renderGraph();
-  if (TRACES.length) selectTrace(TRACES[0].id); else renderDetail();
-  if (!OFFLINE) { const live = document.getElementById('live'); connect(live); }
-  else { const live = document.getElementById('live'); live.classList.add('on'); live.textContent = 'sample data'; }
+function onNewTrace(t, fromRun) {
+  const isRun = fromRun || pendingRun.has(t.id); pendingRun.delete(t.id);
+  const i = TRACES.findIndex(x => x.id === t.id); if (i >= 0) TRACES[i] = t; else TRACES.unshift(t);
+  if (isRun || currentTraceId == null) setCurrentTrace(t.id);
+  else { renderLeft(); }
 }
-function connect(live) {
-  const es = new EventSource(base + '/api/stream');
-  es.onopen = () => { live.classList.add('on'); live.textContent = 'live'; };
-  es.onerror = () => { live.classList.remove('on'); live.textContent = 'reconnecting…'; };
-  es.addEventListener('trace', ev => onNewTrace(JSON.parse(ev.data)));
+function setCurrentTrace(id) { currentTraceId = id; selectedNode = null; document.getElementById('rt-node').style.display = 'none';
+  document.getElementById('graph-hint').textContent = 'Path highlighted · click a node for its arguments & response';
+  renderGraph(); renderLeft(); if (rightTab === 'node') rightTab = 'request'; setRightTab('request'); }
+
+function selectHistory(id) { const t = TRACES.find(x => x.id === id); if (!t) return;
+  // point the editor at the matching route too, if any
+  const gi = ROUTES.findIndex(r => r.method === t.method && r.path === (t.route || t.path)); if (gi >= 0) selectedRouteIdx = gi;
+  setCurrentTrace(id); }
+
+/* ================= node click ================= */
+function clickNode(type) { selectedNode = type; document.getElementById('rt-node').style.display = '';
+  document.getElementById('rt-node').textContent = type === '__http__' ? 'Request' : 'Node · ' + simple(type);
+  rightTab = 'node'; setRightTab('node'); renderGraph(); }
+
+/* ================= boot ================= */
+async function boot() {
+  if (OFFLINE) { GRAPH = window.BAKED.graph; ROUTES = window.BAKED.routes; TRACES = (window.BAKED.traces || []).slice(); }
+  else { [GRAPH, ROUTES, TRACES] = await Promise.all(['/api/graph', '/api/routes', '/api/requests'].map(u => fetch(base + u).then(r => r.json()))); }
+  layout = computeLayout(GRAPH);
+  renderLeft(); renderRight(); renderGraph();
+  if (TRACES.length) setCurrentTrace(TRACES[0].id);
+  const live = document.getElementById('live');
+  if (OFFLINE) { live.classList.add('on'); live.textContent = 'sample data'; }
+  else { const es = new EventSource(base + '/api/stream');
+    es.onopen = () => { live.classList.add('on'); live.textContent = 'live'; };
+    es.onerror = () => { live.classList.remove('on'); live.textContent = 'reconnecting…'; };
+    es.addEventListener('trace', ev => onNewTrace(JSON.parse(ev.data), false)); }
 }
 boot();
 </script>
