@@ -13,12 +13,12 @@ import java.util.regex.Pattern;
  *
  * <p>Behaviour is controlled by the {@code LIGERO_BANNER} environment variable:
  * <ul>
- *   <li>unset / {@code color} — colored banner (ANSI) when the output looks like
- *       a terminal, otherwise plain;</li>
+ *   <li>unset / {@code color} — colored banner (standard ANSI, rendered by
+ *       terminals, IDE run consoles and CI logs);</li>
  *   <li>{@code plain} — always without ANSI colors;</li>
  *   <li>{@code off} / {@code false} — no banner at all.</li>
  * </ul>
- * Colors are also suppressed when {@code NO_COLOR} is set or {@code TERM=dumb}.
+ * Colors are suppressed when {@code NO_COLOR} is set or {@code TERM=dumb}.
  */
 final class Banner {
 
@@ -69,7 +69,10 @@ final class Banner {
         if (env("NO_COLOR") != null || "dumb".equalsIgnoreCase(env("TERM"))) {
             return false;
         }
-        return tty;
+        // Colored by default — standard ANSI is rendered by terminals, IDE run
+        // consoles (IntelliJ, VS Code) and CI logs alike. Disable with NO_COLOR,
+        // LIGERO_BANNER=plain, or a "dumb" terminal. (The tty hint is advisory.)
+        return true;
     }
 
     /** Substitutes the version and strips ANSI when color is off. */

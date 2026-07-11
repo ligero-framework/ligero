@@ -32,6 +32,7 @@ class BannerTest {
         assertThat(Banner.colorEnabled("plain", true)).isFalse();   // forced off
         assertThat(Banner.colorEnabled("color", false)).isTrue();   // forced on even without a tty
         assertThat(Banner.colorEnabled("always", false)).isTrue();
+        assertThat(Banner.colorEnabled(null, false)).isTrue();      // colored by default
     }
 
     @Test
