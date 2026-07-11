@@ -6,196 +6,191 @@
 <title>Ligero Devtools</title>
 <style>
   :root {
-    --bg: #0e1016; --bg-2: #14171f; --panel: #171a23; --panel-2: #1c2029;
-    --border: #262b3a; --border-2: #2f3547; --text: #e3e7f0; --muted: #8b95ad;
-    --faint: #5c6580; --accent: #7ee0a3; --accent-dim: #3a5a48;
-    --controller: #5aa9f7; --service: #7ee0a3; --repository: #f7b955;
-    --component: #c792ea; --bean: #8a93ab; --error: #ef6b73;
-    --get: #10b981; --post: #3b82f6; --put: #f59e0b; --delete: #ef4444;
-    --patch: #8b5cf6; --other: #64748b;
-    --radius: 12px; --shadow: 0 6px 24px rgba(0,0,0,.28);
+    --bg: #eef1f7; --surface: #ffffff; --surface-2: #f4f6fb; --elevated: #ffffff;
+    --border: #dce1ec; --border-2: #c8d0df; --text: #1b2130; --muted: #5c6678; --faint: #8b95a8;
+    --accent: #0ea56f; --accent-soft: rgba(14,165,111,.12); --edge: #b9c2d4;
+    --controller: #2f7ef0; --service: #10a06a; --repository: #e08a00;
+    --component: #7c5cf0; --bean: #64748b; --error: #e0483f;
+    --node-fill: #ffffff; --node-fill-2: #f4f6fb; --shadow: 0 8px 30px rgba(30,40,70,.10);
     --ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    color-scheme: light;
   }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d0f15; --surface: #14171f; --surface-2: #1a1e28; --elevated: #1c2029;
+      --border: #262b39; --border-2: #333a4d; --text: #e6eaf2; --muted: #8b95ad; --faint: #59617a;
+      --accent: #34d399; --accent-soft: rgba(52,211,153,.14); --edge: #39415a;
+      --controller: #5aa9f7; --service: #34d399; --repository: #f5b642;
+      --component: #b79bf5; --bean: #8a93ab; --error: #ef6b73;
+      --node-fill: #1c212e; --node-fill-2: #161b26; --shadow: 0 10px 34px rgba(0,0,0,.4);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #eef1f7; --surface: #ffffff; --surface-2: #f4f6fb; --elevated: #ffffff;
+    --border: #dce1ec; --border-2: #c8d0df; --text: #1b2130; --muted: #5c6678; --faint: #8b95a8;
+    --accent: #0ea56f; --accent-soft: rgba(14,165,111,.12); --edge: #b9c2d4;
+    --controller: #2f7ef0; --service: #10a06a; --repository: #e08a00;
+    --component: #7c5cf0; --bean: #64748b; --error: #e0483f;
+    --node-fill: #ffffff; --node-fill-2: #f4f6fb; --shadow: 0 8px 30px rgba(30,40,70,.10);
+    color-scheme: light;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d0f15; --surface: #14171f; --surface-2: #1a1e28; --elevated: #1c2029;
+    --border: #262b39; --border-2: #333a4d; --text: #e6eaf2; --muted: #8b95ad; --faint: #59617a;
+    --accent: #34d399; --accent-soft: rgba(52,211,153,.14); --edge: #39415a;
+    --controller: #5aa9f7; --service: #34d399; --repository: #f5b642;
+    --component: #b79bf5; --bean: #8a93ab; --error: #ef6b73;
+    --node-fill: #1c212e; --node-fill-2: #161b26; --shadow: 0 10px 34px rgba(0,0,0,.4);
+    color-scheme: dark;
+  }
+
   * { box-sizing: border-box; margin: 0; }
-  html { background: var(--bg); }
-  body { min-height: 100vh; background: radial-gradient(1200px 600px at 80% -10%, #1a2030 0%, var(--bg) 55%) fixed;
-    color: var(--text); font: 14px/1.55 var(--ui); -webkit-font-smoothing: antialiased; }
-  a { color: var(--controller); }
+  html, body { height: 100%; }
+  body { background: var(--bg); color: var(--text); font: 14px/1.5 var(--ui);
+    -webkit-font-smoothing: antialiased; display: flex; flex-direction: column; }
+  button { font-family: inherit; }
 
-  header { display: flex; align-items: center; gap: 16px; padding: 14px 24px;
-    border-bottom: 1px solid var(--border); backdrop-filter: blur(6px); }
-  .brand { display: flex; align-items: baseline; gap: 9px; font-weight: 650; letter-spacing: .2px; font-size: 16px; }
-  .brand .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent);
-    box-shadow: 0 0 10px var(--accent); align-self: center; }
+  /* ---- 1. Header ---- */
+  header { display: flex; align-items: center; gap: 14px; padding: 12px 20px;
+    background: var(--surface); border-bottom: 1px solid var(--border); flex: none; }
+  .brand { display: flex; align-items: center; gap: 9px; font-weight: 650; font-size: 15.5px; letter-spacing: .2px; }
+  .brand .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 9px var(--accent); }
   .brand em { color: var(--accent); font-style: normal; }
-  .pill { font-size: 11px; color: var(--muted); border: 1px solid var(--border-2);
-    padding: 3px 10px; border-radius: 999px; }
-  #live { margin-left: auto; font-size: 12px; color: var(--faint); display: flex; align-items: center; gap: 7px; }
+  .pill { font-size: 11px; color: var(--muted); border: 1px solid var(--border-2); padding: 3px 10px; border-radius: 999px; }
+  .spacer { margin-left: auto; }
+  #live { font-size: 12px; color: var(--faint); display: flex; align-items: center; gap: 7px; }
   #live::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--faint); transition: .3s; }
-  #live.on { color: var(--muted); }
-  #live.on::before { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  #live.on { color: var(--muted); } #live.on::before { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px;
+    border: 1px solid var(--border-2); background: var(--surface-2); color: var(--text); border-radius: 9px; cursor: pointer; transition: .15s; }
+  .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
 
-  nav { display: flex; gap: 2px; padding: 12px 24px 0; }
-  nav button { background: none; border: none; color: var(--muted); font: 500 13.5px var(--ui);
-    padding: 9px 16px; cursor: pointer; border-radius: 9px; transition: .15s; position: relative; }
-  nav button:hover { color: var(--text); background: var(--panel); }
-  nav button.active { color: var(--text); }
-  nav button.active::after { content: ""; position: absolute; left: 16px; right: 16px; bottom: -1px;
-    height: 2px; background: var(--accent); border-radius: 2px; }
+  /* ---- 2. Sub-header: requests ---- */
+  #reqbar { display: flex; align-items: center; gap: 8px; padding: 10px 20px; background: var(--surface);
+    border-bottom: 1px solid var(--border); overflow-x: auto; flex: none; scrollbar-width: thin; }
+  #reqbar .lbl { font: 600 10px var(--ui); text-transform: uppercase; letter-spacing: .7px; color: var(--faint); flex: none; margin-right: 2px; }
+  .new-btn { flex: none; display: inline-flex; align-items: center; gap: 6px; border: 1px dashed var(--border-2);
+    background: transparent; color: var(--muted); padding: 6px 12px; border-radius: 8px; cursor: pointer; font: 500 12.5px var(--ui); transition: .15s; }
+  .new-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .chip { flex: none; display: flex; align-items: center; gap: 8px; padding: 6px 11px; border: 1px solid var(--border);
+    background: var(--surface-2); border-radius: 9px; cursor: pointer; transition: .15s; white-space: nowrap; }
+  .chip:hover { border-color: var(--border-2); }
+  .chip.sel { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .chip .path { font: 12px var(--mono); color: var(--text); }
+  .chip .st { width: 7px; height: 7px; border-radius: 50%; }
+  .chip .t { font: 11px var(--mono); color: var(--faint); }
+  .verb { font: 700 10px var(--mono); letter-spacing: .3px; padding: 2px 6px; border-radius: 5px; color: #fff; }
+  .v-get { background: var(--service); } .v-post { background: var(--controller); } .v-put { background: var(--repository); }
+  .v-delete { background: var(--error); } .v-patch { background: var(--component); } .v-other { background: var(--bean); }
 
-  main { padding: 20px 24px 40px; max-width: 1400px; }
-  .tab { display: none; } .tab.active { display: block; animation: fade .2s ease; }
-  @keyframes fade { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; } }
+  /* ---- 3. Stage: graph + 4. detail ---- */
+  #stage { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 400px; min-height: 0; }
+  @media (max-width: 860px) { #stage { grid-template-columns: 1fr; grid-template-rows: 1fr auto; } }
+  #graph-wrap { position: relative; overflow: auto; padding: 22px; }
+  .legend { position: absolute; top: 16px; left: 22px; display: flex; gap: 14px; flex-wrap: wrap;
+    font-size: 11.5px; color: var(--muted); z-index: 2; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: middle; }
+  .graph-hint { position: absolute; bottom: 16px; left: 22px; font-size: 12px; color: var(--faint); z-index: 2; }
 
-  /* ---- Try it out ---- */
-  .try { display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start; }
-  @media (max-width: 900px) { .try { grid-template-columns: 1fr; } }
-  .card { background: linear-gradient(180deg, var(--panel), var(--bg-2));
-    border: 1px solid var(--border); border-radius: var(--radius); }
-  .routes { overflow: hidden; }
-  .routes h3, .side-h { font: 600 11px var(--ui); text-transform: uppercase; letter-spacing: .8px;
-    color: var(--faint); padding: 14px 16px 8px; }
-  .route { display: flex; align-items: center; gap: 10px; padding: 9px 16px; cursor: pointer;
-    border-top: 1px solid var(--border); transition: background .12s; }
-  .route:hover { background: var(--panel-2); }
-  .route.sel { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--accent); }
-  .route .path { font: 12.5px var(--mono); color: var(--text); word-break: break-all; }
-  .verb { font: 700 10.5px var(--mono); letter-spacing: .3px; padding: 3px 7px; border-radius: 6px;
-    min-width: 52px; text-align: center; color: #fff; flex: none; }
-  .v-get { background: var(--get); } .v-post { background: var(--post); } .v-put { background: var(--put); }
-  .v-delete { background: var(--delete); } .v-patch { background: var(--patch); } .v-other { background: var(--other); }
+  svg { display: block; }
+  svg text { fill: var(--text); font: 12px var(--mono); pointer-events: none; }
+  .edge { stroke: var(--edge); stroke-width: 1.5; fill: none; transition: opacity .2s, stroke .2s; }
+  .edge.hot { stroke: var(--accent); stroke-width: 2.6; }
+  .edge.dim { opacity: .18; }
+  @media (prefers-reduced-motion: no-preference) {
+    .edge.hot { stroke-dasharray: 7 5; animation: flow 1s linear infinite; }
+    @keyframes flow { to { stroke-dashoffset: -24; } }
+  }
+  .gnode { cursor: pointer; }
+  .gnode rect { rx: 9; fill: var(--node-fill); stroke-width: 1.7; transition: opacity .2s, stroke-width .15s; }
+  .gnode:hover rect { fill: var(--node-fill-2); }
+  .gnode.hot rect { stroke-width: 2.6; }
+  .gnode.dim { opacity: .28; }
+  .gnode.sel rect { stroke-width: 3; filter: drop-shadow(0 0 7px var(--accent)); }
+  .gnode .cnt { fill: var(--accent); font-weight: 700; }
+  .entry rect { fill: var(--accent); }
+  .entry text { fill: #04231a; font-weight: 700; }
+  :root[data-theme="dark"] .entry text, :root:not([data-theme="light"]) .entry text { fill: #04231a; }
 
-  .panel { padding: 20px; }
-  .panel .row1 { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
-  .panel .url { font: 14px var(--mono); color: var(--text); word-break: break-all; }
-  .field { margin-top: 16px; }
-  .field label { display: block; font: 600 11px var(--ui); text-transform: uppercase; letter-spacing: .6px;
-    color: var(--muted); margin-bottom: 6px; }
-  .field .hint { color: var(--faint); text-transform: none; letter-spacing: 0; font-weight: 400; }
-  input, textarea, select { width: 100%; background: var(--bg); color: var(--text); font: 13px var(--mono);
-    border: 1px solid var(--border-2); border-radius: 9px; padding: 9px 11px; transition: border .15s, box-shadow .15s; }
-  input:focus, textarea:focus { outline: none; border-color: var(--accent-dim);
-    box-shadow: 0 0 0 3px rgba(126,224,163,.12); }
-  textarea { min-height: 96px; resize: vertical; }
-  .params { display: grid; grid-template-columns: 150px 1fr; gap: 8px 12px; align-items: center; }
-  .params .pname { font: 12px var(--mono); color: var(--repository); }
-  .send { margin-top: 20px; display: flex; gap: 12px; align-items: center; }
-  button.go { background: var(--accent); color: #06251a; font: 650 13.5px var(--ui); border: none;
-    padding: 10px 22px; border-radius: 9px; cursor: pointer; transition: .15s; }
-  button.go:hover { filter: brightness(1.08); transform: translateY(-1px); }
-  button.go:disabled { opacity: .5; cursor: default; transform: none; }
-  .placeholder { color: var(--faint); padding: 60px 20px; text-align: center; }
-  .placeholder svg { opacity: .5; margin-bottom: 10px; }
+  /* ---- Detail panel ---- */
+  #detail { background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; padding: 18px 18px 32px; }
+  @media (max-width: 860px) { #detail { border-left: none; border-top: 1px solid var(--border); max-height: 44vh; } }
+  .d-eyebrow { font: 600 10px var(--ui); text-transform: uppercase; letter-spacing: .8px; color: var(--faint); margin-bottom: 6px; }
+  .d-title { display: flex; align-items: center; gap: 9px; margin-bottom: 3px; }
+  .d-title h2 { font: 650 16px var(--mono); color: var(--text); word-break: break-all; }
+  .d-fqn { font: 11px var(--mono); color: var(--faint); word-break: break-all; margin-bottom: 14px; }
+  .chipst { font: 700 10px var(--mono); text-transform: uppercase; padding: 2px 8px; border-radius: 5px; }
+  .metaline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font: 12px var(--mono); color: var(--muted); margin-bottom: 14px; }
+  .code { font: 700 12px var(--mono); padding: 2px 9px; border-radius: 6px; }
+  .status-2 { color: #063d2a; background: #b7f0d8; } .status-3 { color: #06263f; background: #bcdcfb; }
+  .status-4 { color: #3d2a06; background: #f6e2b0; } .status-5 { color: #3d0c08; background: #f6c3bf; }
+  :root[data-theme="dark"] .status-2, :root:not([data-theme="light"]) .status-2 { color: #04231a; background: var(--service); }
+  :root[data-theme="dark"] .status-3, :root:not([data-theme="light"]) .status-3 { color: #04223b; background: var(--controller); }
+  :root[data-theme="dark"] .status-4, :root:not([data-theme="light"]) .status-4 { color: #2a1c02; background: var(--repository); }
+  :root[data-theme="dark"] .status-5, :root:not([data-theme="light"]) .status-5 { color: #2a0806; background: var(--error); }
+  @media (prefers-color-scheme: dark) {
+    .status-2 { color: #04231a; background: var(--service); } .status-3 { color: #04223b; background: var(--controller); }
+    .status-4 { color: #2a1c02; background: var(--repository); } .status-5 { color: #2a0806; background: var(--error); }
+  }
 
-  .resp { margin-top: 22px; border-top: 1px solid var(--border); padding-top: 18px; }
-  .resp .meta { display: flex; align-items: center; gap: 14px; font: 12.5px var(--mono); color: var(--muted); margin-bottom: 12px; }
-  .code { font: 700 12.5px var(--mono); padding: 2px 9px; border-radius: 6px; }
-  .status-2 { color: #06251a; background: var(--get); } .status-3 { color: #062033; background: var(--controller); }
-  .status-4 { color: #2a1806; background: var(--put); } .status-5 { color: #2a0808; background: var(--delete); }
-
-  /* ---- JSON viewer ---- */
-  pre.json { font: 12.5px/1.5 var(--mono); background: var(--bg); border: 1px solid var(--border);
-    border-radius: 9px; padding: 12px 14px; overflow: auto; white-space: pre; color: var(--text); max-height: 340px; }
-  .j-key { color: #9db4d9; } .j-str { color: var(--service); } .j-num { color: var(--repository); }
+  .d-section { margin-top: 16px; }
+  .d-section > .k { font: 600 10px var(--ui); text-transform: uppercase; letter-spacing: .6px; color: var(--muted); display: block; margin-bottom: 6px; }
+  .d-list { list-style: none; padding: 0; margin: 0; }
+  .d-list li { font: 12px var(--mono); padding: 2px 0; color: var(--text); }
+  .d-list li::before { content: "→ "; color: var(--faint); }
+  .d-none { color: var(--faint); font-size: 12px; }
+  pre.json { font: 12px/1.5 var(--mono); background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 9px; padding: 11px 13px; overflow-x: auto; white-space: pre; color: var(--text); }
+  .j-key { color: var(--controller); } .j-str { color: var(--service); } .j-num { color: var(--repository); }
   .j-bool { color: var(--component); } .j-null { color: var(--faint); }
 
-  /* ---- Flow graph ---- */
-  .flow { margin-top: 6px; }
-  .flow h4 { font: 600 11px var(--ui); text-transform: uppercase; letter-spacing: .8px; color: var(--faint); margin: 18px 0 10px; }
-  .node { position: relative; margin: 0 0 8px; }
-  .node .body { background: var(--panel); border: 1px solid var(--border); border-left-width: 3px;
-    border-radius: 10px; padding: 10px 13px; transition: border-color .15s; }
-  .node .body:hover { border-color: var(--border-2); }
-  .node .head { display: flex; align-items: center; gap: 9px; cursor: pointer; }
-  .node .sig { font: 12.5px var(--mono); color: var(--text); flex: 1; word-break: break-word; }
-  .node .sig b { color: #fff; font-weight: 650; }
-  .node .stereo { font: 700 9.5px var(--mono); letter-spacing: .3px; text-transform: uppercase;
-    padding: 2px 6px; border-radius: 5px; flex: none; }
-  .node .time { font: 11.5px var(--mono); color: var(--faint); flex: none; }
-  .node .chev { color: var(--faint); transition: transform .15s; font-size: 11px; }
-  .node.open .chev { transform: rotate(90deg); }
-  .node .bar { height: 3px; border-radius: 2px; margin-top: 8px; background: var(--border-2); overflow: hidden; }
-  .node .bar span { display: block; height: 100%; border-radius: 2px; }
-  .node .io { display: none; margin-top: 11px; padding-top: 11px; border-top: 1px dashed var(--border); }
-  .node.open .io { display: block; }
-  .io .lbl { font: 600 10px var(--ui); text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin: 0 0 5px; }
-  .io .lbl:not(:first-child) { margin-top: 12px; }
+  .invocation { border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 9px;
+    padding: 10px 12px; margin-bottom: 10px; background: var(--surface-2); }
+  .invocation .sig { font: 12.5px var(--mono); color: var(--text); margin-bottom: 8px; }
+  .invocation .sig b { color: var(--text); } .invocation .dur { color: var(--faint); float: right; }
+  .invocation .lbl { font: 600 9.5px var(--ui); text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin: 8px 0 4px; }
   .err-line { color: var(--error); font: 12px var(--mono); }
-  .rail { margin-left: 14px; padding-left: 20px; border-left: 1px solid var(--border-2); }
 
-  /* ---- Beans graph ---- */
-  .legend { display: flex; gap: 18px; margin-bottom: 14px; color: var(--muted); font-size: 12px; flex-wrap: wrap; }
-  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
-  .notice { background: var(--panel); border: 1px solid var(--border); border-radius: 9px;
-    padding: 10px 14px; color: var(--muted); font-size: 12.5px; margin-bottom: 14px; }
-  .beans-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
-  @media (max-width: 900px) { .beans-layout { grid-template-columns: 1fr; } }
-  #graph-box { background: linear-gradient(180deg, var(--panel), var(--bg-2)); border: 1px solid var(--border);
-    border-radius: var(--radius); overflow: auto; padding: 6px; }
-  svg text { fill: var(--text); font: 12px var(--mono); }
-  svg .edge { stroke: #3a4157; stroke-width: 1.4; fill: none; }
-  svg .node-rect { rx: 8; fill: #1e2330; stroke-width: 1.6; }
-  svg g[data-bean] { cursor: pointer; }
-  svg g[data-bean]:hover .node-rect { fill: #262c3c; }
-  svg .node-rect.sel { fill: #2a3346; stroke-width: 2.6; }
-  #bean-detail { padding: 16px; position: sticky; top: 16px; }
-  .bd-name { font: 600 15px var(--mono); color: #fff; word-break: break-all; margin-bottom: 3px; }
-  .bd-fqn { font: 11px var(--mono); color: var(--faint); word-break: break-all; margin-bottom: 14px; }
-  .bd-row { margin: 11px 0; font-size: 12.5px; }
-  .bd-row .k { display: block; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 4px; }
-  .bd-chip { font: 700 10px var(--mono); text-transform: uppercase; padding: 2px 8px; border-radius: 5px; }
-  .bd-list { list-style: none; padding: 0; margin: 0; }
-  .bd-list li { font: 12px var(--mono); padding: 2px 0; color: var(--text); }
-  .bd-list li::before { content: "→ "; color: var(--faint); }
-  .bd-none { color: var(--faint); font-size: 12px; }
+  .empty-detail { color: var(--faint); text-align: center; padding: 48px 16px; font-size: 13px; }
 
-  /* ---- Requests list ---- */
-  .req-item { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; overflow: hidden;
-    background: var(--panel); }
-  .req-head { display: flex; align-items: center; gap: 12px; padding: 11px 15px; cursor: pointer; }
-  .req-head:hover { background: var(--panel-2); }
-  .req-head .path { font: 13px var(--mono); flex: 1; word-break: break-all; }
-  .req-head .when { font: 11.5px var(--mono); color: var(--faint); }
-  .req-head .n { font: 11.5px var(--mono); color: var(--muted); }
-  .req-detail { display: none; padding: 4px 15px 16px; border-top: 1px solid var(--border); }
-  .req-item.open .req-detail { display: block; }
-  .empty { color: var(--faint); padding: 50px 0; text-align: center; }
+  /* ---- Compose modal ---- */
+  .overlay { position: fixed; inset: 0; background: rgba(6,9,16,.55); display: none; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
+  .overlay.open { display: flex; }
+  .modal { width: 520px; max-width: 100%; max-height: 88vh; overflow-y: auto; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 22px; }
+  .modal h3 { font-size: 15px; margin-bottom: 14px; }
+  .field { margin-bottom: 14px; } .field label { display: block; font: 600 10px var(--ui); text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 6px; }
+  select, input, textarea { width: 100%; background: var(--bg); color: var(--text); font: 12.5px var(--mono);
+    border: 1px solid var(--border-2); border-radius: 8px; padding: 9px 11px; }
+  textarea { min-height: 92px; resize: vertical; }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .params { display: grid; grid-template-columns: 130px 1fr; gap: 8px 10px; align-items: center; }
+  .params .pn { font: 12px var(--mono); color: var(--repository); }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+  .btn { padding: 9px 18px; border-radius: 8px; border: 1px solid var(--border-2); background: var(--surface-2); color: var(--text); cursor: pointer; font: 600 13px var(--ui); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #04231a; }
+  .btn:hover { filter: brightness(1.05); }
 </style>
 </head>
 <body>
 <header>
   <span class="brand"><span class="dot"></span>ligero <em>devtools</em></span>
-  <span class="pill">development profile only</span>
+  <span class="pill">development only</span>
+  <span class="spacer"></span>
   <span id="live">offline</span>
+  <button class="icon-btn" id="theme-btn" title="Toggle theme" onclick="toggleTheme()">◐</button>
 </header>
-<nav>
-  <button id="tab-try" class="active" onclick="show('try')">Try it out</button>
-  <button id="tab-beans" onclick="show('beans')">Beans</button>
-  <button id="tab-requests" onclick="show('requests')">Requests</button>
-</nav>
-<main>
-  <!-- ============ TRY IT OUT ============ -->
-  <section id="try" class="tab active">
-    <div class="try">
-      <div class="card routes">
-        <h3>Routes</h3>
-        <div id="route-list"></div>
-      </div>
-      <div class="card">
-        <div id="panel" class="panel">
-          <div class="placeholder">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M13 2 L3 14 h7 l-1 8 L19 10 h-7 z"/></svg>
-            <div>Select a route to send a request<br>and watch it flow through your beans.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
 
-  <!-- ============ BEANS ============ -->
-  <section id="beans" class="tab">
+<div id="reqbar">
+  <span class="lbl">Requests</span>
+  <button class="new-btn" onclick="openCompose()">＋ New request</button>
+  <span id="chips" style="display:contents"></span>
+</div>
+
+<div id="stage">
+  <div id="graph-wrap">
     <div class="legend">
       <span><i style="background:var(--controller)"></i>controller</span>
       <span><i style="background:var(--service)"></i>service</span>
@@ -203,300 +198,284 @@
       <span><i style="background:var(--component)"></i>component</span>
       <span><i style="background:var(--bean)"></i>bean</span>
     </div>
-    <div id="unspied" class="notice" style="display:none"></div>
-    <div class="beans-layout">
-      <div id="graph-box"></div>
-      <div id="bean-detail" class="card">
-        <div class="side-h">Bean detail</div>
-        <div class="bd-none" style="padding:0 0 4px">Click a node to inspect its type, stereotype and dependencies.</div>
-      </div>
-    </div>
-  </section>
+    <div id="graph-box"></div>
+    <div class="graph-hint" id="graph-hint">Select a request above to light up its path · click any node for detail</div>
+  </div>
+  <aside id="detail"><div class="empty-detail">Pick a request, then click a node in the graph to inspect the arguments and response of each layer.</div></aside>
+</div>
 
-  <!-- ============ REQUESTS ============ -->
-  <section id="requests" class="tab">
-    <div id="req-rows"></div>
-    <div id="no-requests" class="empty">No requests traced yet — fire one from “Try it out”, or hit an endpoint of your app.</div>
-  </section>
-</main>
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeCompose()">
+  <div class="modal">
+    <h3>Send a request</h3>
+    <div class="field"><label>Route</label><select id="c-route" onchange="composeRoute()"></select></div>
+    <div id="c-params-wrap" class="field" style="display:none"><label>Path parameters</label><div id="c-params" class="params"></div></div>
+    <div class="field"><label>Query</label><input id="c-query" placeholder="page=1&size=20"></div>
+    <div id="c-body-wrap" class="field" style="display:none"><label>Body — JSON</label><textarea id="c-body" placeholder='{ "name": "Ada" }'></textarea></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeCompose()">Cancel</button>
+      <button class="btn primary" onclick="sendCompose()">Send</button>
+    </div>
+  </div>
+</div>
 
 <script>
-const COLORS = { controller:'var(--controller)', service:'var(--service)',
-  repository:'var(--repository)', component:'var(--component)', bean:'var(--bean)' };
+const OFFLINE = !!window.__LIGERO_OFFLINE__;
 const base = location.pathname.replace(/\/$/, '');
-const appRoot = base.slice(0, base.length - '/ligero/dev'.length);   // context path prefix ('' when none)
+const appRoot = base.slice(0, base.length - '/ligero/dev'.length);
+const COLORS = { controller: 'var(--controller)', service: 'var(--service)', repository: 'var(--repository)',
+  component: 'var(--component)', bean: 'var(--bean)' };
 
-function show(tab) {
-  for (const t of ['try','beans','requests']) {
-    document.getElementById(t).classList.toggle('active', t === tab);
-    document.getElementById('tab-' + t).classList.toggle('active', t === tab);
-  }
-}
-const simple = fqn => (fqn || '').substring((fqn || '').lastIndexOf('.') + 1);
-const fmtUs = us => us == null ? '' : us >= 1000 ? (us / 1000).toFixed(us >= 10000 ? 0 : 1) + ' ms' : us + ' µs';
+let GRAPH = { nodes: [], edges: [], unspied: [] }, ROUTES = [], TRACES = [];
+let layout = null, selectedTraceId = null, selectedNode = null;
+
+const simple = f => (f || '').split(/[.$]/).pop();   // leaf name: strips package and nesting
 const esc = t => (t ?? '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;');
-const verbClass = m => ['get','post','put','delete','patch'].includes(m.toLowerCase()) ? 'v-' + m.toLowerCase() : 'v-other';
+const fmtUs = us => us == null ? '' : us >= 1000 ? (us / 1000).toFixed(us >= 10000 ? 0 : 1) + ' ms' : us + ' µs';
+const verbClass = m => ['get', 'post', 'put', 'delete', 'patch'].includes(m.toLowerCase()) ? 'v-' + m.toLowerCase() : 'v-other';
+const stColor = s => COLORS[s] || COLORS.bean;
 
-/* Pretty, lightly highlighted JSON from an already-parsed value. */
-function jsonHtml(value) {
-  if (value === undefined) return '';
-  const json = JSON.stringify(value, null, 2);
-  if (json === undefined) return '<span class="j-null">undefined</span>';
-  return json.replace(/&/g, '&amp;').replace(/</g, '&lt;')
+/* ---- theme ---- */
+function applyTheme(t) { document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('theme-btn').textContent = t === 'dark' ? '☾' : '☀'; }
+function toggleTheme() { const cur = document.documentElement.getAttribute('data-theme')
+    || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const next = cur === 'dark' ? 'light' : 'dark'; try { localStorage.setItem('ligero-theme', next); } catch (e) {} applyTheme(next); }
+(function () { let t; try { t = localStorage.getItem('ligero-theme'); } catch (e) {}
+  applyTheme(t || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')); })();
+
+/* ---- JSON viewer ---- */
+function jsonHtml(v) {
+  if (v === undefined) return '<span class="j-null">—</span>';
+  const s = JSON.stringify(v, null, 2);
+  if (s === undefined) return '<span class="j-null">undefined</span>';
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/"(\\.|[^"\\])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g, m => {
-      let cls = 'j-num';
-      if (/^"/.test(m)) cls = /:$/.test(m) ? 'j-key' : 'j-str';
-      else if (/true|false/.test(m)) cls = 'j-bool';
-      else if (/null/.test(m)) cls = 'j-null';
-      return `<span class="${cls}">${m}</span>`;
+      let c = 'j-num';
+      if (/^"/.test(m)) c = /:$/.test(m) ? 'j-key' : 'j-str';
+      else if (/true|false/.test(m)) c = 'j-bool'; else if (/null/.test(m)) c = 'j-null';
+      return `<span class="${c}">${m}</span>`;
     });
 }
-const jsonBlock = value => `<pre class="json">${jsonHtml(value)}</pre>`;
+const jsonBlock = v => `<pre class="json">${jsonHtml(v)}</pre>`;
 
-/* ============ TRY IT OUT ============ */
-let routes = [], selected = null;
-const pending = new Map();   // correlation id -> callback(trace)
-
-async function loadRoutes() {
-  routes = await (await fetch(base + '/api/routes')).json();
-  const list = document.getElementById('route-list');
-  if (!routes.length) { list.innerHTML = '<div class="route"><span class="path">no routes registered</span></div>'; return; }
-  list.innerHTML = routes.map((r, i) =>
-    `<div class="route" data-i="${i}" onclick="selectRoute(${i})">
-       <span class="verb ${verbClass(r.method)}">${esc(r.method)}</span>
-       <span class="path">${esc(r.path)}</span></div>`).join('');
-}
-
-const pathParamsOf = path => [...path.matchAll(/[:{*]([a-zA-Z0-9_]+)}?/g)].map(m => m[1]);
-
-function selectRoute(i) {
-  selected = routes[i];
-  document.querySelectorAll('.route').forEach(el => el.classList.toggle('sel', +el.dataset.i === i));
-  const params = pathParamsOf(selected.path);
-  const hasBody = !['GET', 'HEAD', 'DELETE'].includes(selected.method.toUpperCase());
-  let html = `<div class="row1"><span class="verb ${verbClass(selected.method)}">${esc(selected.method)}</span>`
-    + `<span class="url">${esc(selected.path)}</span></div>`;
-  if (params.length) {
-    html += `<div class="field"><label>Path parameters</label><div class="params">`
-      + params.map(p => `<span class="pname">${esc(p)}</span><input data-pp="${esc(p)}" placeholder="${esc(p)}">`).join('')
-      + `</div></div>`;
-  }
-  html += `<div class="field"><label>Query <span class="hint">— name=value&amp;name2=value2</span></label>`
-    + `<input id="query" placeholder="e.g. page=1&size=20"></div>`;
-  if (hasBody) {
-    html += `<div class="field"><label>Request body <span class="hint">— JSON</span></label>`
-      + `<textarea id="body" placeholder='{ "name": "Ada" }'></textarea></div>`;
-  }
-  html += `<div class="send"><button class="go" onclick="fire()">Send</button>`
-    + `<span id="fire-note" class="hint" style="color:var(--faint)"></span></div>`;
-  html += `<div id="response"></div>`;
-  document.getElementById('panel').innerHTML = html;
-}
-
-async function fire() {
-  if (!selected) return;
-  const btn = document.querySelector('.go'); btn.disabled = true;
-  let path = selected.path;
-  document.querySelectorAll('[data-pp]').forEach(inp => {
-    path = path.replace(new RegExp('[:{*]' + inp.dataset.pp + '}?'), encodeURIComponent(inp.value || ''));
-  });
-  const query = (document.getElementById('query') || {}).value || '';
-  const url = appRoot + path + (query ? (path.includes('?') ? '&' : '?') + query : '');
-  const id = (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random()).slice(0, 8);
-  const opts = { method: selected.method, headers: { 'X-Ligero-Dev': id } };
-  const bodyEl = document.getElementById('body');
-  if (bodyEl && bodyEl.value.trim()) { opts.body = bodyEl.value; opts.headers['Content-Type'] = 'application/json'; }
-
-  const respBox = document.getElementById('response');
-  respBox.innerHTML = '<div class="resp"><div class="meta">sending…</div></div>';
-  const flow = new Promise(res => { pending.set(id, res); setTimeout(() => res(null), 4000); });
-  const t0 = performance.now();
-  let res, text;
-  try {
-    res = await fetch(url, opts);
-    text = await res.text();
-  } catch (e) {
-    respBox.innerHTML = `<div class="resp"><div class="err-line">request failed: ${esc(e.message)}</div></div>`;
-    btn.disabled = false; return;
-  }
-  const ms = (performance.now() - t0).toFixed(1);
-  let bodyHtml, parsed;
-  try { parsed = JSON.parse(text); bodyHtml = jsonBlock(parsed); }
-  catch { bodyHtml = `<pre class="json">${esc(text)}</pre>`; }
-  respBox.innerHTML = `<div class="resp">
-      <div class="meta"><span class="code status-${Math.floor(res.status/100)}">${res.status}</span>
-        <span>${ms} ms</span><span>${esc(res.headers.get('content-type') || '')}</span></div>
-      <div class="io"><div class="lbl">Response body</div>${bodyHtml}</div>
-      <div id="flow-slot" class="flow"></div></div>`;
-  btn.disabled = false;
-
-  const trace = await flow;
-  pending.delete(id);
-  const slot = document.getElementById('flow-slot');
-  if (slot) slot.innerHTML = trace
-    ? '<h4>Request flow</h4>' + flowHtml(trace)
-    : '<div class="hint" style="color:var(--faint);margin-top:14px">trace not captured (is devtools instrumenting your beans?)</div>';
-}
-
-/* ============ FLOW GRAPH (shared) ============ */
-function nodeHtml({ stereo, color, sig, us, total, io, open }) {
-  const pct = total ? Math.max(3, Math.min(100, Math.round(us / total * 100))) : 0;
-  return `<div class="node${open ? ' open' : ''}">
-    <div class="body" style="border-left-color:${color}">
-      <div class="head" onclick="this.closest('.node').classList.toggle('open')">
-        <span class="stereo" style="color:${color};background:${color}22">${stereo}</span>
-        <span class="sig">${sig}</span>
-        <span class="time">${fmtUs(us)}</span><span class="chev">▶</span>
-      </div>
-      ${total ? `<div class="bar"><span style="width:${pct}%;background:${color}"></span></div>` : ''}
-      <div class="io">${io}</div>
-    </div></div>`;
-}
-
-function flowHtml(t) {
-  const total = t.durationUs || 1;
-  // Root = the HTTP request → controller (its result is the response body).
-  const rootColor = COLORS.controller;
-  const rootIo = `<div class="lbl">Request</div>${jsonBlock(t.request)}`
-    + (t.response !== undefined && t.response !== null ? `<div class="lbl">Response</div>${jsonBlock(t.response)}` : '');
-  let html = nodeHtml({
-    stereo: 'HTTP', color: rootColor, us: t.durationUs, total,
-    sig: `<b>${esc(t.method)}</b> ${esc(t.route || t.path)} <span class="time">→ ${t.status}</span>`,
-    io: rootIo, open: false });
-
-  // Nested spied calls, indented by depth.
-  if (t.calls.length) {
-    html += t.calls.map(c => {
-      const color = COLORS[c.stereotype] || COLORS.bean;
-      const io = `<div class="lbl">Arguments</div>${jsonBlock(c.args)}`
-        + (c.error ? `<div class="lbl">Error</div><div class="err-line">${esc(c.error)}</div>`
-                   : `<div class="lbl">Returns</div>${jsonBlock(c.result)}`);
-      const inner = nodeHtml({
-        stereo: c.stereotype, color, us: c.durationUs, total,
-        sig: `<b>${esc(c.bean)}</b>.${esc(c.method)}()`, io, open: false });
-      return `<div class="rail" style="margin-left:${8 + c.depth * 18}px">${inner}</div>`;
-    }).join('');
-  } else {
-    html += `<div class="hint" style="color:var(--faint);margin:8px 0 0 14px">no spied bean calls`
-      + ` — bind beans as interfaces and instrument them to trace their calls</div>`;
-  }
-  return html;
-}
-
-/* ============ BEANS GRAPH ============ */
-let graphData = null;
-
-function selectBean(type) {
-  const g = graphData; if (!g) return;
-  const node = g.nodes.find(n => n.type === type);
-  const stereo = (node && node.stereotype) || 'bean';
-  const color = COLORS[stereo] || COLORS.bean;
-  const deps = g.edges.filter(e => e.from === type).map(e => e.to);
-  const users = g.edges.filter(e => e.to === type).map(e => e.from);
-  const traceable = !g.unspied.includes(type);
-  const list = arr => arr.length
-    ? `<ul class="bd-list">${arr.map(x => `<li>${simple(x)}</li>`).join('')}</ul>`
-    : '<span class="bd-none">none</span>';
-  document.getElementById('bean-detail').innerHTML =
-    `<div class="side-h">Bean detail</div>
-     <div class="bd-name">${simple(type)}</div><div class="bd-fqn">${type}</div>
-     <div class="bd-row"><span class="k">Stereotype</span>
-       <span class="bd-chip" style="color:${color};background:${color}22">${stereo}</span></div>
-     <div class="bd-row"><span class="k">Traceable</span>
-       ${traceable ? '<span style="color:var(--service)">yes — its calls are spied</span>'
-                   : '<span style="color:var(--repository)">no — bound as a concrete class</span>'}</div>
-     <div class="bd-row"><span class="k">Depends on</span>${list(deps)}</div>
-     <div class="bd-row"><span class="k">Used by</span>${list(users)}</div>`;
-  document.querySelectorAll('#graph-box .node-rect').forEach(r =>
-    r.classList.toggle('sel', r.dataset.for === type));
-}
-
-async function drawGraph() {
-  const g = graphData = await (await fetch(base + '/api/graph')).json();
-  if (g.unspied.length) {
-    const div = document.getElementById('unspied');
-    div.style.display = 'block';
-    div.textContent = 'Not traceable (bound as concrete classes — bind them as interfaces to spy their calls): '
-      + g.unspied.map(simple).join(', ');
-  }
-  const deps = {};
-  g.nodes.forEach(n => deps[n.type] = []);
+/* ---- graph layout (dependency levels, left = consumers) ---- */
+const NODE = { W: 178, H: 40, GX: 96, GY: 26, PAD: 34, ENTRY: 150 };
+function computeLayout(g) {
+  const deps = {}; g.nodes.forEach(n => deps[n.type] = []);
   g.edges.forEach(e => { if (deps[e.from]) deps[e.from].push(e.to); });
-  const level = {};
-  const depth = t => {
-    if (t in level) return level[t];
-    level[t] = 0;
-    level[t] = deps[t].length ? 1 + Math.max(...deps[t].map(depth)) : 0;
-    return level[t];
+  const level = {}, depth = t => {
+    if (t in level) return level[t]; level[t] = 0;
+    level[t] = deps[t].length ? 1 + Math.max(...deps[t].map(depth)) : 0; return level[t];
   };
   g.nodes.forEach(n => depth(n.type));
-  const maxLevel = Math.max(0, ...Object.values(level));
-  const cols = [];
-  g.nodes.forEach(n => { const col = maxLevel - level[n.type]; (cols[col] = cols[col] || []).push(n); });
-  const BW = 190, BH = 36, GX = 92, GY = 24, PAD = 30;
+  const maxLevel = Math.max(0, ...Object.values(level)), cols = [];
+  g.nodes.forEach(n => { const c = maxLevel - level[n.type]; (cols[c] = cols[c] || []).push(n); });
   const pos = {};
-  cols.forEach((col, ci) => col.forEach((n, ri) => {
-    pos[n.type] = { x: PAD + ci * (BW + GX), y: PAD + ri * (BH + GY), n };
-  }));
-  const width = PAD * 2 + cols.length * BW + Math.max(0, cols.length - 1) * GX;
-  const height = PAD * 2 + Math.max(0, ...cols.map(c => c.length)) * (BH + GY) - GY;
-  let s = `<svg width="${Math.max(width, 400)}" height="${Math.max(height, 120)}">`
-    + '<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">'
-    + '<path d="M 0 0 L 10 5 L 0 10 z" fill="#3a4157"/></marker></defs>';
+  cols.forEach((col, ci) => col.forEach((n, ri) =>
+    pos[n.type] = { x: NODE.PAD + NODE.ENTRY + ci * (NODE.W + NODE.GX), y: NODE.PAD + ri * (NODE.H + NODE.GY), n }));
+  const width = NODE.PAD * 2 + NODE.ENTRY + cols.length * NODE.W + Math.max(0, cols.length - 1) * NODE.GX;
+  const height = NODE.PAD * 2 + Math.max(1, ...cols.map(c => c.length)) * (NODE.H + NODE.GY) - NODE.GY;
+  return { pos, width: Math.max(width, 480), height: Math.max(height, 200) };
+}
+
+/* ---- which nodes/edges a trace exercised ---- */
+function pathOf(trace) {
+  const bySimple = {}; GRAPH.nodes.forEach(n => bySimple[simple(n.type)] = n.type);
+  const nodes = new Set(), edges = new Set(), entryTargets = new Set(), stack = [];
+  if (trace) trace.calls.forEach(c => {
+    const fqn = bySimple[c.declaredBy]; if (!fqn) return;
+    nodes.add(fqn); stack[c.depth] = fqn;
+    if (c.depth === 0) entryTargets.add(fqn);
+    else { const parent = stack[c.depth - 1]; if (parent) edges.add(parent + ' ' + fqn); }
+  });
+  return { nodes, edges, entryTargets };
+}
+
+/* ---- render the graph ---- */
+function renderGraph() {
+  const g = GRAPH, L = layout, trace = currentTrace();
+  const path = pathOf(trace), active = !!trace;
+  let s = `<svg width="${L.width}" height="${L.height}" viewBox="0 0 ${L.width} ${L.height}">`
+    + '<defs>'
+    + '<marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--edge)"/></marker>'
+    + '<marker id="arwh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--accent)"/></marker>'
+    + '</defs>';
+
+  // dependency edges
   for (const e of g.edges) {
-    const a = pos[e.from], b = pos[e.to];
-    if (!a || !b) continue;
-    const x1 = a.x + BW, y1 = a.y + BH / 2, x2 = b.x, y2 = b.y + BH / 2, mx = (x1 + x2) / 2;
-    s += `<path class="edge" marker-end="url(#arrow)" d="M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}"/>`;
+    const a = L.pos[e.from], b = L.pos[e.to]; if (!a || !b) continue;
+    const hot = path.edges.has(e.from + ' ' + e.to);
+    const cls = 'edge' + (hot ? ' hot' : active ? ' dim' : '');
+    const x1 = a.x + NODE.W, y1 = a.y + NODE.H / 2, x2 = b.x, y2 = b.y + NODE.H / 2, mx = (x1 + x2) / 2;
+    s += `<path class="${cls}" marker-end="url(#${hot ? 'arwh' : 'arw'})" d="M${x1} ${y1}C${mx} ${y1},${mx} ${y2},${x2} ${y2}"/>`;
   }
-  for (const t in pos) {
-    const { x, y, n } = pos[t];
-    const color = COLORS[n.stereotype] || COLORS.bean;
-    s += `<g data-bean onclick="selectBean('${t}')"><title>${t} (${n.stereotype})</title>`
-      + `<rect class="node-rect" data-for="${t}" x="${x}" y="${y}" width="${BW}" height="${BH}" stroke="${color}"/>`
-      + `<text x="${x + BW / 2}" y="${y + BH / 2 + 4}" text-anchor="middle">${simple(t)}</text></g>`;
+  // entry node + edges (only when a request is selected)
+  if (active) {
+    const targets = [...path.entryTargets].map(t => L.pos[t]).filter(Boolean);
+    if (targets.length) {
+      const ey = targets.reduce((s2, t) => s2 + t.y + NODE.H / 2, 0) / targets.length;
+      const ex = 14, ew = NODE.ENTRY - 24, eh = 34, etop = ey - eh / 2;
+      for (const t of targets) {
+        const x1 = ex + ew, y1 = ey, x2 = t.x, y2 = t.y + NODE.H / 2, mx = (x1 + x2) / 2;
+        s += `<path class="edge hot" marker-end="url(#arwh)" d="M${x1} ${y1}C${mx} ${y1},${mx} ${y2},${x2} ${y2}"/>`;
+      }
+      const sel = selectedNode === '__http__' ? ' sel' : '';
+      s += `<g class="gnode entry hot${sel}" onclick="selectNode('__http__')"><rect x="${ex}" y="${etop}" width="${ew}" height="${eh}" stroke="var(--accent)"/>`
+        + `<text x="${ex + ew / 2}" y="${etop + eh / 2 + 4}" text-anchor="middle">▶ ${esc(trace.method)}</text></g>`;
+    }
+  }
+  // bean nodes
+  for (const type in L.pos) {
+    const { x, y, n } = L.pos[type], color = stColor(n.stereotype);
+    const inPath = path.nodes.has(type);
+    let cls = 'gnode';
+    if (active) cls += inPath ? ' hot' : ' dim';
+    if (selectedNode === type) cls += ' sel';
+    const count = trace ? trace.calls.filter(c => simple(type) === c.declaredBy).length : 0;
+    s += `<g class="${cls}" onclick="selectNode('${type}')"><title>${esc(type)}</title>`
+      + `<rect x="${x}" y="${y}" width="${NODE.W}" height="${NODE.H}" stroke="${color}"/>`
+      + `<text x="${x + NODE.W / 2}" y="${y + NODE.H / 2 + 4}" text-anchor="middle">${esc(simple(type))}</text>`
+      + (count ? `<text class="cnt" x="${x + NODE.W - 12}" y="${y + 14}" text-anchor="middle">${count}</text>` : '')
+      + `</g>`;
   }
   document.getElementById('graph-box').innerHTML = s + '</svg>';
 }
 
-/* ============ REQUESTS LIST ============ */
-function addTrace(t, prepend) {
-  document.getElementById('no-requests').style.display = 'none';
-  const rows = document.getElementById('req-rows');
-  const item = document.createElement('div');
-  item.className = 'req-item';
-  item.innerHTML = `<div class="req-head" onclick="this.parentNode.classList.toggle('open')">
-      <span class="verb ${verbClass(t.method)}">${esc(t.method)}</span>
-      <span class="path">${esc(t.path)}</span>
-      <span class="code status-${Math.floor(t.status/100)}">${t.status}</span>
-      <span class="n">${fmtUs(t.durationUs)}</span>
-      <span class="n">${t.calls.length} call${t.calls.length === 1 ? '' : 's'}</span>
-      <span class="when">${new Date(t.startedAt).toLocaleTimeString()}</span></div>
-    <div class="req-detail"><div class="flow">${flowHtml(t)}</div></div>`;
-  if (prepend && rows.firstChild) rows.insertBefore(item, rows.firstChild); else rows.appendChild(item);
+/* ---- requests sub-header ---- */
+function currentTrace() { return TRACES.find(t => t.id === selectedTraceId) || null; }
+function renderChips() {
+  const box = document.getElementById('chips');
+  if (!TRACES.length) { box.innerHTML = '<span class="d-none" style="padding:0 6px">no requests yet</span>'; return; }
+  box.innerHTML = TRACES.map(t =>
+    `<span class="chip${t.id === selectedTraceId ? ' sel' : ''}" onclick="selectTrace('${t.id}')">
+       <span class="verb ${verbClass(t.method)}">${esc(t.method)}</span>
+       <span class="path">${esc(t.path)}</span>
+       <span class="st" style="background:${t.status < 400 ? 'var(--service)' : 'var(--error)'}"></span>
+       <span class="t">${fmtUs(t.durationUs)}</span></span>`).join('');
+}
+function selectTrace(id) { selectedTraceId = id; selectedNode = null; renderChips(); renderGraph(); renderDetail();
+  document.getElementById('graph-hint').textContent = 'Highlighted: the path this request took · click a node for its arguments & response'; }
+
+/* ---- node / request detail (section 4) ---- */
+function selectNode(type) { selectedNode = type; renderGraph(); renderDetail(); }
+
+function renderDetail() {
+  const el = document.getElementById('detail'), trace = currentTrace();
+  if (!trace && !selectedNode) {
+    el.innerHTML = '<div class="empty-detail">Pick a request, then click a node in the graph to inspect the arguments and response of each layer.</div>';
+    return;
+  }
+  // HTTP entry node OR no node selected -> request summary
+  if (!selectedNode || selectedNode === '__http__') { el.innerHTML = requestDetail(trace); return; }
+  el.innerHTML = nodeDetail(selectedNode, trace);
 }
 
-async function loadRequests() {
-  const traces = await (await fetch(base + '/api/requests')).json();
-  traces.forEach(t => addTrace(t, false));
+function requestDetail(t) {
+  if (!t) return '<div class="empty-detail">Select a request.</div>';
+  return `<div class="d-eyebrow">Request</div>
+    <div class="d-title"><span class="verb ${verbClass(t.method)}">${esc(t.method)}</span>
+      <h2 style="font-size:14px">${esc(t.route || t.path)}</h2></div>
+    <div class="metaline"><span class="code status-${Math.floor(t.status / 100)}">${t.status}</span>
+      <span>${fmtUs(t.durationUs)} total</span><span>${t.calls.length} layer${t.calls.length === 1 ? '' : 's'}</span></div>
+    <div class="d-section"><span class="k">Request</span>${jsonBlock(t.request)}</div>
+    ${t.response !== undefined && t.response !== null ? `<div class="d-section"><span class="k">Response</span>${jsonBlock(t.response)}</div>` : ''}`;
 }
 
-function connect() {
+function nodeDetail(type, t) {
+  const node = GRAPH.nodes.find(n => n.type === type), stereo = (node && node.stereotype) || 'bean', color = stColor(stereo);
+  const deps = GRAPH.edges.filter(e => e.from === type).map(e => e.to);
+  const users = GRAPH.edges.filter(e => e.to === type).map(e => e.from);
+  const traceable = !GRAPH.unspied.includes(type);
+  const list = a => a.length ? `<ul class="d-list">${a.map(x => `<li>${esc(simple(x))}</li>`).join('')}</ul>` : '<span class="d-none">none</span>';
+  let html = `<div class="d-eyebrow">Bean</div>
+    <div class="d-title"><h2>${esc(simple(type))}</h2><span class="chipst" style="color:${color};background:${color}22">${stereo}</span></div>
+    <div class="d-fqn">${esc(type)}</div>`;
+
+  if (t) {
+    const calls = t.calls.filter(c => c.declaredBy === simple(type));
+    html += `<div class="d-section"><span class="k">In this request — ${calls.length} call${calls.length === 1 ? '' : 's'}</span>`;
+    if (!calls.length) html += '<span class="d-none">this bean was not called by the selected request</span>';
+    else html += calls.map(c => `<div class="invocation">
+        <div class="sig"><b>${esc(c.bean)}</b>.${esc(c.method)}()<span class="dur">${fmtUs(c.durationUs)}</span></div>
+        <div class="lbl">Arguments</div>${jsonBlock(c.args)}
+        ${c.error ? `<div class="lbl">Error</div><div class="err-line">${esc(c.error)}</div>`
+                  : `<div class="lbl">Returns</div>${jsonBlock(c.result)}`}</div>`).join('');
+    html += `</div>`;
+  }
+  html += `<div class="d-section"><span class="k">Traceable</span>${traceable
+      ? '<span style="color:var(--service)">yes — its calls are spied</span>'
+      : '<span style="color:var(--repository)">no — bound as a concrete class</span>'}</div>
+    <div class="d-section"><span class="k">Depends on</span>${list(deps)}</div>
+    <div class="d-section"><span class="k">Used by</span>${list(users)}</div>`;
+  return html;
+}
+
+/* ---- compose / send ---- */
+const pathParamsOf = p => [...p.matchAll(/[:{*]([a-zA-Z0-9_]+)}?/g)].map(m => m[1]);
+function appRoutes() { return ROUTES.filter(r => !r.path.startsWith('/ligero/dev')); }
+function openCompose() {
+  const sel = document.getElementById('c-route');
+  sel.innerHTML = appRoutes().map((r, i) => `<option value="${i}">${r.method}  ${r.path}</option>`).join('');
+  composeRoute(); document.getElementById('overlay').classList.add('open');
+}
+function closeCompose() { document.getElementById('overlay').classList.remove('open'); }
+function composeRoute() {
+  const r = appRoutes()[+document.getElementById('c-route').value]; if (!r) return;
+  const params = pathParamsOf(r.path), pw = document.getElementById('c-params-wrap');
+  pw.style.display = params.length ? 'block' : 'none';
+  document.getElementById('c-params').innerHTML = params.map(p =>
+    `<span class="pn">${esc(p)}</span><input data-cp="${esc(p)}" placeholder="${esc(p)}">`).join('');
+  document.getElementById('c-body-wrap').style.display =
+    ['GET', 'HEAD', 'DELETE'].includes(r.method.toUpperCase()) ? 'none' : 'block';
+}
+async function sendCompose() {
+  const r = appRoutes()[+document.getElementById('c-route').value]; if (!r) return;
+  let path = r.path;
+  document.querySelectorAll('[data-cp]').forEach(inp =>
+    path = path.replace(new RegExp('[:{*]' + inp.dataset.cp + '}?'), encodeURIComponent(inp.value || '')));
+  const query = document.getElementById('c-query').value || '';
+  const bodyEl = document.getElementById('c-body');
+  const id = (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '' + Math.random()).slice(0, 8);
+  closeCompose();
+  if (OFFLINE) {
+    const sample = TRACES_ALL.find(t => t.method === r.method && t.route === r.path);
+    if (sample) { const clone = JSON.parse(JSON.stringify(sample)); clone.id = id; clone.startedAt = Date.now();
+      onNewTrace(clone); } else alert('This offline demo has sample traces for the /api/v1 routes only.');
+    return;
+  }
+  const url = appRoot + path + (query ? (path.includes('?') ? '&' : '?') + query : '');
+  const opts = { method: r.method, headers: { 'X-Ligero-Dev': id } };
+  if (bodyEl && bodyEl.value.trim()) { opts.body = bodyEl.value; opts.headers['Content-Type'] = 'application/json'; }
+  try { await fetch(url, opts); } catch (e) { alert('Request failed: ' + e.message); }
+  // the trace arrives via SSE and is auto-selected by onNewTrace
+}
+function onNewTrace(t) {
+  const i = TRACES.findIndex(x => x.id === t.id);
+  if (i >= 0) TRACES[i] = t; else TRACES.unshift(t);
+  renderChips(); if (selectedTraceId === t.id || i < 0) selectTrace(t.id);
+}
+
+/* ---- boot ---- */
+let TRACES_ALL = [];
+async function boot() {
+  if (OFFLINE) { GRAPH = window.BAKED.graph; ROUTES = window.BAKED.routes; TRACES = window.BAKED.traces.slice(); TRACES_ALL = window.BAKED.traces; }
+  else {
+    [GRAPH, ROUTES, TRACES] = await Promise.all(
+      ['/api/graph', '/api/routes', '/api/requests'].map(u => fetch(base + u).then(r => r.json())));
+  }
+  layout = computeLayout(GRAPH);
+  renderChips(); renderGraph();
+  if (TRACES.length) selectTrace(TRACES[0].id); else renderDetail();
+  if (!OFFLINE) { const live = document.getElementById('live'); connect(live); }
+  else { const live = document.getElementById('live'); live.classList.add('on'); live.textContent = 'sample data'; }
+}
+function connect(live) {
   const es = new EventSource(base + '/api/stream');
-  const live = document.getElementById('live');
   es.onopen = () => { live.classList.add('on'); live.textContent = 'live'; };
   es.onerror = () => { live.classList.remove('on'); live.textContent = 'reconnecting…'; };
-  es.addEventListener('trace', ev => {
-    const t = JSON.parse(ev.data);
-    addTrace(t, true);
-    const cb = pending.get(t.id);   // matches a request fired from "Try it out"
-    if (cb) cb(t);
-  });
+  es.addEventListener('trace', ev => onNewTrace(JSON.parse(ev.data)));
 }
-
-loadRoutes();
-drawGraph();
-loadRequests().then(connect);
+boot();
 </script>
 </body>
 </html>
