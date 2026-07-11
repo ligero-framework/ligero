@@ -11,8 +11,10 @@ How to cut a coordinated release across the four repositories:
 
 ## Versioning
 
-- **Semantic Versioning** (`MAJOR.MINOR.PATCH`). The framework version in
-  `gradle.properties` is authoritative; `main` always carries `-SNAPSHOT`.
+- **Semantic Versioning** (`MAJOR.MINOR.PATCH`). The **release tag drives the
+  published version** (tag `vX.Y.Z` → artifacts `X.Y.Z`), so `gradle.properties`
+  is never edited by hand for a release; `main` always carries the next
+  `-SNAPSHOT`, bumped automatically after each release (see §1).
 - CLI and examples **track the framework version** they target.
 - Docs are continuously deployed; optionally snapshot a versioned copy on a
   MAJOR/MINOR bump (see §4).
@@ -41,28 +43,32 @@ Dependencies flow downhill — release in this order:
 **Pre-flight:** `main` is green (CI + coverage) and the `CHANGELOG.md`
 *Unreleased* section is complete.
 
-1. Branch `release/x.y.z` from `main`.
-2. **CHANGELOG:** rename `## [Unreleased]` → `## [x.y.z] — YYYY-MM-DD`, and add a
-   fresh empty *Unreleased* block on top.
-3. **Version:** set `version=x.y.z` in `gradle.properties` (drop `-SNAPSHOT`).
-4. Commit `release: vX.Y.Z`, open a PR, merge to `main`.
-5. **Tag:** `git tag -a vX.Y.Z -m "Ligero X.Y.Z" && git push origin vX.Y.Z`.
-6. **Publish to Maven Central** (signing runs automatically for non-SNAPSHOT):
-   ```bash
-   ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository \
-     -PmavenCentralUsername="$MAVEN_CENTRAL_USERNAME" \
-     -PmavenCentralPassword="$MAVEN_CENTRAL_PASSWORD"
-   ```
+The release is **tag-driven** — creating the GitHub Release does everything:
+
+1. **CHANGELOG:** rename `## [Unreleased]` → `## [x.y.z] — YYYY-MM-DD` and add a
+   fresh empty *Unreleased* block on top (a small PR, merged to `main`). This is
+   the only content change; you do **not** touch `version` in `gradle.properties`.
+2. **Create the GitHub Release** from `main` with tag `vX.Y.Z`
+   (`git tag -a vX.Y.Z -m "Ligero X.Y.Z" && git push origin vX.Y.Z`, then publish
+   the Release — notes are auto-categorized via
+   [`.github/release.yml`](.github/release.yml)).
+3. That's it. The [*Publish to Maven Central*](.github/workflows/release.yml)
+   workflow fires on the published Release and:
+   - publishes the signed artifacts as **`X.Y.Z`** (version read from the tag,
+     `-Pversion=${GITHUB_REF_NAME#v}`) and closes/releases the staging repo;
+   - **bumps `main`** to `X.Y.(Z+1)-SNAPSHOT` and pushes the
+     `chore: begin …` commit — so everyday builds target the next version with
+     no manual edit.
+
    Verify on [central.sonatype.com](https://central.sonatype.com) and, once
    synced, at `https://repo1.maven.org/maven2/com/ligeroframework/`.
-7. **GitHub Release:** create it from tag `vX.Y.Z` — notes are auto-categorized
-   via [`.github/release.yml`](.github/release.yml).
-8. **Post-release:** on `main`, bump `version` to the next `-SNAPSHOT`
-   (e.g. `x.y.(z+1)-SNAPSHOT`) and commit.
 
-> **Today:** CI auto-publishes **SNAPSHOTs** from `main` (the *Publish snapshot*
-> job) whenever the `MAVEN_CENTRAL_*` secrets exist. Full releases are the manual
-> steps above until the tag workflow in [§5](#5-automation-recommended) is added.
+> **Notes.** Pre-releases (a Release marked *pre-release*, or a non-`X.Y.Z` tag)
+> publish but **skip** the snapshot bump. If `main` is a protected branch, give
+> the bump job a `RELEASE_BOT_TOKEN` secret (a PAT or GitHub-App token allowed to
+> push to `main`); otherwise it uses the default `GITHUB_TOKEN`. CI also
+> auto-publishes **SNAPSHOTs** from `main` whenever the `MAVEN_CENTRAL_*` secrets
+> exist.
 
 ## 2. CLI release (`ligero-cli`)
 

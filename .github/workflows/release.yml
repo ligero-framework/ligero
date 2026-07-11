@@ -1,7 +1,9 @@
 name: Publish to Maven Central
 
 # Runs when a GitHub Release is published. The version is taken from the tag
-# (e.g. tag `v0.3.0` -> version `0.3.0`), so there's nothing to bump by hand.
+# (e.g. tag `v1.2.0` -> version `1.2.0`), so `gradle.properties` never has to be
+# bumped by hand for a release. After a successful publish, `main` is moved on
+# to the next patch `-SNAPSHOT` (e.g. `1.2.1-SNAPSHOT`) automatically.
 on:
   release:
     types: [published]
@@ -24,7 +26,8 @@ jobs:
           cache: 'gradle'
 
       - name: Publish + release to Maven Central
-        # publishToSonatype uploads the signed artifacts to a staging repo;
+        # The version comes from the release tag (v1.2.0 -> 1.2.0); publishToSonatype
+        # uploads the signed artifacts to a staging repo and
         # closeAndReleaseSonatypeStagingRepository closes and releases it.
         run: >
           ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository
@@ -35,3 +38,49 @@ jobs:
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_PASSWORD }}
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_PRIVATE_KEY }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_PASSPHRASE }}
+
+  bump-snapshot:
+    # After a successful release, move `main` to the next patch -SNAPSHOT so
+    # everyday development builds against the upcoming version — no manual edit.
+    # Skipped for pre-releases (e.g. a tag marked "pre-release" on GitHub).
+    needs: publish
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          # A push to a protected `main` needs a token that can bypass the rule:
+          # set a RELEASE_BOT_TOKEN (PAT/app token) secret, otherwise the default
+          # GITHUB_TOKEN is used (works when main isn't protected against it).
+          token: ${{ secrets.RELEASE_BOT_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Compute next -SNAPSHOT from the tag
+        id: next
+        run: |
+          released="${GITHUB_REF_NAME#v}"
+          if [[ ! "$released" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Tag '$released' is not X.Y.Z — skipping the snapshot bump."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          IFS='.' read -r major minor patch <<< "$released"
+          echo "next=${major}.${minor}.$((patch + 1))-SNAPSHOT" >> "$GITHUB_OUTPUT"
+
+      - name: Bump gradle.properties on main
+        if: steps.next.outputs.skip != 'true'
+        run: |
+          next="${{ steps.next.outputs.next }}"
+          sed -i -E "s/^version=.*/version=${next}/" gradle.properties
+          if git diff --quiet -- gradle.properties; then
+            echo "gradle.properties already at ${next} — nothing to do."
+            exit 0
+          fi
+          git config user.name "Duvan Jamid"
+          git config user.email "duvanjamid.work@gmail.com"
+          git add gradle.properties
+          git commit -m "chore: begin ${next} development"
+          git push origin HEAD:main
