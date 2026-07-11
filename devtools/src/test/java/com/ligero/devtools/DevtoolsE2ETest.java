@@ -116,7 +116,8 @@ class DevtoolsE2ETest {
             .contains("\"depth\":1,\"bean\":\"FixedNameRepo\",\"declaredBy\":\"NameRepo\","
                       + "\"stereotype\":\"repository\",\"method\":\"find\",\"args\":[7]")
             .contains("\"result\":\"hello user-7\"")
-            .contains("\"result\":\"user-7\"");
+            .contains("\"result\":\"user-7\"")
+            .contains("\"response\":\"hello user-7\"");   // text() body captured too
     }
 
     @Test
