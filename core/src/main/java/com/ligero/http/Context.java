@@ -22,6 +22,15 @@ import java.util.Map;
  */
 public final class Context {
 
+    /**
+     * Attribute under which {@link #json(Object)}, {@link #text(String)} and
+     * {@link #html(String)} stash the body they were handed, so development
+     * tooling (ligero-devtools) can show the controller's result. It is a plain
+     * reference — no serialization happens unless something reads it — so the
+     * cost is a single map put.
+     */
+    public static final String RESPONSE_BODY_ATTRIBUTE = "ligero.responseBody";
+
     private final HttpRequest request;
     private final HttpResponse response;
     private final String path;
@@ -235,16 +244,19 @@ public final class Context {
     }
 
     public Context json(Object body) {
+        attributes.put(RESPONSE_BODY_ATTRIBUTE, body);
         response.json(body);
         return this;
     }
 
     public Context text(String body) {
+        attributes.put(RESPONSE_BODY_ATTRIBUTE, body);
         response.contentType("text/plain; charset=utf-8").send(body);
         return this;
     }
 
     public Context html(String body) {
+        attributes.put(RESPONSE_BODY_ATTRIBUTE, body);
         response.contentType("text/html; charset=utf-8").send(body);
         return this;
     }

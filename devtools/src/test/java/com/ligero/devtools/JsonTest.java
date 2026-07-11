@@ -35,9 +35,12 @@ class JsonTest {
     @Test
     void serializesTraceWithCalls() {
         RequestTrace trace = new RequestTrace("abc", "GET", "/items/1");
-        RequestTrace.Call call = trace.enter("StubRepo", "Repo", "repository", "find", "1");
-        call.complete("item-1", null, 42);
+        // args and result arrive already serialized as JSON (by JsonValue).
+        RequestTrace.Call call = trace.enter("StubRepo", "Repo", "repository", "find", "[1]");
+        call.complete("\"item-1\"", null, 42);
         trace.exit();
+        trace.describe("/items/:id", "{\"pathParams\":{\"id\":\"1\"}}");
+        trace.respondedWith("{\"name\":\"item-1\"}");
         trace.finish(200);
 
         String json = Json.trace(trace);
@@ -45,13 +48,27 @@ class JsonTest {
             .contains("\"id\":\"abc\"")
             .contains("\"method\":\"GET\"")
             .contains("\"path\":\"/items/1\"")
+            .contains("\"route\":\"/items/:id\"")
             .contains("\"status\":200")
+            .contains("\"request\":{\"pathParams\":{\"id\":\"1\"}}")
+            .contains("\"response\":{\"name\":\"item-1\"}")
             .contains("\"bean\":\"StubRepo\"")
             .contains("\"stereotype\":\"repository\"")
-            .contains("\"args\":\"1\"")
+            .contains("\"args\":[1]")           // embedded raw, not as a string
             .contains("\"result\":\"item-1\"")
             .contains("\"error\":null")
             .contains("\"durationUs\":42");
         assertThat(Json.traces(List.of(trace))).isEqualTo("[" + json + "]");
+    }
+
+    @Test
+    void serializesRoutesSortedByPath() {
+        String json = Json.routes(new java.util.LinkedHashMap<>(Map.of(
+            "GET", List.of("/users/:id", "/health"),
+            "POST", List.of("/users"))));
+        assertThat(json).isEqualTo(
+            "[{\"method\":\"GET\",\"path\":\"/health\"},"
+            + "{\"method\":\"POST\",\"path\":\"/users\"},"
+            + "{\"method\":\"GET\",\"path\":\"/users/:id\"}]");
     }
 }

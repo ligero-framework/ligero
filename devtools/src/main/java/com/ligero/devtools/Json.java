@@ -2,6 +2,8 @@ package com.ligero.devtools;
 
 import com.ligero.beans.BeanGraph;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -77,9 +79,12 @@ final class Json {
         sb.append("{\"id\":").append(str(t.id()))
           .append(",\"method\":").append(str(t.method()))
           .append(",\"path\":").append(str(t.path()))
+          .append(",\"route\":").append(str(t.route()))
           .append(",\"status\":").append(t.status())
           .append(",\"startedAt\":").append(t.startedAtMs())
           .append(",\"durationUs\":").append(t.durationUs())
+          .append(",\"request\":").append(raw(t.requestJson()))
+          .append(",\"response\":").append(raw(t.responseJson()))
           .append(",\"calls\":[");
         List<RequestTrace.Call> calls = t.calls();
         for (int i = 0; i < calls.size(); i++) {
@@ -87,19 +92,46 @@ final class Json {
                 sb.append(',');
             }
             RequestTrace.Call c = calls.get(i);
+            // args and result are already JSON (produced by JsonValue), so they
+            // are embedded raw rather than as escaped strings.
             sb.append("{\"order\":").append(c.order())
               .append(",\"depth\":").append(c.depth())
               .append(",\"bean\":").append(str(c.bean()))
               .append(",\"declaredBy\":").append(str(c.declaredBy()))
               .append(",\"stereotype\":").append(str(c.stereotype()))
               .append(",\"method\":").append(str(c.method()))
-              .append(",\"args\":").append(str(c.args()))
-              .append(",\"result\":").append(str(c.result()))
+              .append(",\"args\":").append(raw(c.args()))
+              .append(",\"result\":").append(raw(c.result()))
               .append(",\"error\":").append(str(c.error()))
               .append(",\"durationUs\":").append(c.durationUs())
               .append('}');
         }
         sb.append("]}");
+    }
+
+    /** The routes payload for the "try it out" panel: {@code [{method, path}, …]}. */
+    static String routes(Map<String, List<String>> routesByMethod) {
+        List<String[]> flat = new ArrayList<>();
+        routesByMethod.forEach((method, paths) -> {
+            for (String path : paths) {
+                flat.add(new String[] {method, path});
+            }
+        });
+        flat.sort(Comparator.comparing((String[] r) -> r[1]).thenComparing(r -> r[0]));
+        StringBuilder sb = new StringBuilder(256).append('[');
+        for (int i = 0; i < flat.size(); i++) {
+            if (i > 0) {
+                sb.append(',');
+            }
+            sb.append("{\"method\":").append(str(flat.get(i)[0]))
+              .append(",\"path\":").append(str(flat.get(i)[1])).append('}');
+        }
+        return sb.append(']').toString();
+    }
+
+    /** Embeds already-serialized JSON verbatim; {@code null} becomes JSON null. */
+    private static String raw(String json) {
+        return json == null ? "null" : json;
     }
 
     static String str(String value) {

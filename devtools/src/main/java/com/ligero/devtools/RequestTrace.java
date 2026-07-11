@@ -64,6 +64,9 @@ public final class RequestTrace {
     private final List<Call> calls = Collections.synchronizedList(new ArrayList<>());
     private volatile int status;
     private volatile long durationUs;
+    private volatile String route;         // matched route pattern, e.g. /users/:id
+    private volatile String requestJson;   // path/query/body inputs, as JSON
+    private volatile String responseJson;  // response body handed to ctx.json(...), as JSON
     private int depth;
     private int nextOrder;
 
@@ -90,12 +93,26 @@ public final class RequestTrace {
         this.durationUs = (System.nanoTime() - startNanos) / 1_000;
     }
 
+    /** Records the matched route pattern and the request inputs (as JSON). */
+    void describe(String route, String requestJson) {
+        this.route = route;
+        this.requestJson = requestJson;
+    }
+
+    /** Records the response body handed to {@code ctx.json(...)} (as JSON). */
+    void respondedWith(String responseJson) {
+        this.responseJson = responseJson;
+    }
+
     public String id() { return id; }
     public String method() { return method; }
     public String path() { return path; }
     public long startedAtMs() { return startedAtMs; }
     public int status() { return status; }
     public long durationUs() { return durationUs; }
+    public String route() { return route; }
+    public String requestJson() { return requestJson; }
+    public String responseJson() { return responseJson; }
 
     /** Snapshot of the recorded calls, in entry order. */
     public List<Call> calls() {

@@ -88,6 +88,10 @@ public final class Devtools {
             .contentType("application/json; charset=utf-8")
             .send(Json.graph(beans.graph(), recorder.stereotypes(), recorder.unspied())));
 
+        app.get(BASE_PATH + "/api/routes", ctx -> ctx.res()
+            .contentType("application/json; charset=utf-8")
+            .send(Json.routes(app.routes())));
+
         app.get(BASE_PATH + "/api/requests", ctx -> ctx.res()
             .contentType("application/json; charset=utf-8")
             .send(Json.traces(store.recent())));

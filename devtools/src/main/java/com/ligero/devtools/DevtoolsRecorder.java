@@ -27,8 +27,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 final class DevtoolsRecorder implements BeanDecorator {
 
-    private static final int PREVIEW_MAX = 240;
-
     /** Trace of the request currently handled by this thread (one request = one thread). */
     static final ThreadLocal<RequestTrace> CURRENT = new ThreadLocal<>();
 
@@ -62,11 +60,12 @@ final class DevtoolsRecorder implements BeanDecorator {
             return invoke(bean, method, args);
         }
         RequestTrace.Call call = trace.enter(beanName, declaredBy, stereotype,
-            method.getName(), args == null ? "" : preview(args));
+            method.getName(), JsonValue.array(args));
         long start = System.nanoTime();
         try {
             Object result = invoke(bean, method, args);
-            call.complete(preview(result), null, (System.nanoTime() - start) / 1_000);
+            String resultJson = method.getReturnType() == void.class ? null : JsonValue.of(result);
+            call.complete(resultJson, null, (System.nanoTime() - start) / 1_000);
             return result;
         } catch (Throwable e) {
             call.complete(null, e.getClass().getSimpleName() + ": " + e.getMessage(),
@@ -91,26 +90,6 @@ final class DevtoolsRecorder implements BeanDecorator {
 
     List<String> unspied() {
         return List.copyOf(unspied);
-    }
-
-    static String preview(Object value) {
-        if (value == null) {
-            return "null";
-        }
-        String text;
-        if (value instanceof Object[] array) {
-            StringBuilder sb = new StringBuilder();
-            for (Object item : array) {
-                if (sb.length() > 0) {
-                    sb.append(", ");
-                }
-                sb.append(item);
-            }
-            text = sb.toString();
-        } else {
-            text = String.valueOf(value);
-        }
-        return text.length() <= PREVIEW_MAX ? text : text.substring(0, PREVIEW_MAX) + "…";
     }
 
     private static String stereotypeOf(Class<?> type) {
