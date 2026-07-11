@@ -106,32 +106,31 @@ The release is **tag-driven** — creating the GitHub Release does everything:
 Copy into the release tracking issue:
 
 - [ ] Framework CI green on `main`
-- [ ] `CHANGELOG.md` dated; version bumped; tag `vX.Y.Z` pushed
-- [ ] Published to Maven Central + verified on `repo1.maven.org`
-- [ ] GitHub Release created
+- [ ] `CHANGELOG.md` dated (no manual version edit)
+- [ ] GitHub Release created with tag `vX.Y.Z`
+- [ ] Publish + `main` snapshot-bump succeeded (verify on `repo1.maven.org` + the `chore: begin …` commit on `main`)
 - [ ] CLI bumped, tested, tagged, dist attached
 - [ ] Examples bumped, verified against released artifacts, tagged
 - [ ] Docs updated + deployed
-- [ ] Next `-SNAPSHOT` set on framework `main`
 - [ ] Announcement (GitHub Discussions / README badge)
 
 ## Hotfix (patch) releases
 
 Branch `hotfix/x.y.(z+1)` from the release **tag** (not `main`), apply the fix
-only, then follow steps 1–8. Cherry-pick the fix back to `main` if needed.
+only, finalize the CHANGELOG, then create a Release with tag `vX.Y.(Z+1)` — the
+workflow publishes it from the tag. Cherry-pick the fix back to `main` if needed.
 
-## 5. Automation (recommended)
+## 5. Automation
 
-Not yet wired. Add `.github/workflows/release.yml` triggered on version tags so
-a `git push origin vX.Y.Z` performs the publish and GitHub Release:
+Wired in [`.github/workflows/release.yml`](.github/workflows/release.yml): a
+published GitHub Release publishes the tag's version to Maven Central and bumps
+`main` to the next `-SNAPSHOT` (see §1). For reference, the core of it:
 
 ```yaml
-name: Release
+name: Publish to Maven Central
 on:
-  push:
-    tags: ['v*']
-permissions:
-  contents: write
+  release:
+    types: [published]
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -139,16 +138,20 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '21' }
-      - uses: gradle/actions/setup-gradle@v4
       - name: Publish to Maven Central
-        run: ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository
+        run: >
+          ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository
+          -Pversion=${GITHUB_REF_NAME#v}
         env:
           MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
-      - uses: softprops/action-gh-release@v2   # GitHub Release from the tag
 ```
+
+> The real workflow also runs a `bump-snapshot` job that moves `main` to the
+> next `-SNAPSHOT` after a successful publish — see the file for the full
+> version and the `RELEASE_BOT_TOKEN` note for protected branches.
 
 > `closeAndReleaseSonatypeStagingRepository` is provided by the
 > `io.github.gradle-nexus.publish-plugin` already configured in `build.gradle`.
