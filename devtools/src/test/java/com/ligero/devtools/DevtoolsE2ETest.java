@@ -72,6 +72,8 @@ class DevtoolsE2ETest {
             devtools.install(app, beans);
             app.get("/greet/{id}", ctx ->
                 ctx.text(ctx.get(GreetService.class).greet(ctx.pathParamAsInt("id"))));
+            app.get("/api/greet/{id}", ctx ->
+                ctx.json(java.util.Map.of("message", ctx.get(GreetService.class).greet(ctx.pathParamAsInt("id")))));
         });
     }
 
@@ -110,11 +112,31 @@ class DevtoolsE2ETest {
             .contains("\"status\":200")
             // service call at depth 0, repository call nested at depth 1
             .contains("\"depth\":0,\"bean\":\"DefaultGreetService\",\"declaredBy\":\"GreetService\","
-                      + "\"stereotype\":\"service\",\"method\":\"greet\",\"args\":\"7\"")
+                      + "\"stereotype\":\"service\",\"method\":\"greet\",\"args\":[7]")
             .contains("\"depth\":1,\"bean\":\"FixedNameRepo\",\"declaredBy\":\"NameRepo\","
-                      + "\"stereotype\":\"repository\",\"method\":\"find\",\"args\":\"7\"")
+                      + "\"stereotype\":\"repository\",\"method\":\"find\",\"args\":[7]")
             .contains("\"result\":\"hello user-7\"")
             .contains("\"result\":\"user-7\"");
+    }
+
+    @Test
+    void routesApiListsRegisteredRoutes() {
+        String routes = server.get("/ligero/dev/api/routes").execute().body();
+        assertThat(routes)
+            .contains("{\"method\":\"GET\",\"path\":\"/api/greet/{id}\"}")
+            .contains("{\"method\":\"GET\",\"path\":\"/greet/{id}\"}");
+    }
+
+    @Test
+    void capturesRouteRequestAndJsonResponseAndCorrelationId() {
+        server.get("/api/greet/3").header("X-Ligero-Dev", "fired123").execute();
+
+        String traces = server.get("/ligero/dev/api/requests").execute().body();
+        assertThat(traces)
+            .contains("\"id\":\"fired123\"")                              // correlation header -> trace id
+            .contains("\"route\":\"/api/greet/{id}\"")                    // matched route pattern
+            .contains("\"pathParams\":{\"id\":\"3\"}")                    // request inputs as JSON
+            .contains("\"response\":{\"message\":\"hello user-3\"}");     // ctx.json body captured as JSON
     }
 
     @Test

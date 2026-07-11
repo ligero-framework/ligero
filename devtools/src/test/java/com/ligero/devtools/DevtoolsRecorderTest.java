@@ -58,8 +58,8 @@ class DevtoolsRecorderTest {
         assertThat(call.declaredBy()).isEqualTo("Repo");
         assertThat(call.stereotype()).isEqualTo("repository");
         assertThat(call.method()).isEqualTo("find");
-        assertThat(call.args()).isEqualTo("7");
-        assertThat(call.result()).isEqualTo("item-7");
+        assertThat(call.args()).isEqualTo("[7]");            // JSON array of arguments
+        assertThat(call.result()).isEqualTo("\"item-7\"");   // JSON value
         assertThat(call.error()).isNull();
     }
 
@@ -103,13 +103,5 @@ class DevtoolsRecorderTest {
         assertThat(recorder.unspied()).containsExactly(PlainService.class.getName());
         assertThat(recorder.stereotypes())
             .containsEntry(PlainService.class.getName(), "service");
-    }
-
-    @Test
-    void previewTruncatesLongValuesAndJoinsArrays() {
-        assertThat(DevtoolsRecorder.preview(null)).isEqualTo("null");
-        assertThat(DevtoolsRecorder.preview(new Object[] {1, "a"})).isEqualTo("1, a");
-        String longText = "x".repeat(500);
-        assertThat(DevtoolsRecorder.preview(longText)).hasSize(241).endsWith("…");
     }
 }

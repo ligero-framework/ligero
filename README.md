@@ -40,7 +40,7 @@ app.start();
 - 📜 **OpenAPI**: generated from your routes, with opt-in Swagger UI (`ligero-openapi`)
 - 🧪 **Testable**: in-memory fake engine for unit tests, `ligero-test` for fluent end-to-end tests
 - 🧭 **Dependency injection & modules**: explicit, compile-checked wiring (no reflection) with an optional compile-time processor; feature modules (`LigeroModule`) that keep wiring out of `main()`
-- 🔬 **Visual devtools**: `/ligero/dev` shows a live bean graph and per-request traces (`ligero-devtools`)
+- 🔬 **Visual devtools**: `/ligero/dev` — an interactive console to fire any route ("try it out") and watch it flow through your beans, with the JSON in/out and timing of every layer, plus a live bean graph (`ligero-devtools`)
 - 🗄️ **Data, your way**: `ligero-jdbc` (SQL → records, no ORM), `ligero-jpa` (Hibernate), and `ligero-migrations` (Flyway) — mix and match
 - ⚙️ **YAML config + profiles**: `ligero.yml` with per-profile overlays and `${ENV:-default}` interpolation (`ligero-config-yaml`)
 - ✅ **Validation**: annotation-based request validation → automatic 400 (`ligero-validation`)
@@ -61,7 +61,7 @@ you need it, carry nothing you don't.
 | `ligero-server-jetty` | Alternative `ServerEngine` on Jetty 12 — adds **HTTP/2 (h2c)** and WebSockets |
 | `ligero-json` | Jackson `BodyMapper` (`ctx.body()` / `ctx.json()`), with `java.time` support |
 | `ligero-processor` | Optional compile-time annotation processor that generates the DI wiring |
-| `ligero-devtools` | `/ligero/dev` dashboard — live bean graph + per-request traces |
+| `ligero-devtools` | `/ligero/dev` dashboard — "try it out" request console, per-request flow graph (JSON + timing per layer), live bean graph |
 | `ligero-config-yaml` | `ligero.yml` + profiles, `${ENV:-default}` interpolation (`ConfigSource` SPI) |
 | `ligero-jdbc` | Tiny SQL helper — query → record, transactions, no ORM |
 | `ligero-jpa` | Thin JPA/Hibernate helper (bring your own provider) |
