@@ -1,0 +1,10 @@
+description = 'Ligero architecture tests: ArchUnit fitness functions that enforce the documented architecture rules (dependency-free core, reflection-free, SPI boundaries). Not published.'
+
+dependencies {
+    testImplementation project(':core')
+
+    testImplementation libs.archunit.junit5
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+}

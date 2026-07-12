@@ -18,6 +18,7 @@ jakartaPersistence = "3.1.0"
 hibernate = "6.6.4.Final"
 jedis = "5.2.0"
 commonsPool2 = "2.12.0"
+archunit = "1.3.0"
 
 [libraries]
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
@@ -45,3 +46,4 @@ hibernate-core = { module = "org.hibernate.orm:hibernate-core", version.ref = "h
 jedis = { module = "redis.clients:jedis", version.ref = "jedis" }
 commons-pool2 = { module = "org.apache.commons:commons-pool2", version.ref = "commonsPool2" }
 otel-sdk-testing = { module = "io.opentelemetry:opentelemetry-sdk-testing", version.ref = "otel" }
+archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }

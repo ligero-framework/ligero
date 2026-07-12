@@ -105,7 +105,7 @@ subprojects {
     }
 
     // El módulo examples es una aplicación de demostración: no se publica.
-    if (!(project.name in ['examples', 'benchmarks'])) {
+    if (!(project.name in ['examples', 'benchmarks', 'arch-test'])) {
         apply plugin: 'maven-publish'
         apply plugin: 'signing'
 
