@@ -6,69 +6,175 @@
 
 ## 1. Framework ↔ CLI version coordination
 
-**Problem.** `ligero new` generates projects that depend on a *specific*
-framework version (`Templates.LIGERO_VERSION`, surfaced as the `ligeroVersion`
-ext property in the generated `build.gradle`). If that constant lags behind the
-latest published framework, new projects pull an old framework; if it points at
-an *unpublished* version, they don't resolve at all (Central has no artifact
-yet). So the CLI must always pin the **latest published** framework version.
+### 1.1 The problem
 
-**Decision.** Keep pinning (reproducible, offline-friendly) and **automate the
-bump**, rather than resolving "latest" dynamically at generate time (which makes
-`ligero new` output non-deterministic and network-dependent).
+`ligero new` generates projects that depend on a *specific* framework version.
+That version lives in one place — `Templates.LIGERO_VERSION` — and is surfaced
+as the `ligeroVersion` ext property in the generated `build.gradle`, so every
+Ligero dependency (`ligero-core`, `ligero-devtools`, `ligero-processor`, …)
+reads from a single variable:
 
-- **A framework release does not require a 1:1 CLI release.** The CLI only needs
-  a *new release* when its own behaviour changes. But every framework release
-  should update the version new projects target.
-- **Mechanism:** when the framework release workflow finishes publishing
-  `vX.Y.Z`, it fires a `repository_dispatch` at `ligero-cli`; a CLI workflow
-  bumps `LIGERO_VERSION`/`ligeroVersion` to `X.Y.Z` and **opens a PR** (same
-  protected-branch pattern as the snapshot bump).
+```gradle
+ext { ligeroVersion = '0.6.0' }        // <- Templates.LIGERO_VERSION
+// ...
+implementation "com.ligeroframework:ligero-core:$ligeroVersion"
+```
 
-Framework side (add to the publish job, after a successful publish):
+Two failure modes bound the problem:
+
+- **If the constant lags** the latest published framework, `ligero new`
+  scaffolds projects on an **old** framework — users miss fixes and features and
+  file "why am I on 0.5?" issues.
+- **If the constant points at an *unpublished* version**, generated projects
+  **don't resolve at all** — Maven Central has no artifact, `gradle build`
+  fails on a fresh checkout. This is the worse failure: a broken first
+  experience.
+
+So the invariant is: **`LIGERO_VERSION` must always name a version that is
+already published to Maven Central, and should be the latest such version.**
+
+### 1.2 Two rejected alternatives
+
+- **Resolve "latest" dynamically at generate time** (e.g. query Central for the
+  newest version and write *that*). Rejected: it makes `ligero new` output
+  **non-deterministic** (two runs a week apart produce different projects) and
+  **network-dependent** (offline or air-gapped users get nothing, or a
+  failure). Scaffolding should be reproducible and work offline.
+- **Use a dynamic Gradle range** in the template (`ligero-core:0.+` or
+  `latest.release`). Rejected for the same reasons *inside the generated app*:
+  it makes the **user's** build non-reproducible and surprises them with
+  silent upgrades. Pinning an exact version is the correct default for a
+  scaffolded project.
+
+### 1.3 Decision: pin + automate the bump
+
+Keep pinning an **exact, published** version (reproducible, offline-friendly),
+and remove the manual maintenance by **automating the bump** through CI.
+
+The key insight is to **decouple two things that look like one**:
+
+| Concept | What it is | Cadence |
+|---|---|---|
+| **Targeted framework version** (`LIGERO_VERSION`) | which framework a *new project* pins | bump on **every** framework release |
+| **CLI release** (a tagged `ligero` binary) | a new version of the CLI tool itself | cut only on framework **MINOR/MAJOR**, or when the CLI's own code changes |
+
+A framework release does **not** require a 1:1 CLI release. Most framework
+releases (especially PATCHes) should only move the *targeted version* — a
+one-line change merged via PR — while the CLI binary people have installed keeps
+working and keeps scaffolding correct projects.
+
+### 1.4 The mechanism (implemented)
+
+When the framework's publish workflow finishes uploading `vX.Y.Z` to Maven
+Central, it fires a cross-repo `repository_dispatch` at `ligero-cli`. A CLI
+workflow receives it, rewrites `LIGERO_VERSION`, and **opens a PR** (never a
+direct push — `main` is protected).
+
+**Framework side** — a `notify-cli` job, `needs: publish`:
 
 ```yaml
-      - name: Tell ligero-cli about the new version
+  notify-cli:
+    needs: publish
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch framework-released to ligero-cli
+        if: ${{ secrets.RELEASE_BOT_TOKEN != '' }}
         run: |
+          version="${GITHUB_REF_NAME#v}"
           curl -sf -X POST \
             -H "Authorization: Bearer ${{ secrets.RELEASE_BOT_TOKEN }}" \
             -H "Accept: application/vnd.github+json" \
             https://api.github.com/repos/ligero-framework/ligero-cli/dispatches \
-            -d '{"event_type":"framework-released","client_payload":{"version":"'"${GITHUB_REF_NAME#v}"'"}}'
+            -d "{\"event_type\":\"framework-released\",\"client_payload\":{\"version\":\"${version}\"}}"
 ```
 
-CLI side (`.github/workflows/framework-bump.yml`):
+**CLI side** — `.github/workflows/framework-bump.yml`:
 
 ```yaml
 on:
   repository_dispatch:
     types: [framework-released]
+  workflow_dispatch:                       # manual fallback
+    inputs: { version: { required: true } }
 jobs:
   bump:
     runs-on: ubuntu-latest
     permissions: { contents: write, pull-requests: write }
     steps:
       - uses: actions/checkout@v4
-      - run: |
-          v="${{ github.event.client_payload.version }}"
-          sed -i -E "s/LIGERO_VERSION = \"[^\"]+\"/LIGERO_VERSION = \"$v\"/" \
+      - id: v
+        run: |
+          v="${{ github.event.client_payload.version || github.event.inputs.version }}"
+          v="${v#v}"
+          [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0; }
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - if: steps.v.outputs.skip != 'true'
+        run: |
+          sed -i -E 's/(LIGERO_VERSION = ")[^"]+(")/\1${{ steps.v.outputs.version }}\2/' \
             src/main/java/com/ligero/cli/Templates.java
-      - uses: peter-evans/create-pull-request@v6
+      - if: steps.v.outputs.skip != 'true'
+        uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.RELEASE_BOT_TOKEN }}
-          branch: chore/framework-${{ github.event.client_payload.version }}
-          title: "chore: target Ligero ${{ github.event.client_payload.version }}"
-          commit-message: "chore: generated projects target Ligero ${{ github.event.client_payload.version }}"
+          token: ${{ secrets.RELEASE_BOT_TOKEN || secrets.GITHUB_TOKEN }}
+          base: main
+          branch: chore/target-ligero-${{ steps.v.outputs.version }}
+          title: "chore: generated projects target Ligero ${{ steps.v.outputs.version }}"
+          commit-message: "chore: generated projects target Ligero ${{ steps.v.outputs.version }}"
 ```
 
-**When to cut a CLI release.** On a framework **MINOR/MAJOR** bump (new
-capabilities worth surfacing) or whenever the CLI itself changes — not on every
-framework **PATCH**. The bump PR keeps `LIGERO_VERSION` current between CLI
-releases, and the CLI's own release remains tag-driven (see `RELEASING.md`).
+End-to-end flow:
 
-> Requires a `RELEASE_BOT_TOKEN` with `repo` scope on both repositories. Until
-> it's wired, `LIGERO_VERSION` is bumped by hand as part of the release
-> checklist — a one-line change.
+```
+tag v0.6.1 on ligero
+      │
+      ▼
+publish job  ──►  Maven Central has 0.6.1
+      │
+      ▼
+notify-cli  ──(repository_dispatch: framework-released, "0.6.1")──►  ligero-cli
+                                                                          │
+                                                                          ▼
+                                                          framework-bump opens PR
+                                                          "target Ligero 0.6.1"
+                                                                          │
+                                                     (checks pass, merge — optionally auto-merge)
+                                                                          ▼
+                                                    ligero new now pins 0.6.1
+```
+
+### 1.5 When to actually cut a CLI release
+
+The bump PR keeps the *targeted version* current without releasing the CLI.
+Cut a real CLI release (a new tag → native binaries + installers, see
+`RELEASING.md`) only when:
+
+- the framework had a **MINOR or MAJOR** bump worth surfacing in the tool
+  (new templates, new `--flags`, new generators to match new framework APIs); or
+- the **CLI's own code** changed (bug fix, new command, template change).
+
+Do **not** cut a CLI release for a framework **PATCH** — the already-installed
+CLI keeps scaffolding correctly once the bump PR merges. This keeps CLI release
+noise proportional to actual CLI change, and users don't get a "new CLI" prompt
+for a framework patch that didn't affect the tool.
+
+### 1.6 Ordering, safety, and fallback
+
+- **Publish-before-notify.** The dispatch fires only after
+  `closeAndReleaseSonatypeStagingRepository` succeeds, so `LIGERO_VERSION` can
+  never be bumped to a version that isn't on Central. (Central's release can lag
+  a few minutes behind the API call; the CLI PR's own build is what would catch
+  a not-yet-propagated artifact, and it can simply be re-run.)
+- **Pre-releases are skipped** (`if: !prerelease`), so an `-rc` tag never moves
+  the targeted version.
+- **Non-`X.Y.Z` tags are ignored** by the CLI workflow's regex guard.
+- **Token.** A cross-repo `repository_dispatch` **cannot** use the default
+  `GITHUB_TOKEN`; it needs a `RELEASE_BOT_TOKEN` (PAT or GitHub-App token) with
+  access to `ligero-cli`. The CLI side also prefers that token so the opened
+  PR's checks run (PRs opened by `GITHUB_TOKEN` don't trigger CI).
+- **Manual fallback.** Until the token is wired, the same bump runs from the
+  Actions tab via `workflow_dispatch` (type the version), or `LIGERO_VERSION`
+  is edited by hand — a one-line change on the release checklist.
 
 ## 2. Documentation versioning
 
