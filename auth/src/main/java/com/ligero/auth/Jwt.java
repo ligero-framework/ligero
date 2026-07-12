@@ -6,7 +6,11 @@ import com.ligero.spi.BodyMapper;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.Signature;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
@@ -14,47 +18,100 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Minimal JWT support: HS256 signing and verification with {@code exp}/
- * {@code nbf} enforcement. Asymmetric algorithms are intentionally out of
- * scope — delegate to a dedicated library if you need them.
+ * JWT signing and verification with {@code exp}/{@code nbf} enforcement.
+ * Supports the symmetric <b>HS256</b> and the asymmetric <b>RS256</b> and
+ * <b>ES256</b> algorithms — the latter two let you verify tokens issued by an
+ * external identity provider (OIDC) against its public keys (see {@link Jwks}).
  *
  * <pre>{@code
+ * // Symmetric (issue + verify yourself)
  * Jwt jwt = Jwt.hs256(secret, bodyMapper);
- * String token = jwt.sign(Map.of("sub", "ada", "roles", List.of("admin")), Duration.ofHours(1));
- * Map<String, Object> claims = jwt.verify(token); // throws UnauthorizedException if invalid
+ * String token = jwt.sign(Map.of("sub", "ada"), Duration.ofHours(1));
+ * Map<String, Object> claims = jwt.verify(token);
+ *
+ * // Resource server: verify tokens from an IdP with its RSA public key
+ * Jwt verifier = Jwt.rs256Verifier(idpPublicKey, bodyMapper);
+ * Map<String, Object> claims = verifier.verify(bearerToken);
  * }</pre>
  */
 public final class Jwt {
 
+    /** Supported signature algorithms. */
+    public enum Algorithm {
+        HS256("HS256"), RS256("RS256"), ES256("ES256");
+
+        final String jose;
+
+        Algorithm(String jose) {
+            this.jose = jose;
+        }
+    }
+
     private static final Base64.Encoder B64E = Base64.getUrlEncoder().withoutPadding();
     private static final Base64.Decoder B64D = Base64.getUrlDecoder();
-    private static final String HEADER_B64 =
-        B64E.encodeToString("{\"alg\":\"HS256\",\"typ\":\"JWT\"}".getBytes(StandardCharsets.UTF_8));
 
-    private final byte[] secret;
+    private final Algorithm algorithm;
+    private final byte[] secret;         // HS256 only
+    private final PrivateKey privateKey; // RS256/ES256 signing (null = verify-only)
+    private final PublicKey publicKey;   // RS256/ES256 verification
     private final BodyMapper mapper;
+    private final String headerB64;
 
-    private Jwt(byte[] secret, BodyMapper mapper) {
-        if (secret == null || secret.length < 32) {
-            throw new IllegalArgumentException("HS256 secret must be at least 32 bytes");
-        }
-        this.secret = secret.clone();
+    private Jwt(Algorithm algorithm, byte[] secret, PrivateKey privateKey,
+                PublicKey publicKey, BodyMapper mapper) {
+        this.algorithm = algorithm;
+        this.secret = secret == null ? null : secret.clone();
+        this.privateKey = privateKey;
+        this.publicKey = publicKey;
         this.mapper = mapper;
+        this.headerB64 = B64E.encodeToString(
+            ("{\"alg\":\"" + algorithm.jose + "\",\"typ\":\"JWT\"}").getBytes(StandardCharsets.UTF_8));
     }
+
+    // ---- factories ----------------------------------------------------------
 
     public static Jwt hs256(String secret, BodyMapper mapper) {
-        return new Jwt(secret.getBytes(StandardCharsets.UTF_8), mapper);
+        byte[] bytes = secret.getBytes(StandardCharsets.UTF_8);
+        if (bytes.length < 32) {
+            throw new IllegalArgumentException("HS256 secret must be at least 32 bytes");
+        }
+        return new Jwt(Algorithm.HS256, bytes, null, null, mapper);
     }
+
+    /** RS256 signer + verifier (you issue and verify tokens). */
+    public static Jwt rs256(PrivateKey signer, PublicKey verifier, BodyMapper mapper) {
+        return new Jwt(Algorithm.RS256, null, signer, verifier, mapper);
+    }
+
+    /** RS256 verify-only (resource server validating an IdP's tokens). */
+    public static Jwt rs256Verifier(PublicKey verifier, BodyMapper mapper) {
+        return new Jwt(Algorithm.RS256, null, null, verifier, mapper);
+    }
+
+    /** ES256 signer + verifier. */
+    public static Jwt es256(PrivateKey signer, PublicKey verifier, BodyMapper mapper) {
+        return new Jwt(Algorithm.ES256, null, signer, verifier, mapper);
+    }
+
+    /** ES256 verify-only. */
+    public static Jwt es256Verifier(PublicKey verifier, BodyMapper mapper) {
+        return new Jwt(Algorithm.ES256, null, null, verifier, mapper);
+    }
+
+    // ---- sign / verify ------------------------------------------------------
 
     /** Signs the claims, adding {@code iat} and {@code exp}. */
     public String sign(Map<String, Object> claims, Duration ttl) {
+        if (algorithm != Algorithm.HS256 && privateKey == null) {
+            throw new IllegalStateException("This Jwt is verify-only (no private key)");
+        }
         Map<String, Object> payload = new HashMap<>(claims);
         long now = Instant.now().getEpochSecond();
         payload.put("iat", now);
         payload.put("exp", now + ttl.toSeconds());
         String body = B64E.encodeToString(mapper.writeJson(payload).getBytes(StandardCharsets.UTF_8));
-        String signingInput = HEADER_B64 + "." + body;
-        return signingInput + "." + B64E.encodeToString(hmac(signingInput));
+        String signingInput = headerB64 + "." + body;
+        return signingInput + "." + B64E.encodeToString(signature(signingInput));
     }
 
     /**
@@ -76,12 +133,11 @@ public final class Jwt {
         } catch (IllegalArgumentException e) {
             throw new UnauthorizedException("Malformed token");
         }
-        // reject anything that isn't exactly HS256 (alg confusion / "none" attacks)
-        if (!header.contains("\"HS256\"")) {
+        // pin the algorithm (defends against alg-confusion and "none" attacks)
+        if (!header.contains("\"" + algorithm.jose + "\"")) {
             throw new UnauthorizedException("Unsupported token algorithm");
         }
-        byte[] expected = hmac(parts[0] + "." + parts[1]);
-        if (!MessageDigest.isEqual(expected, signature)) {
+        if (!verifySignature(parts[0] + "." + parts[1], signature)) {
             throw new UnauthorizedException("Invalid token signature");
         }
         Map<String, Object> claims;
@@ -101,13 +157,55 @@ public final class Jwt {
         return claims;
     }
 
-    private byte[] hmac(String input) {
+    private byte[] signature(String signingInput) {
+        byte[] input = signingInput.getBytes(StandardCharsets.UTF_8);
         try {
-            Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(new SecretKeySpec(secret, "HmacSHA256"));
-            return mac.doFinal(input.getBytes(StandardCharsets.UTF_8));
-        } catch (java.security.GeneralSecurityException e) {
-            throw new IllegalStateException("HmacSHA256 unavailable", e);
+            return switch (algorithm) {
+                case HS256 -> hmac(input);
+                case RS256 -> {
+                    Signature s = Signature.getInstance("SHA256withRSA");
+                    s.initSign(privateKey);
+                    s.update(input);
+                    yield s.sign();
+                }
+                case ES256 -> {
+                    Signature s = Signature.getInstance("SHA256withECDSA");
+                    s.initSign(privateKey);
+                    s.update(input);
+                    yield Ecdsa.derToJose(s.sign(), 64); // P-256 -> 64-byte R||S
+                }
+            };
+        } catch (GeneralSecurityException e) {
+            throw new IllegalStateException("Signing failed", e);
         }
+    }
+
+    private boolean verifySignature(String signingInput, byte[] signature) {
+        byte[] input = signingInput.getBytes(StandardCharsets.UTF_8);
+        try {
+            return switch (algorithm) {
+                case HS256 -> MessageDigest.isEqual(hmac(input), signature);
+                case RS256 -> {
+                    Signature s = Signature.getInstance("SHA256withRSA");
+                    s.initVerify(publicKey);
+                    s.update(input);
+                    yield s.verify(signature);
+                }
+                case ES256 -> {
+                    Signature s = Signature.getInstance("SHA256withECDSA");
+                    s.initVerify(publicKey);
+                    s.update(input);
+                    yield s.verify(Ecdsa.joseToDer(signature));
+                }
+            };
+        } catch (GeneralSecurityException e) {
+            return false;
+        }
+    }
+
+    private byte[] hmac(byte[] input) throws GeneralSecurityException {
+        Mac mac = Mac.getInstance("HmacSHA256");
+        mac.init(new SecretKeySpec(secret, "HmacSHA256"));
+        return mac.doFinal(input);
     }
 }

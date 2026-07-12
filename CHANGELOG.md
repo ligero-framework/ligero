@@ -6,6 +6,20 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Asymmetric JWT + JWKS** (`ligero-auth`). `Jwt` now supports **RS256** and
+  **ES256** (sign and verify) alongside HS256, and `Jwks.parse(json, mapper)`
+  turns an OIDC provider's JWKS document into JDK public keys by `kid` — so a
+  Ligero service can validate tokens issued by an external identity provider.
+  The verifier pins the algorithm (defends against alg-confusion / `none`).
+- **`ligero-resilience`** — dependency-free `Retry` (fixed or exponential
+  backoff), `Timeout` (runs on a virtual thread, abandons overruns) and a
+  `CircuitBreaker` (closed → open → half-open) for hardening outbound calls.
+- **Application events + lifecycle hooks** (`ligero-core`). An in-process
+  `Events` bus (typed publish/subscribe, supertype delivery, isolated handler
+  failures) and `Ligero.onStart(...)` / `onStop(...)` hooks that run when the
+  server starts and stops.
+
 ## [0.6.0] — 2026-07-11
 
 ### Added
