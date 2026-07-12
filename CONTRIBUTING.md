@@ -3,7 +3,12 @@
 Thanks for your interest! This project follows a small set of hard rules —
 they are what keeps Ligero "ligero".
 
-## Architecture rules (enforced in review)
+## Architecture rules (enforced by `arch-test` + review)
+
+> Rules 1, 3 and 4 (and the reflection-free promise) are checked automatically
+> by the [`arch-test`](arch-test) module — ArchUnit fitness functions that run
+> as part of `./gradlew build` and fail CI if a change breaks them.
+
 
 1. **No new dependencies in `ligero-core`** (only `slf4j-api`). Integrations
    live in adapter modules (`ligero-json`, `ligero-server-*`, `ligero-*`).
