@@ -39,26 +39,30 @@ jobs:
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_PRIVATE_KEY }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_PASSPHRASE }}
 
-  notify-cli:
-    # Tell ligero-cli about the freshly published framework version so it can
-    # open a PR bumping the version `ligero new` pins for generated projects.
-    # Fires for every real release (patch included) to keep the pinned version
-    # current; the CLI cuts its own release only on a MINOR/MAJOR. Needs a
-    # RELEASE_BOT_TOKEN (PAT/App token with access to ligero-cli) — a
-    # cross-repo repository_dispatch can't use the default GITHUB_TOKEN, so the
-    # step is skipped when the secret isn't set.
+  notify-consumers:
+    # Tell the downstream repos about the freshly published framework version so
+    # each opens a PR bumping the version it pins: ligero-cli (the version
+    # `ligero new` targets), ligero-docs (snippet versions) and ligero-examples
+    # (the example apps' dependencies). Fires for every real release (patch
+    # included) to keep those pins current; the CLI cuts its own release only on
+    # a MINOR/MAJOR. Needs a RELEASE_BOT_TOKEN (PAT/App token with access to the
+    # downstream repos) — a cross-repo repository_dispatch can't use the default
+    # GITHUB_TOKEN, so the step is skipped when the secret isn't set.
     needs: publish
     if: ${{ !github.event.release.prerelease }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        repo: [ligero-cli, ligero-docs, ligero-examples]
     steps:
-      - name: Dispatch framework-released to ligero-cli
+      - name: Dispatch framework-released to ${{ matrix.repo }}
         if: ${{ secrets.RELEASE_BOT_TOKEN != '' }}
         run: |
           version="${GITHUB_REF_NAME#v}"
           curl -sf -X POST \
             -H "Authorization: Bearer ${{ secrets.RELEASE_BOT_TOKEN }}" \
             -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/ligero-framework/ligero-cli/dispatches \
+            https://api.github.com/repos/ligero-framework/${{ matrix.repo }}/dispatches \
             -d "{\"event_type\":\"framework-released\",\"client_payload\":{\"version\":\"${version}\"}}"
 
   bump-snapshot:
