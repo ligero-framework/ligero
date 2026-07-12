@@ -4,6 +4,9 @@ import com.ligero.Ligero;
 import com.ligero.http.Context;
 import com.ligero.middleware.Middleware;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -24,6 +27,8 @@ import java.util.TreeMap;
  */
 public final class OpenApi implements Middleware {
 
+    private static final Logger log = LoggerFactory.getLogger(OpenApi.class);
+
     private final Ligero app;
     private final String title;
     private final String version;
@@ -39,15 +44,18 @@ public final class OpenApi implements Middleware {
     }
 
     public static OpenApi of(Ligero app, String title, String version) {
+        log.info("OpenAPI spec at {}", "/openapi.json");
         return new OpenApi(app, title, version, "/openapi.json", null);
     }
 
     public OpenApi at(String docPath) {
+        log.info("OpenAPI spec at {}", docPath);
         return new OpenApi(app, title, version, docPath, uiPath);
     }
 
     /** Opt-in Swagger UI page (loads swagger-ui-dist from a public CDN). */
     public OpenApi withSwaggerUi(String uiPath) {
+        log.info("Swagger UI at {}", uiPath);
         return new OpenApi(app, title, version, docPath, uiPath);
     }
 
