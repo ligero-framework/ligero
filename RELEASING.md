@@ -56,17 +56,17 @@ The release is **tag-driven** — creating the GitHub Release does everything:
    workflow fires on the published Release and:
    - publishes the signed artifacts as **`X.Y.Z`** (version read from the tag,
      `-Pversion=${GITHUB_REF_NAME#v}`) and closes/releases the staging repo;
-   - **bumps `main`** to `X.Y.(Z+1)-SNAPSHOT` and pushes the
-     `chore: begin …` commit — so everyday builds target the next version with
-     no manual edit.
+   - **opens a `chore: begin X.Y.(Z+1)-SNAPSHOT development` PR** against `main`
+     (protected `main` takes changes via PR) — merge it (or enable auto-merge)
+     so everyday builds target the next version with no manual edit.
 
    Verify on [central.sonatype.com](https://central.sonatype.com) and, once
    synced, at `https://repo1.maven.org/maven2/com/ligeroframework/`.
 
 > **Notes.** Pre-releases (a Release marked *pre-release*, or a non-`X.Y.Z` tag)
-> publish but **skip** the snapshot bump. If `main` is a protected branch, give
-> the bump job a `RELEASE_BOT_TOKEN` secret (a PAT or GitHub-App token allowed to
-> push to `main`); otherwise it uses the default `GITHUB_TOKEN`. CI also
+> publish but **skip** the snapshot bump. The bump PR must be created by a
+> **`RELEASE_BOT_TOKEN`** (PAT/App token) so its checks run — a `GITHUB_TOKEN`
+> PR doesn't trigger CI, which the branch rule requires before merge. CI also
 > auto-publishes **SNAPSHOTs** from `main` whenever the `MAVEN_CENTRAL_*` secrets
 > exist.
 
@@ -108,7 +108,7 @@ Copy into the release tracking issue:
 - [ ] Framework CI green on `main`
 - [ ] `CHANGELOG.md` dated (no manual version edit)
 - [ ] GitHub Release created with tag `vX.Y.Z`
-- [ ] Publish + `main` snapshot-bump succeeded (verify on `repo1.maven.org` + the `chore: begin …` commit on `main`)
+- [ ] Publish succeeded (verify on `repo1.maven.org`) and the `chore: begin …` snapshot-bump PR merged
 - [ ] CLI bumped, tested, tagged, dist attached
 - [ ] Examples bumped, verified against released artifacts, tagged
 - [ ] Docs updated + deployed
