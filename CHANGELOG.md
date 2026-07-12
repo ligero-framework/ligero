@@ -6,6 +6,20 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **`ligero-scheduler`** — a tiny, dependency-free scheduler for background
+  tasks (`fixedRate`, `fixedDelay`, `once`, `dailyAt`). Timing runs on a small
+  daemon pool; each task runs on its own **virtual thread**, so a slow or
+  throwing job never stalls the timer or cancels its own schedule.
+- **Cache abstraction** — a `Cache<K,V>` SPI in `ligero-core` with a load-through
+  helper and TTLs, plus an in-process `InMemoryCache` (lazy expiry). A
+  distributed `RedisCache` (strings) ships in `ligero-redis`.
+- **OpenAPI body schemas** — `OpenApi.model(Class)` and
+  `OpenApi.describe(method, path, …)` generate `components/schemas` from your
+  **record** types and reference them from request/response bodies (scalars,
+  enums, temporals, arrays/collections and nested records). Schema generation
+  uses reflection only at document-build time, never on the request path.
+
 ## [0.6.0] — 2026-07-11
 
 ### Added
