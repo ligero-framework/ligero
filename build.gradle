@@ -80,8 +80,8 @@ subprojects {
     // Umbral de cobertura por módulo (roadmap fase 0.4: 80 % en core).
     // json y server se cubren además indirectamente por los tests de
     // integración, que JaCoCo no cuenta entre módulos.
-    def coverageMinimums = [core: 0.80, json: 0.70, server: 0.70, auth: 0.70,
-                            'template-mustache': 0.60, 'template-freemarker': 0.60, 'template-pebble': 0.60, otel: 0.60, testkit: 0.60, openapi: 0.60,
+    def coverageMinimums = [core: 0.80, json: 0.95, server: 0.70, auth: 0.70,
+                            'template-mustache': 0.60, 'template-freemarker': 0.60, 'template-pebble': 0.60, otel: 0.90, testkit: 0.80, openapi: 0.95,
                             'metrics-micrometer': 0.60, 'server-jetty': 0.50,
                             devtools: 0.60, processor: 0.0, jdbc: 0.85, migrations: 0.80, validation: 0.80, 'config-yaml': 0.75, jpa: 0.70, redis: 0.60,
                             examples: 0.0, benchmarks: 0.0]
