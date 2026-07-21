@@ -360,4 +360,26 @@ class LigeroIntegrationTest {
             () -> get(base + "/ping"))).isNotNull();
         this.app = null;
     }
+
+    @Test
+    void middlewareAndHandlerCanBothReadRequestBody() throws Exception {
+        Ligero app = newApp();
+        var bodySeenByMiddleware = new java.util.concurrent.atomic.AtomicReference<String>();
+
+        app.use((ctx, next) -> {
+            bodySeenByMiddleware.set(ctx.bodyAsString());
+            next.proceed();
+        });
+        app.post("/echo", ctx -> ctx.text(ctx.bodyAsString()));
+        String base = start(app);
+
+        HttpResponse<String> response = client.send(
+            HttpRequest.newBuilder(URI.create(base + "/echo"))
+                .POST(HttpRequest.BodyPublishers.ofString("hello")).build(),
+            HttpResponse.BodyHandlers.ofString());
+
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(bodySeenByMiddleware.get()).isEqualTo("hello");
+        assertThat(response.body()).isEqualTo("hello");
+    }
 }
