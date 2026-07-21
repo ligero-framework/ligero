@@ -9,7 +9,9 @@ module com.ligero.core {
     exports com.ligero;
     exports com.ligero.beans;
     exports com.ligero.beans.stereotype;
+    exports com.ligero.cache;
     exports com.ligero.config;
+    exports com.ligero.events;
     exports com.ligero.http;
     exports com.ligero.middleware;
     exports com.ligero.router;

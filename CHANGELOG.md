@@ -13,6 +13,45 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
   `app.use(mcp.http("/mcp"))` — implements the `initialize` handshake, `ping`,
   and `tools/list` + `tools/call`, with tool failures surfaced as MCP error
   results. Dependency-free and reflection-free.
+- **HTTP `QUERY` method** — `app.query(path, handler)` (and `RouteGroup.query`)
+  register handlers for the [IETF QUERY method](https://datatracker.ietf.org/doc/draft-ietf-httpbis-safe-method-w-body/):
+  a safe, idempotent method like GET but with a request body, for queries too
+  large or structured for a URL. Read the body with `ctx.body(...)` as for POST.
+  Verified end-to-end through the JDK engine.
+- **Connection pooling** (`ligero-jdbc`). `DataSources.pooled(url, user, pass)`
+  builds a HikariCP-backed `DataSource` (an `AutoCloseable`, closed by the
+  `Beans` container on shutdown), with an optional `HikariConfig` customizer for
+  pool size, timeouts and pool name.
+- **Native-image support** — `ligero-core`'s GraalVM resource metadata now
+  covers YAML config, templates, static files and migrations, so the
+  reflection-free stack (core, `ligero-server-jdk`, scheduler, resilience, auth,
+  jdbc) compiles to a native binary with no extra config. See
+  `design/native-image.md` for the supported path and the boundaries around the
+  reflective adapters (Jackson/Hibernate).
+- **Asymmetric JWT + JWKS** (`ligero-auth`). `Jwt` now supports **RS256** and
+  **ES256** (sign and verify) alongside HS256, and `Jwks.parse(json, mapper)`
+  turns an OIDC provider's JWKS document into JDK public keys by `kid` — so a
+  Ligero service can validate tokens issued by an external identity provider.
+  The verifier pins the algorithm (defends against alg-confusion / `none`).
+- **`ligero-resilience`** — dependency-free `Retry` (fixed or exponential
+  backoff), `Timeout` (runs on a virtual thread, abandons overruns) and a
+  `CircuitBreaker` (closed → open → half-open) for hardening outbound calls.
+- **Application events + lifecycle hooks** (`ligero-core`). An in-process
+  `Events` bus (typed publish/subscribe, supertype delivery, isolated handler
+  failures) and `Ligero.onStart(...)` / `onStop(...)` hooks that run when the
+  server starts and stops.
+- **`ligero-scheduler`** — a tiny, dependency-free scheduler for background
+  tasks (`fixedRate`, `fixedDelay`, `once`, `dailyAt`). Timing runs on a small
+  daemon pool; each task runs on its own **virtual thread**, so a slow or
+  throwing job never stalls the timer or cancels its own schedule.
+- **Cache abstraction** — a `Cache<K,V>` SPI in `ligero-core` with a load-through
+  helper and TTLs, plus an in-process `InMemoryCache` (lazy expiry). A
+  distributed `RedisCache` (strings) ships in `ligero-redis`.
+- **OpenAPI body schemas** — `OpenApi.model(Class)` and
+  `OpenApi.describe(method, path, …)` generate `components/schemas` from your
+  **record** types and reference them from request/response bodies (scalars,
+  enums, temporals, arrays/collections and nested records). Schema generation
+  uses reflection only at document-build time, never on the request path.
 
 ## [0.6.0] — 2026-07-11
 

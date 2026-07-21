@@ -2,6 +2,8 @@ description = 'Ligero JDBC: a tiny, explicit helper over a DataSource (query -> 
 
 dependencies {
     api project(':core')
+    // HikariCP is the de-facto connection pool; DataSources.pooled(...) builds one.
+    api libs.hikaricp
 
     testImplementation libs.h2
     testImplementation libs.junit.jupiter
