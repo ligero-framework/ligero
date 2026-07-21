@@ -9,6 +9,7 @@ final class FakeRedisOps implements RedisOps {
 
     private final Map<String, Long> counters = new HashMap<>();
     private final Map<String, Map<String, String>> hashes = new LinkedHashMap<>();
+    private final Map<String, String> values = new HashMap<>();
 
     @Override
     public long incrementWithTtl(String key, long ttlSeconds) {
@@ -27,8 +28,19 @@ final class FakeRedisOps implements RedisOps {
     }
 
     @Override
+    public void set(String key, String value, long ttlSeconds) {
+        values.put(key, value);
+    }
+
+    @Override
+    public String get(String key) {
+        return values.get(key);
+    }
+
+    @Override
     public void delete(String key) {
         counters.remove(key);
         hashes.remove(key);
+        values.remove(key);
     }
 }
