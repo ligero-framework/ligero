@@ -6,6 +6,13 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **HTTP `QUERY` method** — `app.query(path, handler)` (and `RouteGroup.query`)
+  register handlers for the [IETF QUERY method](https://datatracker.ietf.org/doc/draft-ietf-httpbis-safe-method-w-body/):
+  a safe, idempotent method like GET but with a request body, for queries too
+  large or structured for a URL. Read the body with `ctx.body(...)` as for POST.
+  Verified end-to-end through the JDK engine.
+
 ## [0.6.0] — 2026-07-11
 
 ### Added
