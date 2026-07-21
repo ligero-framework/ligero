@@ -7,6 +7,16 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Connection pooling** (`ligero-jdbc`). `DataSources.pooled(url, user, pass)`
+  builds a HikariCP-backed `DataSource` (an `AutoCloseable`, closed by the
+  `Beans` container on shutdown), with an optional `HikariConfig` customizer for
+  pool size, timeouts and pool name.
+- **Native-image support** — `ligero-core`'s GraalVM resource metadata now
+  covers YAML config, templates, static files and migrations, so the
+  reflection-free stack (core, `ligero-server-jdk`, scheduler, resilience, auth,
+  jdbc) compiles to a native binary with no extra config. See
+  `design/native-image.md` for the supported path and the boundaries around the
+  reflective adapters (Jackson/Hibernate).
 - **Asymmetric JWT + JWKS** (`ligero-auth`). `Jwt` now supports **RS256** and
   **ES256** (sign and verify) alongside HS256, and `Jwks.parse(json, mapper)`
   turns an OIDC provider's JWKS document into JDK public keys by `kid` — so a

@@ -2,7 +2,12 @@
   "resources": {
     "includes": [
       { "pattern": "META-INF/services/.*" },
-      { "pattern": "ligero\\.properties" }
+      { "pattern": "ligero\\.properties" },
+      { "pattern": "ligero\\.yml" },
+      { "pattern": "ligero-.*\\.yml" },
+      { "pattern": "templates/.*" },
+      { "pattern": "static/.*" },
+      { "pattern": "db/migration/.*" }
     ]
   }
 }
