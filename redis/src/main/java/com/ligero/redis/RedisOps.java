@@ -18,6 +18,12 @@ public interface RedisOps {
     /** {@code HSET key fields} then {@code EXPIRE key ttlSeconds}. */
     void hset(String key, Map<String, String> fields, long ttlSeconds);
 
+    /** {@code SET key value}, adding {@code EX ttlSeconds} when {@code ttlSeconds > 0}. */
+    void set(String key, String value, long ttlSeconds);
+
+    /** {@code GET key} ({@code null} when the key is absent). */
+    String get(String key);
+
     /** {@code DEL key}. */
     void delete(String key);
 }

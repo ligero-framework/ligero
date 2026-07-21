@@ -43,6 +43,24 @@ public final class JedisRedisOps implements RedisOps {
     }
 
     @Override
+    public void set(String key, String value, long ttlSeconds) {
+        try (Jedis jedis = pool.getResource()) {
+            if (ttlSeconds > 0) {
+                jedis.setex(key, ttlSeconds, value);
+            } else {
+                jedis.set(key, value);
+            }
+        }
+    }
+
+    @Override
+    public String get(String key) {
+        try (Jedis jedis = pool.getResource()) {
+            return jedis.get(key);
+        }
+    }
+
+    @Override
     public void delete(String key) {
         try (Jedis jedis = pool.getResource()) {
             jedis.del(key);
