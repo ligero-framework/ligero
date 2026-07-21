@@ -55,6 +55,22 @@ class LigeroIntegrationTest {
     }
 
     @Test
+    void queryMethodRoundTripsThroughTheJdkEngine() throws Exception {
+        String base = start(newApp().query("/search",
+            ctx -> ctx.json(Map.of("echo", ctx.bodyAsString()))));
+
+        HttpResponse<String> response = client.send(
+            HttpRequest.newBuilder(URI.create(base + "/search"))
+                .method("QUERY", HttpRequest.BodyPublishers.ofString("{\"term\":\"ligero\"}"))
+                .header("Content-Type", "application/json")
+                .build(),
+            HttpResponse.BodyHandlers.ofString());
+
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body()).contains("ligero");
+    }
+
+    @Test
     void pathParamsWorkEndToEnd() throws Exception {
         // regression for B1: path params were silently dropped by the server
         Ligero app = newApp();

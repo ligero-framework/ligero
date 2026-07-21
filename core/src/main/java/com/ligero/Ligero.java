@@ -130,6 +130,17 @@ public final class Ligero implements AutoCloseable {
         return route("OPTIONS", path, handler);
     }
 
+    /**
+     * Registers a handler for the HTTP <b>QUERY</b> method
+     * (<a href="https://datatracker.ietf.org/doc/draft-ietf-httpbis-safe-method-w-body/">IETF
+     * draft</a>) — a safe, idempotent method like GET but with a request body,
+     * for queries too large or structured to fit in a URL. Read the body with
+     * {@code ctx.body(...)} / {@code ctx.bodyAsString()} as you would for POST.
+     */
+    public Ligero query(String path, Handler handler) {
+        return route("QUERY", path, handler);
+    }
+
     /** Registers the handler for every standard HTTP method. */
     public Ligero any(String path, Handler handler) {
         ANY_METHODS.forEach(method -> route(method, path, handler));

@@ -56,6 +56,11 @@ public final class RouteGroup {
         return route("OPTIONS", path, handler);
     }
 
+    /** The HTTP QUERY method (safe + idempotent, with a request body). */
+    public RouteGroup query(String path, Handler handler) {
+        return route("QUERY", path, handler);
+    }
+
     public RouteGroup route(String method, String path, Handler handler) {
         app.route(method, join(path), handler);
         return this;
