@@ -65,6 +65,8 @@ public final class Ligero implements AutoCloseable {
     private final Map<Integer, Handler> statusHandlers = new HashMap<>();
     private final Map<Class<?>, Object> services = new HashMap<>();
     private final Map<String, com.ligero.websocket.WsHandler> webSockets = new LinkedHashMap<>();
+    private final List<Runnable> startHooks = new ArrayList<>();
+    private final List<Runnable> stopHooks = new ArrayList<>();
 
     private ServerEngine engine;
     private BodyMapper bodyMapper;
@@ -257,6 +259,28 @@ public final class Ligero implements AutoCloseable {
     // Lifecycle
     // ------------------------------------------------------------------
 
+    /** Runs {@code hook} right after the server has started (port is bound). */
+    public Ligero onStart(Runnable hook) {
+        startHooks.add(hook);
+        return this;
+    }
+
+    /** Runs {@code hook} when the server stops, before the engine shuts down. */
+    public Ligero onStop(Runnable hook) {
+        stopHooks.add(hook);
+        return this;
+    }
+
+    private void runHooks(List<Runnable> hooks, String phase) {
+        for (Runnable hook : hooks) {
+            try {
+                hook.run();
+            } catch (RuntimeException e) {
+                log.error("A {} hook failed", phase, e);
+            }
+        }
+    }
+
     /** Starts the server. */
     public void start() throws IOException {
         if (started) {
@@ -288,11 +312,13 @@ public final class Ligero implements AutoCloseable {
             router.routes().forEach((method, paths) ->
                 paths.forEach(path -> log.debug("  {} {}", method, path)));
         }
+        runHooks(startHooks, "start");
     }
 
     /** Stops the server gracefully within the configured shutdown window. */
     public void stop() {
         if (started) {
+            runHooks(stopHooks, "stop");
             engine.stop(config.shutdownGrace());
             started = false;
             log.info("Ligero stopped");

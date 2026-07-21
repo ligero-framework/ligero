@@ -23,5 +23,6 @@ include 'jpa'                // ligero-jpa: helper liviano sobre JPA/Hibernate (
 include 'redis'              // ligero-redis: stores distribuidos (rate-limit + sesiones) sobre Redis
 include 'benchmarks'          // JMH (no se publica)
 include 'scheduler'      // ligero-scheduler: tareas en segundo plano (virtual threads)
+include 'resilience'     // ligero-resilience: retry, timeout y circuit-breaker
 include 'arch-test'      // solo tests de arquitectura (ArchUnit); no se publica
 include 'examples'  // Aplicación de ejemplo (no se publica)
