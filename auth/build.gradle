@@ -1,4 +1,4 @@
-description = 'Ligero auth: JWT (HS256) verification/signing, CSRF protection and sessions'
+description = 'Ligero auth: JWT (HS256/RS256/ES256) with JWKS, CSRF protection and sessions'
 
 dependencies {
     api project(':core')

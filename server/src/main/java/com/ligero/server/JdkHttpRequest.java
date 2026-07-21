@@ -5,6 +5,7 @@ import com.ligero.http.PayloadTooLargeException;
 
 import com.sun.net.httpserver.HttpExchange;
 
+import java.io.ByteArrayInputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,6 +30,7 @@ final class JdkHttpRequest implements HttpRequest {
     private final long maxBodyBytes;
     private Map<String, List<String>> headers;
     private Map<String, List<String>> queryParams;
+    private byte[] cachedBodyBytes;
     private String cachedBody;
 
     JdkHttpRequest(HttpExchange exchange, long maxBodyBytes) {
@@ -92,25 +94,39 @@ final class JdkHttpRequest implements HttpRequest {
 
     @Override
     public InputStream getBody() {
-        long declared = exchange.getRequestHeaders().getFirst("Content-Length") != null
-            ? parseLongSafe(exchange.getRequestHeaders().getFirst("Content-Length"))
-            : -1;
-        if (declared > maxBodyBytes) {
-            throw new PayloadTooLargeException(maxBodyBytes);
-        }
-        return new BoundedInputStream(exchange.getRequestBody(), maxBodyBytes);
+        return new ByteArrayInputStream(getCachedBodyBytes());
     }
 
     @Override
     public String getBodyAsString() {
         if (cachedBody == null) {
-            try (InputStream in = getBody()) {
-                cachedBody = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+            cachedBody = new String(getCachedBodyBytes(), StandardCharsets.UTF_8);
+        }
+        return cachedBody;
+    }
+
+    /**
+     * Reads the request body from the exchange exactly once, enforcing the
+     * configured size limit, and caches the result as a byte array. All
+     * subsequent calls to {@link #getBody()} and {@link #getBodyAsString()}
+     * are served from this cache, so middleware and handlers can read the body
+     * in any order without consuming the underlying stream.
+     */
+    private byte[] getCachedBodyBytes() {
+        if (cachedBodyBytes == null) {
+            long declared = exchange.getRequestHeaders().getFirst("Content-Length") != null
+                ? parseLongSafe(exchange.getRequestHeaders().getFirst("Content-Length"))
+                : -1;
+            if (declared > maxBodyBytes) {
+                throw new PayloadTooLargeException(maxBodyBytes);
+            }
+            try (InputStream in = new BoundedInputStream(exchange.getRequestBody(), maxBodyBytes)) {
+                cachedBodyBytes = in.readAllBytes();
             } catch (IOException e) {
                 throw new IllegalStateException("Could not read request body", e);
             }
         }
-        return cachedBody;
+        return cachedBodyBytes;
     }
 
     @Override

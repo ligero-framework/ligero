@@ -6,6 +6,8 @@
 module com.ligero.jdbc {
     requires transitive com.ligero.core;
     requires transitive java.sql;
+    // JedisPool/HikariDataSource appear on the public DataSources factory.
+    requires transitive com.zaxxer.hikari;
 
     exports com.ligero.jdbc;
 }

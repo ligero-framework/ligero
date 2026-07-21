@@ -22,8 +22,17 @@ import java.util.TreeMap;
  * }</pre>
  *
  * <p>Route patterns translate directly ({@code {id}} is already OpenAPI
- * syntax); parameters are typed as strings. Schemas/annotations can refine
- * this in a later phase.</p>
+ * syntax); path parameters are typed as strings. Attach request/response
+ * body schemas — generated from your record types — with {@link #model} and
+ * {@link #describe}:</p>
+ *
+ * <pre>{@code
+ * app.use(OpenApi.of(app, "My API", "1.0.0")
+ *     .describe("POST", "/users", op -> op
+ *         .summary("Create a user")
+ *         .requestBody(NewUser.class)
+ *         .response(201, User.class)));
+ * }</pre>
  */
 public final class OpenApi implements Middleware {
 
@@ -34,29 +43,88 @@ public final class OpenApi implements Middleware {
     private final String version;
     private final String docPath;
     private final String uiPath;
+    // Shared across at()/withSwaggerUi() copies so registrations survive chaining.
+    private final Map<String, Object> componentSchemas;
+    private final Map<String, Operation> operations;
 
-    private OpenApi(Ligero app, String title, String version, String docPath, String uiPath) {
+    private OpenApi(Ligero app, String title, String version, String docPath, String uiPath,
+                    Map<String, Object> componentSchemas, Map<String, Operation> operations) {
         this.app = app;
         this.title = title;
         this.version = version;
         this.docPath = docPath;
         this.uiPath = uiPath;
+        this.componentSchemas = componentSchemas;
+        this.operations = operations;
     }
 
     public static OpenApi of(Ligero app, String title, String version) {
         log.info("OpenAPI spec at {}", "/openapi.json");
-        return new OpenApi(app, title, version, "/openapi.json", null);
+        return new OpenApi(app, title, version, "/openapi.json", null,
+            new LinkedHashMap<>(), new LinkedHashMap<>());
     }
 
     public OpenApi at(String docPath) {
         log.info("OpenAPI spec at {}", docPath);
-        return new OpenApi(app, title, version, docPath, uiPath);
+        return new OpenApi(app, title, version, docPath, uiPath, componentSchemas, operations);
     }
 
     /** Opt-in Swagger UI page (loads swagger-ui-dist from a public CDN). */
     public OpenApi withSwaggerUi(String uiPath) {
         log.info("Swagger UI at {}", uiPath);
-        return new OpenApi(app, title, version, docPath, uiPath);
+        return new OpenApi(app, title, version, docPath, uiPath, componentSchemas, operations);
+    }
+
+    /**
+     * Registers a record type as a reusable component schema (also pulling in any
+     * nested record types), so it can be referenced from request/response bodies.
+     */
+    public OpenApi model(Class<?> type) {
+        componentSchemas.put(Schemas.name(type), Schemas.of(type, componentSchemas));
+        return this;
+    }
+
+    /**
+     * Attaches request/response body types and a summary to an operation, keyed by
+     * HTTP method and route pattern (e.g. {@code describe("POST", "/users", ...)}).
+     * Referenced types are registered as component schemas automatically.
+     */
+    public OpenApi describe(String method, String path, java.util.function.Consumer<Operation> customizer) {
+        Operation operation =
+            operations.computeIfAbsent(method.toUpperCase() + " " + path, k -> new Operation());
+        customizer.accept(operation);
+        if (operation.requestBodyType != null) {
+            model(operation.requestBodyType);
+        }
+        operation.responseTypes.values().forEach(this::model);
+        return this;
+    }
+
+    /** Request/response metadata for one operation. */
+    public static final class Operation {
+        private String summary;
+        private Class<?> requestBodyType;
+        private final Map<Integer, Class<?>> responseTypes = new java.util.LinkedHashMap<>();
+
+        public Operation summary(String summary) {
+            this.summary = summary;
+            return this;
+        }
+
+        public Operation requestBody(Class<?> type) {
+            this.requestBodyType = type;
+            return this;
+        }
+
+        public Operation response(int status, Class<?> type) {
+            responseTypes.put(status, type);
+            return this;
+        }
+    }
+
+    private static Map<String, Object> bodyRef(Class<?> type) {
+        return Map.of("content", Map.of("application/json",
+            Map.of("schema", Map.of("$ref", "#/components/schemas/" + Schemas.name(type)))));
     }
 
     @Override
@@ -121,7 +189,25 @@ public final class OpenApi implements Middleware {
                 if (!parameters.isEmpty()) {
                     operation.put("parameters", parameters);
                 }
-                operation.put("responses", Map.of("200", Map.of("description", "OK")));
+
+                Operation meta = operations.get(method.toUpperCase() + " " + route);
+                if (meta != null && meta.summary != null) {
+                    operation.put("summary", meta.summary);
+                }
+                if (meta != null && meta.requestBodyType != null) {
+                    operation.put("requestBody", bodyRef(meta.requestBodyType));
+                }
+                if (meta != null && !meta.responseTypes.isEmpty()) {
+                    Map<String, Object> responses = new LinkedHashMap<>();
+                    meta.responseTypes.forEach((status, type) -> {
+                        Map<String, Object> response = new LinkedHashMap<>(bodyRef(type));
+                        response.put("description", "OK");
+                        responses.put(String.valueOf(status), response);
+                    });
+                    operation.put("responses", responses);
+                } else {
+                    operation.put("responses", Map.of("200", Map.of("description", "OK")));
+                }
                 pathItem.put(method.toLowerCase(), operation);
             }
         });
@@ -129,6 +215,9 @@ public final class OpenApi implements Middleware {
         doc.put("openapi", "3.0.3");
         doc.put("info", Map.of("title", title, "version", version));
         doc.put("paths", paths);
+        if (!componentSchemas.isEmpty()) {
+            doc.put("components", Map.of("schemas", new LinkedHashMap<>(componentSchemas)));
+        }
         return doc;
     }
 }
