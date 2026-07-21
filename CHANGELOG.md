@@ -17,6 +17,30 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
   jdbc) compiles to a native binary with no extra config. See
   `design/native-image.md` for the supported path and the boundaries around the
   reflective adapters (Jackson/Hibernate).
+- **Asymmetric JWT + JWKS** (`ligero-auth`). `Jwt` now supports **RS256** and
+  **ES256** (sign and verify) alongside HS256, and `Jwks.parse(json, mapper)`
+  turns an OIDC provider's JWKS document into JDK public keys by `kid` — so a
+  Ligero service can validate tokens issued by an external identity provider.
+  The verifier pins the algorithm (defends against alg-confusion / `none`).
+- **`ligero-resilience`** — dependency-free `Retry` (fixed or exponential
+  backoff), `Timeout` (runs on a virtual thread, abandons overruns) and a
+  `CircuitBreaker` (closed → open → half-open) for hardening outbound calls.
+- **Application events + lifecycle hooks** (`ligero-core`). An in-process
+  `Events` bus (typed publish/subscribe, supertype delivery, isolated handler
+  failures) and `Ligero.onStart(...)` / `onStop(...)` hooks that run when the
+  server starts and stops.
+- **`ligero-scheduler`** — a tiny, dependency-free scheduler for background
+  tasks (`fixedRate`, `fixedDelay`, `once`, `dailyAt`). Timing runs on a small
+  daemon pool; each task runs on its own **virtual thread**, so a slow or
+  throwing job never stalls the timer or cancels its own schedule.
+- **Cache abstraction** — a `Cache<K,V>` SPI in `ligero-core` with a load-through
+  helper and TTLs, plus an in-process `InMemoryCache` (lazy expiry). A
+  distributed `RedisCache` (strings) ships in `ligero-redis`.
+- **OpenAPI body schemas** — `OpenApi.model(Class)` and
+  `OpenApi.describe(method, path, …)` generate `components/schemas` from your
+  **record** types and reference them from request/response bodies (scalars,
+  enums, temporals, arrays/collections and nested records). Schema generation
+  uses reflection only at document-build time, never on the request path.
 
 ## [0.6.0] — 2026-07-11
 

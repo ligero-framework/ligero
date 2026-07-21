@@ -1,0 +1,10 @@
+description = 'Ligero resilience: dependency-free retry, timeout and circuit-breaker helpers for outbound calls.'
+
+dependencies {
+    api libs.slf4j.api
+
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+    testRuntimeOnly libs.slf4j.simple
+}
