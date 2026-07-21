@@ -6,6 +6,14 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **`ligero-mcp`** — build **Model Context Protocol** servers: expose your app's
+  capabilities as *tools* an LLM can call, over JSON-RPC 2.0 (Streamable HTTP).
+  `McpServer.create(name, version).tool(name, description, schema, handler)` and
+  `app.use(mcp.http("/mcp"))` — implements the `initialize` handshake, `ping`,
+  and `tools/list` + `tools/call`, with tool failures surfaced as MCP error
+  results. Dependency-free and reflection-free.
+
 ## [0.6.0] — 2026-07-11
 
 ### Added

@@ -1,0 +1,13 @@
+description = 'Ligero MCP: build Model Context Protocol servers — expose tools to LLMs over JSON-RPC 2.0 (Streamable HTTP).'
+
+dependencies {
+    api project(':core')
+
+    testImplementation project(':json')
+    testImplementation project(':testkit')
+    testImplementation project(':server')
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+    testRuntimeOnly libs.slf4j.simple
+}
