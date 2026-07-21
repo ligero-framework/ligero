@@ -22,6 +22,7 @@ include 'config-yaml'        // ligero-config-yaml: ConfigSource desde ligero.ym
 include 'jpa'                // ligero-jpa: helper liviano sobre JPA/Hibernate (EntityManagerFactory + transacciones)
 include 'redis'              // ligero-redis: stores distribuidos (rate-limit + sesiones) sobre Redis
 include 'benchmarks'          // JMH (no se publica)
+include 'mcp'            // ligero-mcp: servidores Model Context Protocol (JSON-RPC 2.0)
 include 'scheduler'      // ligero-scheduler: tareas en segundo plano (virtual threads)
 include 'resilience'     // ligero-resilience: retry, timeout y circuit-breaker
 include 'arch-test'      // solo tests de arquitectura (ArchUnit); no se publica
