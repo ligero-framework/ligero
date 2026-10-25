@@ -23,7 +23,7 @@ they are what keeps Ligero "ligero".
 
 ```bash
 ./gradlew build            # compile, test, coverage gates
-./gradlew :examples:run    # demo app on :8080
+./gradlew :examples:run    # demo app on :8080 (layout: docs/ARCHETYPE.md)
 ./gradlew -t :examples:run # dev mode: recompiles and restarts on change
 ./gradlew :benchmarks:jmh  # router benchmarks (JMH)
 ```

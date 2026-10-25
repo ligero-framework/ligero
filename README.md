@@ -297,7 +297,12 @@ Runtime.getRuntime().addShutdownHook(new Thread(app::stop)); // drains in-flight
 
 ## Examples
 
-Check out the [examples directory](examples/src/main/java/com/ligero/examples) for more examples of using Ligero.
+The [`examples/`](examples/src/main/java/com/ligero/examples) app is the reference
+layout: `Application` (bootstrap) → `platform/` (middleware) → one package per
+feature (`users/`: controller → service → repository + domain, wired by a
+`UsersModule`). The conventions are written down in
+[docs/ARCHETYPE.md](docs/ARCHETYPE.md); more styles (hexagonal, JPA, templates)
+live in [`ligero-examples`](https://github.com/ligero-framework/ligero-examples).
 
 ## Roadmap
 

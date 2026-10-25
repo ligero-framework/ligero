@@ -3,7 +3,7 @@ apply plugin: 'application'
 description = 'Ligero example application (not published)'
 
 application {
-    mainClass = 'com.ligero.examples.ExampleApp'
+    mainClass = 'com.ligero.examples.Application'
 }
 
 dependencies {
@@ -13,4 +13,8 @@ dependencies {
     implementation project(':openapi')
     implementation project(':devtools')
     runtimeOnly libs.slf4j.simple
+
+    testImplementation project(':testkit')
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
 }
