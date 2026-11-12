@@ -87,7 +87,7 @@ public final class Load {
         private final int expectedStatus;
         private final long deadline;
         private final AtomicLong errors;
-        long[] latencies = new long[1 << 16];
+        long[] latencies = new long[1 << 12];
         int count;
         Thread thread;
 

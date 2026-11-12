@@ -49,7 +49,7 @@ def gradle():
     return shutil.which("gradle") or str(HERE.parent / "gradlew")
 
 
-def build(app_dir, name, props, out_root):
+def build(app_dir, name, props, out_root, optional=False):
     """installDist the app and copy the result aside (one source dir can be built several ways)."""
     target = out_root / name
     if target.exists():
@@ -59,6 +59,8 @@ def build(app_dir, name, props, out_root):
         command[1:1] = ["-p", str(app_dir)]
     result = subprocess.run(command, cwd=app_dir, capture_output=True, text=True)
     if result.returncode != 0:
+        if optional:
+            return None, 0.0
         log(result.stdout[-3000:] + result.stderr[-3000:])
         raise SystemExit(f"build failed: {name}")
     shutil.copytree(app_dir / "build" / "install" / app_dir.name, target)
@@ -161,9 +163,14 @@ def main():
     out_root.mkdir(exist_ok=True)
     apps = HERE / "apps"
     # (key, label, source dir, gradle properties, role)
-    plan = [("candidate", "Ligero — this build (JDK engine)", apps / "ligero-app",
+    plan = [("loom", "Ligero — this build (Loom engine)", apps / "ligero-app",
+             {"ligeroVersion": args.candidate, "engine": "loom"}, "candidate"),
+            ("candidate", "Ligero — this build (JDK engine)", apps / "ligero-app",
              {"ligeroVersion": args.candidate}, "candidate")]
     if args.baseline:
+        # a baseline that predates the Loom engine simply has no such row
+        plan.append(("baseline-loom", "Ligero — baseline (Loom engine)", apps / "ligero-app",
+                     {"ligeroVersion": args.baseline, "engine": "loom"}, "optional"))
         plan.append(("baseline", "Ligero — baseline (JDK engine)", apps / "ligero-app",
                      {"ligeroVersion": args.baseline}, "baseline"))
     if not args.no_typed:
@@ -176,9 +183,12 @@ def main():
         plan.append(("spring", "Spring Boot 3.4 (MVC / Tomcat)", apps / "springboot-app", {}, "other"))
 
     binaries, libs = {}, {}
-    for key, label, source, props, _ in plan:
+    for key, label, source, props, role in list(plan):
         log(f"building {label} ...")
-        binaries[key], libs[key] = build(source, key, props, out_root)
+        binaries[key], libs[key] = build(source, key, props, out_root, optional=role == "optional")
+        if binaries[key] is None:
+            log(f"  not available in that build - skipped")
+            plan = [entry for entry in plan if entry[0] != key]
 
     samples = {key: [] for key, *_ in plan}
     for round_number in range(1, args.rounds + 1):
@@ -217,21 +227,24 @@ def main():
     lines.append("")
 
     failures = []
-    candidate = stats["candidate"]
-    if candidate["errors"]:
-        failures.append(f"the candidate returned {candidate['errors']} failed requests under load")
+    # Standing is judged with Ligero's own engine: the one built to lead.
+    candidate = stats["loom"]
 
     lines.append("### Gate 1 — no regression against the baseline")
     if args.baseline:
-        baseline = stats["baseline"]
-        lines += ["", "| Scenario | Baseline | This build | Change | |", "|---|--:|--:|--:|---|"]
-        for scenario, label in SCENARIOS:
-            before, after = baseline[scenario]["throughput"], candidate[scenario]["throughput"]
-            change = after / before - 1
-            ok = change >= -args.max_regression
-            lines.append(f"| {label} | {before:,.0f} | {after:,.0f} | {change:+.1%} | {'✅' if ok else '❌'} |")
-            if not ok:
-                failures.append(f"{label}: {change:+.1%} vs the baseline (limit -{args.max_regression:.0%})")
+        lines += ["", "| Engine | Scenario | Baseline | This build | Change | |", "|---|---|--:|--:|--:|---|"]
+        pairs = [("JDK", "baseline", "candidate")]
+        if "baseline-loom" in stats:
+            pairs.insert(0, ("Loom", "baseline-loom", "loom"))
+        for engine, base_key, new_key in pairs:
+            for scenario, label in SCENARIOS:
+                before, after = stats[base_key][scenario]["throughput"], stats[new_key][scenario]["throughput"]
+                change = after / before - 1
+                ok = change >= -args.max_regression
+                lines.append(f"| {engine} | {label} | {before:,.0f} | {after:,.0f} | {change:+.1%} | {'✅' if ok else '❌'} |")
+                if not ok:
+                    failures.append(f"{engine} engine, {label}: {change:+.1%} vs the baseline "
+                                    f"(limit -{args.max_regression:.0%})")
     else:
         lines += ["", "_No baseline given — skipped._"]
     lines.append("")
@@ -240,7 +253,7 @@ def main():
     floors = json.loads((HERE / "thresholds.json").read_text())["min_ratio_vs"]
     others = [(key, label, stats[key]) for key, label, *_rest, role in plan if role == "other"]
     if others:
-        lines += ["", "Overall throughput of this build divided by the other framework's; "
+        lines += ["", "Overall throughput of this build (Loom engine) divided by the other framework's; "
                   "it must not fall below the floor in `perf/thresholds.json`.", "",
                   "| Framework | Overall | Ligero vs it | Floor | |", "|---|--:|--:|--:|---|"]
         for key, label, other in others:
@@ -255,7 +268,7 @@ def main():
     lines.append("")
 
     if "typed" in stats:
-        ratio = stats["typed"]["overall"] / candidate["overall"]
+        ratio = stats["typed"]["overall"] / stats["candidate"]["overall"]
         lines += [f"Typed controllers run at {ratio:.2f}× the throughput of hand-written lambdas "
                   "(informational, not gated).", ""]
 

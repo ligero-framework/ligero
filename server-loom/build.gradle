@@ -1,0 +1,11 @@
+description = 'Ligero Loom server engine: a zero-dependency HTTP/1.1 + WebSocket server on virtual threads'
+
+dependencies {
+    api project(':core')
+
+    testImplementation project(':json')
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+    testRuntimeOnly libs.slf4j.simple
+}

@@ -77,6 +77,18 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
   auto-commit used to commit the partial transaction.
 
 ### Added
+- **`ligero-server-loom` — Ligero's own server engine.** HTTP/1.1 and
+  WebSockets implemented from scratch on sockets (no `com.sun.net.httpserver`,
+  no Jetty, no dependencies): one thread per connection with blocking I/O —
+  dedicated platform threads for the first 256 concurrent connections, virtual
+  threads beyond — keep-alive and pipelining, chunked requests, streaming
+  responses, `Expect: 100-continue`, gzip, graceful shutdown and RFC 6455
+  WebSockets with the same origin check as the Jetty engine. Parsing is
+  strict by design: bounded head/headers/body/connections, a deadline for slow
+  request heads, and ambiguous framing (`Content-Length` + `Transfer-Encoding`,
+  conflicting lengths, folded headers, missing `Host`) is refused; response
+  headers are validated against header injection. Opt in by depending on it
+  instead of `ligero-server-jdk`.
 - **Typed controllers** (`com.ligero.web` + `ligero-processor`). Declare
   endpoints as methods on a `@Controller("/prefix")` class with `@Get`,
   `@Post`, `@Put`, `@Patch`, `@Delete` (or `@Route(method = ..)`), bind inputs
