@@ -184,7 +184,16 @@ public final class Context {
 
     /** Deserializes the JSON request body. Requires a {@link BodyMapper} on the classpath. */
     public <T> T body(Class<T> type) {
-        return requireBodyMapper().readJson(request.getBodyAsString(), type);
+        String raw = request.getBodyAsString();
+        if (raw == null || raw.isBlank()) {
+            throw new BadRequestException("Request body is required");
+        }
+        T value = requireBodyMapper().readJson(raw, type);
+        if (value == null) {
+            // a literal JSON null would otherwise surface as a NullPointerException (500)
+            throw new BadRequestException("Request body is required");
+        }
+        return value;
     }
 
     /** Deserializes the body and returns a validator to declare constraints on it. */
@@ -277,7 +286,8 @@ public final class Context {
     }
 
     public Context removeCookie(String name) {
-        response.header("Set-Cookie", name + "=; Path=/; Max-Age=0");
+        response.header("Set-Cookie", Cookie.of(name, "").withMaxAge(java.time.Duration.ZERO)
+            .withHttpOnly(false).withSameSite(null).toSetCookieHeader());
         return this;
     }
 
@@ -336,10 +346,18 @@ public final class Context {
             int eq = pair.indexOf('=');
             String key = eq >= 0 ? pair.substring(0, eq) : pair;
             String value = eq >= 0 ? pair.substring(eq + 1) : "";
-            params.computeIfAbsent(URLDecoder.decode(key, StandardCharsets.UTF_8), k -> new ArrayList<>())
-                  .add(URLDecoder.decode(value, StandardCharsets.UTF_8));
+            params.computeIfAbsent(decode(key), k -> new ArrayList<>()).add(decode(value));
         }
         return params;
+    }
+
+    private static String decode(String encoded) {
+        try {
+            return URLDecoder.decode(encoded, StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            // broken percent-encoding is the client's mistake, not a server error
+            throw new BadRequestException("Malformed percent-encoding in form body");
+        }
     }
 
     /** Request view exposing this context's path parameters (legacy-style handlers). */

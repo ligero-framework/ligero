@@ -87,8 +87,17 @@ public final class JettyServerEngine implements ServerEngine {
             // upgrade requests are handled here; everything else falls through
             WebSocketUpgradeHandler upgrade = WebSocketUpgradeHandler.from(server, container ->
                 config.webSockets().forEach((path, wsHandler) ->
-                    container.addMapping(path, (upgradeRequest, upgradeResponse, callback) ->
-                        new JettyWsAdapter(path, wsHandler))));
+                    container.addMapping(path, (upgradeRequest, upgradeResponse, callback) -> {
+                        String origin = upgradeRequest.getHeaders().get("Origin");
+                        String host = upgradeRequest.getHeaders().get("Host");
+                        if (!wsHandler.acceptOrigin(origin, host)) {
+                            // cross-site handshake: refuse before any session exists
+                            upgradeResponse.setStatus(403);
+                            callback.succeeded();
+                            return null;
+                        }
+                        return new JettyWsAdapter(path, wsHandler);
+                    })));
             upgrade.setHandler(handler);
             handler = upgrade;
         }

@@ -6,6 +6,67 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Security
+- **CORS**: `allowCredentials(true)` together with the wildcard origin used to
+  echo *any* `Origin` back with `Access-Control-Allow-Credentials: true`,
+  letting every website read authenticated responses. `build()` now refuses
+  that combination — pass an explicit `allowOrigins(...)` list. `Vary: Origin`
+  is only sent when the answer actually depends on the origin.
+- **WebSockets** (`ligero-server-jetty`): handshakes carrying a foreign
+  `Origin` are refused with `403` (cross-site WebSocket hijacking). Override
+  `WsHandler.acceptOrigin(origin, host)` to trust additional origins.
+- **MCP** (`ligero-mcp`): the HTTP endpoint validates `Origin` as the MCP
+  specification requires (DNS-rebinding protection) — only loopback origins
+  and those passed to `McpServer.allowedOrigins(...)` are accepted. Internal
+  failures no longer echo exception messages to the client.
+- **Devtools**: the dashboard and its API now answer **only to loopback
+  clients** by default (opt out with `Devtools.allowRemote(true)` or
+  `LIGERO_DEVTOOLS_REMOTE=true`), and trace ids taken from request headers are
+  restricted to an identifier alphabet — a crafted `X-Ligero-Dev` /
+  `X-Request-Id` header could previously inject script into the dashboard.
+- **Sessions** (`ligero-auth`): `InMemorySessionStore` now expires idle
+  sessions (30 min, sliding) and caps how many it holds — previously every
+  cookie-less request left a session in memory forever. New
+  `SessionMiddleware.regenerate(ctx)` (call it on login to defeat session
+  fixation), `SessionMiddleware.invalidate(ctx)` (logout) and
+  `.secureCookie(true)`.
+- **JWT** (`ligero-auth`): the `alg` header is parsed and compared exactly
+  instead of by substring; a non-numeric `exp`/`nbf` is rejected instead of
+  being treated as "no expiry"; malformed ES256 signatures answer `401` instead
+  of crashing with a `500`.
+- **Rate limiting**: `TokenBucketStore` reclaims idle buckets and caps the
+  number of tracked keys, so cycling through keys cannot exhaust memory.
+- **Cookies**: names, values and attributes are validated (no control
+  characters or `;`), closing header/attribute injection through
+  user-influenced cookie values; `SameSite=None` now implies `Secure`.
+- **Request hygiene** (secure defaults): literal dot segments (`/../`, `/./`)
+  and backslashes in the path are rejected like their percent-encoded forms.
+- **Logging / request ids**: an incoming `X-Request-Id` is only reused when it
+  is a short, plain identifier; the JSON access log escapes the method, path
+  and request id, so crafted requests cannot forge log records.
+- **Static files**: symlinks inside the served directory can no longer expose
+  files outside it.
+- **Uploads**: multipart bodies are limited to 1 000 parts, and
+  `UploadedFile.safeFilename()` strips directories from the client-supplied
+  name — use it instead of `filename()` when writing to disk.
+- **OpenAPI**: the Swagger UI page pins `swagger-ui-dist` to an exact version
+  with Subresource Integrity and escapes the title/spec path.
+- **Pebble** (`ligero-template-pebble`): templates load from the classpath
+  only (Pebble's default loader also reads the file system).
+
+### Fixed
+- Malformed percent-encoding in a query string, form body or path now answers
+  `400` instead of `500`.
+- Path parameters are percent-decoded (`/users/John%20Doe` →
+  `"John Doe"`); previously handlers received the raw, encoded segment.
+- `ctx.body(Type.class)` answers `400` for an empty body or a literal JSON
+  `null` instead of handing the handler a `null` (→ `NullPointerException`).
+- `ligero-server-jetty`: the request body can be read more than once
+  (`bodyAsBytes()` then `body(...)`, middleware then handler), matching the
+  JDK engine.
+- `Jdbc.tx(...)` rolls back on any failure, including `Error`s — restoring
+  auto-commit used to commit the partial transaction.
+
 ### Added
 - **`ligero-mcp`** — build **Model Context Protocol** servers: expose your app's
   capabilities as *tools* an LLM can call, over JSON-RPC 2.0 (Streamable HTTP).

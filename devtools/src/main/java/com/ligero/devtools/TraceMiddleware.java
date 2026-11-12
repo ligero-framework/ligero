@@ -56,11 +56,20 @@ final class TraceMiddleware implements Middleware {
 
     private static String traceId(Context ctx) {
         String correlation = ctx.header(CORRELATION_HEADER);
-        if (correlation != null && !correlation.isBlank()) {
+        if (isSafeId(correlation)) {
             return correlation;
         }
         String requestId = ctx.attribute("requestId");
-        return requestId != null ? requestId : UUID.randomUUID().toString().substring(0, 8);
+        return isSafeId(requestId) ? requestId : UUID.randomUUID().toString().substring(0, 8);
+    }
+
+    /**
+     * Trace ids come from request headers and are rendered by the dashboard,
+     * so anything outside a plain identifier alphabet is discarded (it could
+     * otherwise carry markup or script into the page).
+     */
+    static boolean isSafeId(String id) {
+        return id != null && id.matches("[A-Za-z0-9_.:-]{1,64}");
     }
 
     /** Records the matched route, the request inputs and the response body. */

@@ -1,11 +1,13 @@
 package com.ligero.server.jetty;
 
+import com.ligero.http.BadRequestException;
 import com.ligero.http.HttpRequest;
 import com.ligero.http.PayloadTooLargeException;
 
 import org.eclipse.jetty.io.Content;
 import org.eclipse.jetty.server.Request;
 
+import java.io.ByteArrayInputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,8 +27,8 @@ final class JettyHttpRequest implements HttpRequest {
     private final long maxBodyBytes;
     private Map<String, List<String>> headers;
     private Map<String, List<String>> queryParams;
+    private byte[] cachedBodyBytes;
     private String cachedBody;
-    private InputStream bodyStream;
 
     JettyHttpRequest(Request request, long maxBodyBytes) {
         this.request = request;
@@ -80,35 +82,53 @@ final class JettyHttpRequest implements HttpRequest {
             int eq = pair.indexOf('=');
             String key = eq >= 0 ? pair.substring(0, eq) : pair;
             String value = eq >= 0 ? pair.substring(eq + 1) : "";
-            params.computeIfAbsent(URLDecoder.decode(key, StandardCharsets.UTF_8), k -> new ArrayList<>())
-                  .add(URLDecoder.decode(value, StandardCharsets.UTF_8));
+            params.computeIfAbsent(decode(key), k -> new ArrayList<>()).add(decode(value));
         }
         params.replaceAll((k, v) -> Collections.unmodifiableList(v));
         return Collections.unmodifiableMap(params);
     }
 
+    private static String decode(String encoded) {
+        try {
+            return URLDecoder.decode(encoded, StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            // broken percent-encoding is the client's mistake: 400, not 500
+            throw new BadRequestException("Malformed percent-encoding in query string");
+        }
+    }
+
     @Override
     public InputStream getBody() {
-        long declared = request.getHeaders().getLongField("Content-Length");
-        if (declared > maxBodyBytes) {
-            throw new PayloadTooLargeException(maxBodyBytes);
-        }
-        if (bodyStream == null) {
-            bodyStream = new BoundedInputStream(Content.Source.asInputStream(request), maxBodyBytes);
-        }
-        return bodyStream;
+        return new ByteArrayInputStream(getCachedBodyBytes());
     }
 
     @Override
     public String getBodyAsString() {
         if (cachedBody == null) {
-            try (InputStream in = getBody()) {
-                cachedBody = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+            cachedBody = new String(getCachedBodyBytes(), StandardCharsets.UTF_8);
+        }
+        return cachedBody;
+    }
+
+    /**
+     * Reads the body from Jetty exactly once (enforcing the size limit) and
+     * serves every later {@link #getBody()} / {@link #getBodyAsString()} from
+     * the cache, so middleware and handlers can read it in any order — the
+     * same contract as the JDK engine.
+     */
+    private byte[] getCachedBodyBytes() {
+        if (cachedBodyBytes == null) {
+            long declared = request.getHeaders().getLongField("Content-Length");
+            if (declared > maxBodyBytes) {
+                throw new PayloadTooLargeException(maxBodyBytes);
+            }
+            try (InputStream in = new BoundedInputStream(Content.Source.asInputStream(request), maxBodyBytes)) {
+                cachedBodyBytes = in.readAllBytes();
             } catch (IOException e) {
                 throw new IllegalStateException("Could not read request body", e);
             }
         }
-        return cachedBody;
+        return cachedBodyBytes;
     }
 
     @Override
