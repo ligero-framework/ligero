@@ -1,0 +1,7 @@
+{
+  "_comment": "Gate 2 of perf/run.py. For each other framework: the minimum allowed value of (Ligero overall throughput / that framework's overall throughput), measured in the same run. Raise a floor when Ligero gains ground so the gain cannot be lost again; never lower one to make a PR pass.",
+  "min_ratio_vs": {
+    "javalin": 0.55,
+    "spring": 1.10
+  }
+}

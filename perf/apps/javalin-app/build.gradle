@@ -1,0 +1,22 @@
+plugins {
+    id 'application'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+repositories {
+    mavenCentral()
+}
+
+application {
+    mainClass = 'bench.App'
+}
+
+dependencies {
+    implementation 'io.javalin:javalin:6.3.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
+    runtimeOnly 'org.slf4j:slf4j-simple:2.0.16'
+}

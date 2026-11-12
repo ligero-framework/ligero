@@ -1,0 +1,24 @@
+plugins {
+    id 'application'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+repositories {
+    mavenCentral()
+}
+
+application {
+    mainClass = 'bench.App'
+}
+
+// Spring Boot without the boot plugin: plain dependencies + the application
+// plugin, so every framework in this comparison is built and launched the
+// same way (installDist -> bin script).
+dependencies {
+    implementation platform('org.springframework.boot:spring-boot-dependencies:3.4.1')
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+}

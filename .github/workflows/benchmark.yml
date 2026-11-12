@@ -1,0 +1,60 @@
+name: Benchmark
+
+# Runs on every pull request: builds the PR and its target branch, serves the
+# same products API from both (and from Javalin and Spring Boot) and fails the
+# check when the PR is slower than the target branch or loses ground against
+# the other frameworks. Details: perf/README.md.
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: benchmark-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  http:
+    name: HTTP benchmark (regression + standing)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out the build under test
+        uses: actions/checkout@v4
+        with:
+          path: candidate
+
+      - name: Check out the baseline (the PR's target branch)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha || 'main' }}
+          path: baseline
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Publish the baseline to mavenLocal
+        working-directory: baseline
+        run: ./gradlew publishToMavenLocal -Pversion=0.0.0-base-SNAPSHOT -x javadoc --no-daemon -q
+
+      - name: Publish the build under test to mavenLocal
+        working-directory: candidate
+        run: ./gradlew publishToMavenLocal -Pversion=0.0.0-pr-SNAPSHOT -x javadoc --no-daemon -q
+
+      - name: Run the benchmark and check the gates
+        working-directory: candidate
+        run: python3 perf/run.py --candidate 0.0.0-pr-SNAPSHOT --baseline 0.0.0-base-SNAPSHOT
+
+      - name: Upload the results table
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: candidate/perf/results.md
+          if-no-files-found: ignore

@@ -18,6 +18,9 @@ public final class PathNormalizer {
         if (path == null || path.isEmpty()) {
             return "/";
         }
+        if (isNormalized(path)) {
+            return path; // the common case on the request path: nothing to allocate
+        }
         StringBuilder sb = new StringBuilder(path.length() + 1);
         if (path.charAt(0) != '/') {
             sb.append('/');
@@ -35,6 +38,19 @@ public final class PathNormalizer {
             sb.setLength(sb.length() - 1);
         }
         return sb.length() == 0 ? "/" : sb.toString();
+    }
+
+    private static boolean isNormalized(String path) {
+        int length = path.length();
+        if (path.charAt(0) != '/' || (length > 1 && path.charAt(length - 1) == '/')) {
+            return false;
+        }
+        for (int i = 1; i < length; i++) {
+            if (path.charAt(i) == '/' && path.charAt(i - 1) == '/') {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**

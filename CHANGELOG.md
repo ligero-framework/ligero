@@ -54,6 +54,15 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 - **Pebble** (`ligero-template-pebble`): templates load from the classpath
   only (Pebble's default loader also reads the file system).
 
+### Performance
+- Request hygiene (on by default) is now a single allocation-free pass over
+  the URI instead of three lower-cased copies and a split per request, and
+  `PathNormalizer.normalize` returns already-normalized paths as they are.
+- **`perf/` benchmark + `Benchmark` workflow.** Every pull request builds the
+  PR and its target branch, serves the same API from both (plus Javalin and
+  Spring Boot) and fails when the PR is more than 10 % slower in any scenario
+  or loses ground against the other frameworks (`perf/thresholds.json`).
+
 ### Fixed
 - Malformed percent-encoding in a query string, form body or path now answers
   `400` instead of `500`.
