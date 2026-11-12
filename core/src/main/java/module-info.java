@@ -17,6 +17,7 @@ module com.ligero.core {
     exports com.ligero.router;
     exports com.ligero.spi;
     exports com.ligero.validation;
+    exports com.ligero.web;
     exports com.ligero.websocket;
 
     uses com.ligero.spi.ConfigSource;
@@ -25,4 +26,5 @@ module com.ligero.core {
     uses com.ligero.spi.TemplateEngine;
     uses com.ligero.spi.MetricsCollector;
     uses com.ligero.spi.Tracer;
+    uses com.ligero.spi.RequestValidator;
 }

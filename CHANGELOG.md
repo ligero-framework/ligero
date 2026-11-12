@@ -68,6 +68,21 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
   auto-commit used to commit the partial transaction.
 
 ### Added
+- **Typed controllers** (`com.ligero.web` + `ligero-processor`). Declare
+  endpoints as methods on a `@Controller("/prefix")` class with `@Get`,
+  `@Post`, `@Put`, `@Patch`, `@Delete` (or `@Route(method = ..)`), bind inputs
+  with `@PathParam`, `@QueryParam`, `@HeaderParam` and `@Body` (+ `@Valid`),
+  and simply return the result — a record/collection (JSON), `String` (text),
+  `Optional` (404 when empty), `void` (204) or a `Response<T>` for explicit
+  status and headers (`@Status` for a fixed one). The processor generates a
+  `<Controller>Routes` class with plain `app.route(...)` registrations at
+  compile time — no reflection, native-image friendly — and reports mistakes
+  (unknown path parameter, unsupported type, private method, generic body) as
+  compile errors. The lambda style is unchanged and can be mixed in.
+- `Context.respond(Object)` — the single place that turns a return value into
+  a response — and the immutable `Response<T>` type.
+- `RequestValidator` SPI; `ligero-validation` registers a Bean Validation
+  implementation, used for `@Body @Valid` parameters.
 - **`ligero-mcp`** — build **Model Context Protocol** servers: expose your app's
   capabilities as *tools* an LLM can call, over JSON-RPC 2.0 (Streamable HTTP).
   `McpServer.create(name, version).tool(name, description, schema, handler)` and

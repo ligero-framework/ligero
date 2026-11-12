@@ -270,6 +270,61 @@ public final class Context {
         return this;
     }
 
+    /**
+     * Writes whatever a typed controller method returned — the single place
+     * that turns a Java value into an HTTP response:
+     *
+     * <ul>
+     *   <li>{@link Response} — its status and headers are applied, then its body follows these rules;</li>
+     *   <li>{@link java.util.Optional} — empty answers {@code 404}, otherwise its value is written;</li>
+     *   <li>{@code null} (and {@code void} methods) — no body; {@code 204} unless a status was already set;</li>
+     *   <li>{@code String} / {@code CharSequence} — {@code text/plain};</li>
+     *   <li>{@code byte[]} — {@code application/octet-stream};</li>
+     *   <li>anything else — JSON through the {@link BodyMapper}.</li>
+     * </ul>
+     *
+     * <p>Does nothing when the response is already committed, so a method
+     * that wrote through {@code ctx} itself is left alone.</p>
+     */
+    public Context respond(Object result) {
+        if (response.isCommitted()) {
+            return this;
+        }
+        Object body = result;
+        if (body instanceof Response<?> typed) {
+            response.status(typed.status());
+            typed.headers().forEach(response::header);
+            body = typed.body();
+        }
+        if (body instanceof java.util.Optional<?> optional) {
+            if (optional.isEmpty()) {
+                throw new NotFoundException("Not found");
+            }
+            body = optional.get();
+        }
+        if (body == null) {
+            if (response.getStatus() == 200) {
+                response.status(204);
+            }
+            response.end();
+            return this;
+        }
+        if (body instanceof CharSequence text) {
+            return text(text.toString());
+        }
+        if (body instanceof byte[] bytes) {
+            attributes.put(RESPONSE_BODY_ATTRIBUTE, bytes);
+            response.contentType("application/octet-stream");
+            try (java.io.OutputStream out = response.getOutputStream()) {
+                out.write(bytes);
+            } catch (java.io.IOException e) {
+                throw new java.io.UncheckedIOException("Could not send response", e);
+            }
+            return this;
+        }
+        return json(body);
+    }
+
     public Context redirect(String url) {
         response.redirect(url);
         return this;

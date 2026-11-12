@@ -144,6 +144,164 @@ class LigeroProcessorTest {
     }
 
     @Test
+    void typedRoutesGenerateARoutesClassThatCompiles() throws IOException {
+        Path src = Files.createDirectories(dir.resolve("src/demo"));
+        write(src, "Color.java", "package demo; public enum Color { RED, GREEN }");
+        write(src, "Item.java", "package demo; public record Item(long id, String name) {}");
+        write(src, "Items.java", """
+            package demo;
+            import com.ligero.beans.stereotype.Controller;
+            import com.ligero.http.Context;
+            import com.ligero.http.Response;
+            import com.ligero.web.*;
+            import java.util.List;
+            import java.util.Optional;
+            import java.util.UUID;
+            @Controller("/api/items")
+            public class Items {
+                @Get
+                List<Item> list(@QueryParam(defaultValue = "1") int page, @QueryParam String q,
+                                @QueryParam("tag") List<String> tags, @QueryParam Color color) { return List.of(); }
+                @Get("/{id}")
+                Optional<Item> get(@PathParam long id, @HeaderParam("X-Tenant") String tenant) { return Optional.empty(); }
+                @Get("/by-key/{key}")
+                Item byKey(@PathParam("key") UUID uuid, Context ctx) { return null; }
+                @Post @Status(201)
+                Response<Item> create(@Body Item item) { return Response.created(item); }
+                @Put("/{id}/raw")
+                String raw(@PathParam long id, @Body String text) { return text; }
+                @Delete("/{id}")
+                void delete(@PathParam long id) {}
+                @Route(method = "query", path = "/search")
+                List<Item> search(@Body Item example) { return List.of(); }
+                @Get("/files/*rest")
+                String file(@PathParam String rest) { return rest; }
+            }""");
+        Path gen = freshDir("generated");
+        StringWriter diagnostics = new StringWriter();
+        boolean ok = compileWithProcessor(src, gen, freshDir("classes"), diagnostics);
+        assertThat(ok).as(diagnostics.toString()).isTrue();
+
+        String routes = Files.readString(gen.resolve("demo/ItemsRoutes.java"));
+        assertThat(routes)
+            .contains("public static void mount(com.ligero.Ligero app, demo.Items controller)")
+            .contains("app.route(\"GET\", \"/api/items\", ctx -> {")
+            .contains("com.ligero.web.Binding.toInt(com.ligero.web.Binding.orDefault(ctx.queryParam(\"page\"), \"1\"), \"query parameter\", \"page\")")
+            .contains("ctx.queryParams(\"tag\")")
+            .contains("com.ligero.web.Binding.toEnum(demo.Color.values(), ctx.queryParam(\"color\"), \"query parameter\", \"color\")")
+            .contains("app.route(\"GET\", \"/api/items/{id}\", ctx -> {")
+            .contains("com.ligero.web.Binding.toLong(com.ligero.web.Binding.required(ctx.pathParam(\"id\"), \"path parameter\", \"id\"), \"path parameter\", \"id\")")
+            .contains("ctx.header(\"X-Tenant\")")
+            .contains("com.ligero.web.Binding.toUuid(")
+            .contains("app.route(\"POST\", \"/api/items\", ctx -> {")
+            .contains("ctx.body(demo.Item.class)")
+            .contains("ctx.status(201);")
+            .contains("ctx.bodyAsString()")
+            .contains("app.route(\"DELETE\", \"/api/items/{id}\", ctx -> {")
+            .contains("ctx.respond(null);")
+            .contains("app.route(\"QUERY\", \"/api/items/search\", ctx -> {")
+            .contains("app.route(\"GET\", \"/api/items/files/*rest\", ctx -> {");
+
+        String module = Files.readString(gen.resolve("demo/LigeroGeneratedModule.java"));
+        assertThat(module)
+            .contains("builder.bind(demo.Items.class, b -> new demo.Items());")
+            .contains("demo.ItemsRoutes.mount(app, beans.get(demo.Items.class));");
+    }
+
+    @Test
+    void validBodyRequiresAValidatorAtMountTime() throws IOException {
+        Path src = Files.createDirectories(dir.resolve("src/demo"));
+        write(src, "In.java", "package demo; public record In(String name) {}");
+        write(src, "C.java", """
+            package demo;
+            import com.ligero.beans.stereotype.Controller;
+            import com.ligero.web.*;
+            @Controller public class C {
+                @Post("/in") In create(@Body @Valid In in) { return in; }
+            }""");
+        Path gen = freshDir("generated");
+        assertThat(compileWithProcessor(src, gen, freshDir("classes"))).isTrue();
+        assertThat(Files.readString(gen.resolve("demo/CRoutes.java")))
+            .contains("com.ligero.web.Binding.requireValidator();")
+            .contains("com.ligero.web.Binding.valid(ctx.body(demo.In.class))")
+            .contains("app.route(\"POST\", \"/in\", ctx -> {");
+    }
+
+    @Test
+    void typedControllerImplementingAnInterfaceIsStillBoundAsItself() throws IOException {
+        Path src = Files.createDirectories(dir.resolve("src/demo"));
+        write(src, "Marker.java", "package demo; public interface Marker {}");
+        write(src, "C.java", """
+            package demo;
+            import com.ligero.beans.stereotype.Controller;
+            import com.ligero.web.Get;
+            @Controller("/c") public class C implements Marker {
+                @Get String hi() { return "hi"; }
+            }""");
+        Path gen = freshDir("generated");
+        assertThat(compileWithProcessor(src, gen, freshDir("classes"))).isTrue();
+        assertThat(Files.readString(gen.resolve("demo/LigeroGeneratedModule.java")))
+            .contains("builder.bind(demo.C.class, b -> new demo.C());")
+            .contains("demo.CRoutes.mount(app, beans.get(demo.C.class));");
+    }
+
+    @Test
+    void typedRouteMistakesAreCompileErrors() throws IOException {
+        assertRouteError("""
+            @Controller("/a") public class C {
+                @Get("/{id}") String get(@PathParam long userId) { return ""; }
+            }""", "has no {userId} segment");
+        assertRouteError("""
+            @Controller public class C {
+                @Get("/x") String get(String mystery) { return ""; }
+            }""", "say where this parameter comes from");
+        assertRouteError("""
+            @Controller public class C {
+                @Get("/x") String get(@QueryParam java.time.Instant when) { return ""; }
+            }""", "unsupported parameter type");
+        assertRouteError("""
+            @Controller public class C {
+                @Get("/x") private String get() { return ""; }
+            }""", "non-private instance methods");
+        assertRouteError("""
+            @Controller public class C {
+                @Get("/x") @Post("/x") String both() { return ""; }
+            }""", "more than one HTTP method annotation");
+        assertRouteError("""
+            @Controller public class C {
+                @Post("/x") String post(@Body java.util.List<String> names) { return ""; }
+            }""", "@Body needs a concrete class or record");
+        assertRouteError("""
+            @Controller public class C {
+                @Post("/x") String post(@Body String a, @Body String b) { return ""; }
+            }""", "single @Body");
+        assertRouteError("""
+            @Controller public class C {
+                @Get("/x") String get(@QueryParam @Valid String q) { return ""; }
+            }""", "@Valid applies to the @Body parameter");
+        assertRouteError("""
+            public class C {
+                @Get("/x") String get() { return ""; }
+            }""", "only works inside a class annotated with @Controller");
+        assertRouteError("""
+            @Controller public class C {
+                @Get("/x") @Status(42) String get() { return ""; }
+            }""", "valid HTTP status code");
+    }
+
+    private void assertRouteError(String classBody, String expectedMessage) throws IOException {
+        Path root = Files.createTempDirectory(dir, "case");
+        Path src = Files.createDirectories(root.resolve("src/demo"));
+        write(src, "C.java", "package demo;\nimport com.ligero.beans.stereotype.Controller;\n"
+            + "import com.ligero.web.*;\n" + classBody);
+        StringWriter diagnostics = new StringWriter();
+        boolean ok = compileWithProcessor(src, Files.createDirectories(root.resolve("generated")),
+            Files.createDirectories(root.resolve("classes")), diagnostics);
+        assertThat(ok).as("expected a compile error containing: " + expectedMessage).isFalse();
+        assertThat(diagnostics.toString()).contains(expectedMessage);
+    }
+
+    @Test
     void providesMustBeStatic() throws IOException {
         Path src = Files.createDirectories(dir.resolve("src/demo"));
         write(src, "Config.java", """

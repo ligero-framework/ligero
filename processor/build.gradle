@@ -6,7 +6,22 @@ dependencies {
     implementation project(':core')
 
     testImplementation project(':core')
+
+    // End-to-end: the test sources contain real typed controllers that are
+    // compiled WITH this processor and then served over HTTP.
+    testAnnotationProcessor files(sourceSets.main.output)
+    testAnnotationProcessor project(':core')
+    testImplementation project(':testkit')
+    testImplementation project(':validation')
+    testRuntimeOnly project(':server')
+    testRuntimeOnly project(':json')
+    testRuntimeOnly libs.slf4j.simple
     testImplementation libs.junit.jupiter
     testRuntimeOnly libs.junit.launcher
     testImplementation libs.assertj.core
+}
+
+// The processor's own classes must exist before the test sources are compiled with it.
+tasks.named('compileTestJava') {
+    dependsOn tasks.named('classes')
 }
