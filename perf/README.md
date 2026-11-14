@@ -28,7 +28,11 @@ bottleneck — and compares the medians.
 Startup time, memory, the Jetty engine and typed controllers are reported but
 not gated.
 
-A reference run (4 CPUs, 32 connections, medians of 3 rounds, requests/s):
+The size of the lead depends on the machine. On the GitHub-hosted runner the
+workflow uses, the Loom engine measured 117,695 requests/s overall against
+83,956 for Javalin (1.40×) and 45,257 for Spring Boot (2.60×); the floors are
+calibrated there. A run on a 4-CPU development machine showed a wider gap
+(32 connections, medians of 3 rounds, requests/s):
 
 | | GET list | GET by id | POST | Overall |
 |---|--:|--:|--:|--:|
