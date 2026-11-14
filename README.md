@@ -27,7 +27,8 @@ app.start();
 ## Features
 
 - ⚡️ **Lightweight & Fast**: zero dependencies in the core, served on Java 21 virtual threads
-- 🧩 **Simple API**: fluent, Express-inspired `Context` handlers (`ctx.json(...)`, `ctx.pathParam(...)`)
+- 🧱 **Typed controllers**: endpoints as plain Java methods — `@Get("/{id}") Product get(@PathParam long id)` — with parameters, body and return type checked by the compiler; the routing code is generated at build time (no reflection)
+- 🧩 **Simple API**: fluent, Express-inspired `Context` handlers (`ctx.json(...)`, `ctx.pathParam(...)`) for when a lambda is all you need
 - 🛣️ **Expressive Routing**: trie-based matching with `{params}`, `*wildcards`, route groups, automatic 405/OPTIONS
 - 🔗 **Middleware**: composable pipeline with built-ins for CORS, security headers, rate limiting, Basic auth, request id, access logging and static files
 - 🚨 **Error Handling**: `HttpException` hierarchy, custom exception/status handlers, no stack-trace leaks
@@ -58,6 +59,7 @@ you need it, carry nothing you don't.
 |---|---|
 | `ligero-core` | Public API, router, middleware, DI (`Beans`), feature modules, SPIs — zero deps (slf4j-api only) |
 | `ligero-server-jdk` | Default `ServerEngine` (JDK http server, virtual threads, TCP_NODELAY) |
+| `ligero-server-loom` | Ligero's **own** `ServerEngine`: HTTP/1.1 + WebSockets written from scratch on sockets and virtual threads — zero dependencies, strict parsing, the fastest of the three |
 | `ligero-server-jetty` | Alternative `ServerEngine` on Jetty 12 — adds **HTTP/2 (h2c)** and WebSockets |
 | `ligero-json` | Jackson `BodyMapper` (`ctx.body()` / `ctx.json()`), with `java.time` support |
 | `ligero-processor` | Optional compile-time annotation processor that generates the DI wiring |
@@ -188,6 +190,78 @@ The classic `(req, res)` handler style keeps working:
 app.get("/legacy/{id}", (req, res) -> res.json(Map.of("id", req.getPathParams().get("id"))));
 ```
 
+### Typed controllers
+
+For anything beyond a handful of routes, declare endpoints as methods. Inputs
+are typed parameters, the output is the return type, and the method is unit
+testable by calling it:
+
+```java
+@Controller("/api/products")
+public final class ProductController {
+
+    private final ProductService products;
+
+    public ProductController(ProductService products) {
+        this.products = products;
+    }
+
+    @Get
+    List<Product> list(@QueryParam(defaultValue = "1") int page, @QueryParam Category category) {
+        return products.list(page, category);
+    }
+
+    @Get("/{id}")
+    Optional<Product> get(@PathParam long id) {          // empty -> 404
+        return products.find(id);
+    }
+
+    @Post
+    Response<Product> create(@Body @Valid NewProduct body) {   // invalid -> 400
+        Product created = products.create(body);
+        return Response.created("/api/products/" + created.id(), created);
+    }
+
+    @Delete("/{id}")
+    void delete(@PathParam long id) {                     // -> 204
+        products.delete(id);
+    }
+}
+```
+
+| You write | You get |
+|---|---|
+| `@PathParam long id`, `@QueryParam int page`, `@HeaderParam("X-Tenant") String t` | converted values; a bad or missing one answers `400` naming the parameter |
+| `@QueryParam Category c` (enum), `UUID`, `BigDecimal`, `List<String>` | the same, for richer types |
+| `@Body NewProduct body` (+ `@Valid` with `ligero-validation`) | the deserialized, validated record |
+| return a record / `List` / `Map` | JSON, `200` |
+| return `String` | `text/plain` |
+| return `Optional<T>` | the value, or `404` when empty |
+| `void` | `204` |
+| return `Response<T>` or add `@Status(201)` | explicit status and headers |
+| a `Context ctx` parameter | the full low-level API, when you need it |
+
+Add the processor and install the generated modules — that is the whole setup:
+
+```groovy
+annotationProcessor 'com.ligeroframework:ligero-processor:<version>'
+```
+
+```java
+Ligero app = Ligero.create(8080);
+Modules.install(app, GeneratedModules.all());   // beans wired, routes mounted
+app.start();
+```
+
+Nothing is discovered at runtime. The processor writes a
+`ProductControllerRoutes` class next to your controller containing the same
+`app.route(...)` calls you would have typed by hand (open it in
+`build/generated` to see exactly what runs), and a mistake — a `@PathParam`
+the route does not declare, an unsupported type, a private method — is a
+**compile error**. Prefer explicit wiring? Call
+`ProductControllerRoutes.mount(app, controller)` yourself. The lambda style
+below keeps working and mixes freely with typed controllers.
+
 ### Requests & Responses
 
 ```java
@@ -285,6 +359,34 @@ fake and drive the whole pipeline without opening a socket:
 app.engine(new FakeEngine());
 app.bodyMapper(new JacksonBodyMapper());
 ```
+
+#### The Loom engine — Ligero's own server
+
+`ligero-server-loom` does not wrap anybody else's HTTP server: it reads and
+writes HTTP/1.1 (and WebSockets) directly on sockets. Swap the dependency and
+nothing else changes:
+
+```groovy
+runtimeOnly 'com.ligeroframework:ligero-server-loom:<version>'   // instead of ligero-server-jdk
+```
+
+- **Fast.** One thread per connection with blocking I/O — no dispatcher, no
+  hand-off between threads; requests are parsed from a per-connection buffer
+  and a response is normally one write. The first 256 concurrent connections
+  get a dedicated platform thread, the rest run on virtual threads. See
+  [`perf/`](perf/README.md) for how it compares.
+- **Complete.** Keep-alive and pipelining, chunked requests and streaming
+  responses (SSE), `Expect: 100-continue`, `HEAD`, gzip, graceful shutdown,
+  and WebSockets (handshake, fragmentation, ping/pong, close codes).
+- **Strict.** Bounded head, header count, body and connections; a deadline for
+  slow request heads; and anything ambiguous is refused — `Content-Length`
+  with `Transfer-Encoding`, conflicting lengths, folded headers, a missing
+  `Host` — which is what request smuggling relies on. Response headers are
+  validated so application data cannot split a response.
+- **Zero dependencies**, like the core.
+
+It speaks HTTP/1.1; terminate TLS and HTTP/2 at your proxy or load balancer,
+or use the Jetty engine for h2c.
 
 ### Graceful Shutdown
 

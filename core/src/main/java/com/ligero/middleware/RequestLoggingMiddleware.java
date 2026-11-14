@@ -40,11 +40,30 @@ public final class RequestLoggingMiddleware implements Middleware {
             if (jsonFormat) {
                 String requestId = ctx.attribute(RequestIdMiddleware.ATTRIBUTE);
                 log.info("{\"method\":\"{}\",\"path\":\"{}\",\"status\":{},\"durationMicros\":{}{}}",
-                    ctx.method(), ctx.path(), ctx.res().getStatus(), micros,
-                    requestId == null ? "" : ",\"requestId\":\"" + requestId + "\"");
+                    escape(ctx.method()), escape(ctx.path()), ctx.res().getStatus(), micros,
+                    requestId == null ? "" : ",\"requestId\":\"" + escape(requestId) + "\"");
             } else {
                 log.info("{} {} -> {} ({} µs)", ctx.method(), ctx.path(), ctx.res().getStatus(), micros);
             }
         }
+    }
+
+    /** JSON string escaping, so a crafted path cannot forge or break log records. */
+    static String escape(String value) {
+        if (value == null) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder(value.length());
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (c == '"' || c == '\\') {
+                sb.append('\\').append(c);
+            } else if (c < 0x20 || c == 0x7f) {
+                sb.append(String.format("\\u%04x", (int) c));
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
     }
 }

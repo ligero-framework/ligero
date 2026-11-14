@@ -18,6 +18,13 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 public @interface Controller {
 
+    /**
+     * Path prefix shared by this controller's typed routes
+     * ({@code @Get}, {@code @Post}, ... — see {@link com.ligero.web}), e.g.
+     * {@code "/api/products"}. Empty mounts them at the root.
+     */
+    String value() default "";
+
     /** Binding key for the optional processor; defaults to the single implemented interface (or the class itself). */
     Class<?> as() default Void.class;
 }

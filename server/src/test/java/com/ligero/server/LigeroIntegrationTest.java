@@ -398,4 +398,60 @@ class LigeroIntegrationTest {
         assertThat(bodySeenByMiddleware.get()).isEqualTo("hello");
         assertThat(response.body()).isEqualTo("hello");
     }
+
+    @Test
+    void pathParamsArePercentDecoded() throws Exception {
+        String base = start(newApp().get("/users/{name}", ctx -> ctx.text(ctx.pathParam("name"))));
+
+        assertThat(get(base + "/users/John%20Doe").body()).isEqualTo("John Doe");
+        assertThat(get(base + "/users/caf%C3%A9").body()).isEqualTo("café");
+        assertThat(get(base + "/users/a+b").body()).as("+ is a literal plus in a path").isEqualTo("a+b");
+    }
+
+    @Test
+    void malformedPercentEncodingIsA400NotA500() throws Exception {
+        String base = start(newApp()
+            .get("/search", ctx -> ctx.text(String.valueOf(ctx.queryParam("q"))))
+            .post("/form", ctx -> ctx.text(String.valueOf(ctx.formParam("name")))));
+
+        // raw socket: java.net.URI would refuse to build these request lines
+        assertThat(rawStatusLine("GET /search?q=%zz HTTP/1.1")).contains("400");
+        assertThat(rawStatusLine("GET /search?q=ok HTTP/1.1")).contains("200");
+    }
+
+    @Test
+    void dotSegmentsNeverReachHandlers() throws Exception {
+        String base = start(newApp().get("/files/*path", ctx -> ctx.text(ctx.pathParam("path"))));
+
+        assertThat(rawStatusLine("GET /files/../../etc/passwd HTTP/1.1")).contains("400");
+        assertThat(rawStatusLine("GET /files/a/%2e%2e/b HTTP/1.1")).contains("400");
+        assertThat(get(base + "/files/docs/readme.txt").body()).isEqualTo("docs/readme.txt");
+    }
+
+    @Test
+    void literalJsonNullBodyIsA400() throws Exception {
+        record In(String name) {
+        }
+        String base = start(newApp().post("/in", ctx -> ctx.text(ctx.body(In.class).name())));
+
+        for (String body : new String[] {"null", ""}) {
+            HttpResponse<String> response = client.send(
+                HttpRequest.newBuilder(URI.create(base + "/in"))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(body)).build(),
+                HttpResponse.BodyHandlers.ofString());
+            assertThat(response.statusCode()).as("body '" + body + "'").isEqualTo(400);
+        }
+    }
+
+    private String rawStatusLine(String requestLine) throws IOException {
+        try (java.net.Socket socket = new java.net.Socket("127.0.0.1", app.port())) {
+            socket.setSoTimeout(5000);
+            socket.getOutputStream().write((requestLine + "\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n")
+                .getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+            socket.getOutputStream().flush();
+            return new java.io.BufferedReader(new java.io.InputStreamReader(
+                socket.getInputStream(), java.nio.charset.StandardCharsets.US_ASCII)).readLine();
+        }
+    }
 }

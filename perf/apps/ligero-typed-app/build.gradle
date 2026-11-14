@@ -1,0 +1,29 @@
+plugins {
+    id 'application'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+application {
+    mainClass = 'bench.App'
+}
+
+// Same products API as ligero-app, written with typed controllers: measures
+// what the generated routing code costs compared with hand-written lambdas.
+def ligeroVersion = findProperty('ligeroVersion') ?: '0.5.0-SNAPSHOT'
+
+dependencies {
+    implementation "com.ligeroframework:ligero-core:$ligeroVersion"
+    annotationProcessor "com.ligeroframework:ligero-processor:$ligeroVersion"
+    runtimeOnly "com.ligeroframework:ligero-server-jdk:$ligeroVersion"
+    runtimeOnly "com.ligeroframework:ligero-json:$ligeroVersion"
+    runtimeOnly 'org.slf4j:slf4j-simple:2.0.16'
+}

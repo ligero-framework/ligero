@@ -1,6 +1,7 @@
 package com.ligero.mcp;
 
 import com.ligero.http.Context;
+import com.ligero.http.ForbiddenException;
 import com.ligero.middleware.Middleware;
 
 import java.util.Map;
@@ -26,6 +27,9 @@ final class McpHttp implements Middleware {
         if (!path.equals(ctx.path()) || !"POST".equals(ctx.method())) {
             chain.proceed();
             return;
+        }
+        if (!server.isOriginAllowed(ctx.header("Origin"))) {
+            throw new ForbiddenException("Origin not allowed");
         }
         Map<String, Object> message = ctx.body(Map.class);
         Map<String, Object> response = server.handle(message);

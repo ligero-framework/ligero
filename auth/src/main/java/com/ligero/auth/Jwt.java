@@ -71,6 +71,7 @@ public final class Jwt {
     // ---- factories ----------------------------------------------------------
 
     public static Jwt hs256(String secret, BodyMapper mapper) {
+        java.util.Objects.requireNonNull(mapper, "A BodyMapper is required (add ligero-json)");
         byte[] bytes = secret.getBytes(StandardCharsets.UTF_8);
         if (bytes.length < 32) {
             throw new IllegalArgumentException("HS256 secret must be at least 32 bytes");
@@ -133,8 +134,15 @@ public final class Jwt {
         } catch (IllegalArgumentException e) {
             throw new UnauthorizedException("Malformed token");
         }
-        // pin the algorithm (defends against alg-confusion and "none" attacks)
-        if (!header.contains("\"" + algorithm.jose + "\"")) {
+        // pin the algorithm (defends against alg-confusion and "none" attacks):
+        // the header must be a JSON object whose "alg" is exactly ours
+        Object alg;
+        try {
+            alg = mapper.readJson(header, Map.class).get("alg");
+        } catch (RuntimeException e) {
+            throw new UnauthorizedException("Malformed token");
+        }
+        if (!algorithm.jose.equals(alg)) {
             throw new UnauthorizedException("Unsupported token algorithm");
         }
         if (!verifySignature(parts[0] + "." + parts[1], signature)) {
@@ -147,14 +155,35 @@ public final class Jwt {
         } catch (RuntimeException e) {
             throw new UnauthorizedException("Malformed token payload");
         }
+        if (claims == null) {
+            throw new UnauthorizedException("Malformed token payload");
+        }
         long now = Instant.now().getEpochSecond();
-        if (claims.get("exp") instanceof Number exp && now >= exp.longValue()) {
+        Long exp = timeClaim(claims, "exp");
+        if (exp != null && now >= exp) {
             throw new UnauthorizedException("Token expired");
         }
-        if (claims.get("nbf") instanceof Number nbf && now < nbf.longValue()) {
+        Long nbf = timeClaim(claims, "nbf");
+        if (nbf != null && now < nbf) {
             throw new UnauthorizedException("Token not yet valid");
         }
         return claims;
+    }
+
+    /**
+     * A time claim must be numeric when present. A token carrying e.g.
+     * {@code "exp":"never"} is rejected instead of being treated as if it had
+     * no expiry at all.
+     */
+    private static Long timeClaim(Map<String, Object> claims, String name) {
+        Object value = claims.get(name);
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        throw new UnauthorizedException("Malformed token payload");
     }
 
     private byte[] signature(String signingInput) {
@@ -195,10 +224,12 @@ public final class Jwt {
                     Signature s = Signature.getInstance("SHA256withECDSA");
                     s.initVerify(publicKey);
                     s.update(input);
-                    yield s.verify(Ecdsa.joseToDer(signature));
+                    // ES256 signatures are exactly R||S, 32 bytes each
+                    yield signature.length == 64 && s.verify(Ecdsa.joseToDer(signature));
                 }
             };
-        } catch (GeneralSecurityException e) {
+        } catch (GeneralSecurityException | RuntimeException e) {
+            // any malformed signature is simply an invalid one
             return false;
         }
     }

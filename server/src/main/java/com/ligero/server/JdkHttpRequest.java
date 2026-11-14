@@ -1,5 +1,6 @@
 package com.ligero.server;
 
+import com.ligero.http.BadRequestException;
 import com.ligero.http.HttpRequest;
 import com.ligero.http.PayloadTooLargeException;
 
@@ -85,11 +86,19 @@ final class JdkHttpRequest implements HttpRequest {
             String key = eq >= 0 ? pair.substring(0, eq) : pair;
             // a parameter without value maps to "" (never null)
             String value = eq >= 0 ? pair.substring(eq + 1) : "";
-            params.computeIfAbsent(URLDecoder.decode(key, StandardCharsets.UTF_8), k -> new ArrayList<>())
-                  .add(URLDecoder.decode(value, StandardCharsets.UTF_8));
+            params.computeIfAbsent(decode(key), k -> new ArrayList<>()).add(decode(value));
         }
         params.replaceAll((k, v) -> Collections.unmodifiableList(v));
         return Collections.unmodifiableMap(params);
+    }
+
+    private static String decode(String encoded) {
+        try {
+            return URLDecoder.decode(encoded, StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            // broken percent-encoding is the client's mistake: 400, not 500
+            throw new BadRequestException("Malformed percent-encoding in query string");
+        }
     }
 
     @Override
