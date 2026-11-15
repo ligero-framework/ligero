@@ -256,8 +256,21 @@ public final class Context {
         return cookies;
     }
 
+    /**
+     * Attribute a middleware may set to override {@link #remoteAddress()} with
+     * the real client address — see
+     * {@link com.ligero.middleware.TrustedProxyMiddleware}.
+     */
+    public static final String CLIENT_ADDRESS_ATTRIBUTE = "ligero.clientAddress";
+
+    /**
+     * Address of the client. This is the peer of the TCP connection unless
+     * {@link com.ligero.middleware.TrustedProxyMiddleware} established the
+     * address a trusted reverse proxy forwarded.
+     */
     public String remoteAddress() {
-        return request.getRemoteAddress();
+        Object forwarded = attributes.get(CLIENT_ADDRESS_ATTRIBUTE);
+        return forwarded instanceof String address ? address : request.getRemoteAddress();
     }
 
     // ------------------------------------------------------------------

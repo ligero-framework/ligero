@@ -57,6 +57,10 @@ final class WebSocketConnection implements WsSession {
     private final ReentrantLock writeLock = new ReentrantLock();
     private String path;
     private volatile boolean closeSent;
+    private boolean deflate;
+    private int messageOpcode;
+    private boolean messageCompressed;
+    private int closeSentCode;
 
     WebSocketConnection(Connection connection, Socket socket, InputStream in, OutputStream out,
                         WsHandler handler, LoomServerEngine.Limits limits) {
@@ -85,8 +89,15 @@ final class WebSocketConnection implements WsSession {
             return;
         }
         String accept = Base64.getEncoder().encodeToString(sha1(key + GUID));
+        // permessage-deflate (RFC 7692) when the client offers it. Neither side keeps
+        // its compression window between messages: slightly less compression, but no
+        // per-connection zlib state to hold for every open socket.
+        deflate = offersDeflate(head);
         out.write(("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
-            + "Sec-WebSocket-Accept: " + accept + "\r\n\r\n").getBytes(StandardCharsets.US_ASCII));
+            + "Sec-WebSocket-Accept: " + accept + "\r\n"
+            + (deflate ? "Sec-WebSocket-Extensions: permessage-deflate; server_no_context_takeover; "
+                + "client_no_context_takeover\r\n" : "")
+            + "\r\n").getBytes(StandardCharsets.US_ASCII));
         socket.setSoTimeout(0); // an open socket may legitimately stay silent; TCP keep-alive detects dead peers
 
         int closeCode = 1006;
@@ -106,8 +117,11 @@ final class WebSocketConnection implements WsSession {
                 int b1 = readByte();
                 boolean fin = (b0 & 0x80) != 0;
                 int opcode = b0 & 0x0f;
-                if ((b0 & 0x70) != 0 || (b1 & 0x80) == 0) {
-                    // reserved bits (no extension was negotiated) or an unmasked client frame
+                boolean compressed = (b0 & 0x40) != 0;
+                if ((b0 & 0x30) != 0 || (b1 & 0x80) == 0
+                        || (compressed && (!deflate || opcode >= 0x8 || opcode == OP_CONTINUATION))) {
+                    // reserved bits nobody negotiated, a "compressed" control or continuation
+                    // frame, or an unmasked client frame
                     close(1002, "protocol error");
                     closeCode = 1002;
                     break;
@@ -149,36 +163,37 @@ final class WebSocketConnection implements WsSession {
                     writeFrame(OP_PONG, payload);
                 } else if (opcode == OP_PONG) {
                     // unsolicited pongs are allowed and ignored
-                } else if (opcode == OP_TEXT || opcode == OP_CONTINUATION) {
-                    if ((opcode == OP_TEXT) == (message != null)) {
+                } else if (opcode == OP_TEXT || opcode == OP_BINARY || opcode == OP_CONTINUATION) {
+                    boolean starts = opcode != OP_CONTINUATION;
+                    if (starts == (message != null)) {
                         // a new message while one is in flight, or a continuation of nothing
                         close(1002, "protocol error");
                         closeCode = 1002;
                         break;
                     }
+                    if (starts) {
+                        messageOpcode = opcode;
+                        messageCompressed = compressed;
+                    }
+                    byte[] whole;
                     if (fin && message == null) {
-                        if (!deliver(payload)) {
-                            closeCode = 1007;
-                            break;
-                        }
+                        whole = payload;
                     } else {
                         if (message == null) {
                             message = new ByteArrayOutputStream(Math.max(256, payload.length * 2));
                         }
                         message.write(payload, 0, payload.length);
-                        if (fin) {
-                            byte[] whole = message.toByteArray();
-                            message = null;
-                            if (!deliver(whole)) {
-                                closeCode = 1007;
-                                break;
-                            }
+                        if (!fin) {
+                            continue;
                         }
+                        whole = message.toByteArray();
+                        message = null;
                     }
-                } else if (opcode == OP_BINARY) {
-                    close(1003, "binary messages are not supported");
-                    closeCode = 1003;
-                    break;
+                    int failure = dispatch(whole);
+                    if (failure != 0) {
+                        closeCode = failure;
+                        break;
+                    }
                 } else {
                     close(1002, "protocol error");
                     closeCode = 1002;
@@ -192,6 +207,76 @@ final class WebSocketConnection implements WsSession {
         } finally {
             notifyClose(closeCode, closeReason);
         }
+    }
+
+    /** Hands a complete message to the handler; returns a close code when it has to be refused, else 0. */
+    private int dispatch(byte[] message) {
+        byte[] content = message;
+        if (messageCompressed) {
+            content = inflate(message);
+            if (content == null) {
+                return closeSentCode;
+            }
+        }
+        if (messageOpcode == OP_TEXT) {
+            return deliver(content) ? 0 : 1007;
+        }
+        try {
+            handler.onBinary(this, content);
+        } catch (Exception e) {
+            handler.onError(this, e);
+        }
+        return 0;
+    }
+
+    /**
+     * Inflates a compressed message, never producing more than the message
+     * size limit — a few kilobytes of zeros must not become gigabytes.
+     */
+    private byte[] inflate(byte[] compressed) {
+        java.util.zip.Inflater inflater = new java.util.zip.Inflater(true);
+        try {
+            byte[] input = java.util.Arrays.copyOf(compressed, compressed.length + 4);
+            input[compressed.length + 2] = (byte) 0xff; // the 00 00 ff ff tail the sender removed
+            input[compressed.length + 3] = (byte) 0xff;
+            inflater.setInput(input);
+            ByteArrayOutputStream result = new ByteArrayOutputStream(Math.max(256, compressed.length * 3));
+            byte[] chunk = new byte[8 * 1024];
+            while (!inflater.finished() && !inflater.needsInput()) {
+                int n = inflater.inflate(chunk);
+                if (n == 0 && (inflater.needsInput() || inflater.needsDictionary())) {
+                    break;
+                }
+                if (result.size() + n > maxMessageBytes) {
+                    close(1009, "message too big");
+                    closeSentCode = 1009;
+                    return null;
+                }
+                result.write(chunk, 0, n);
+            }
+            return result.toByteArray();
+        } catch (java.util.zip.DataFormatException e) {
+            close(1007, "invalid compressed data");
+            closeSentCode = 1007;
+            return null;
+        } finally {
+            inflater.end();
+        }
+    }
+
+    private static boolean offersDeflate(RequestHead head) {
+        for (int i = 0; i < head.headerCount; i++) {
+            if (head.names[i].equalsIgnoreCase("Sec-WebSocket-Extensions")) {
+                for (String extension : head.values[i].split(",")) {
+                    String name = extension.trim();
+                    int semicolon = name.indexOf(';');
+                    if ((semicolon < 0 ? name : name.substring(0, semicolon).trim()).equals("permessage-deflate")) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     /** Decodes strictly: invalid UTF-8 closes the socket with 1007 instead of being papered over. */
@@ -268,6 +353,10 @@ final class WebSocketConnection implements WsSession {
 
     /** Server frames are never masked. Writers are serialized so frames cannot interleave. */
     private void writeFrame(int opcode, byte[] payload) throws IOException {
+        writeFrame(opcode, false, payload);
+    }
+
+    private void writeFrame(int opcode, boolean compressed, byte[] payload) throws IOException {
         int length = payload.length;
         byte[] frame;
         int offset;
@@ -289,11 +378,13 @@ final class WebSocketConnection implements WsSession {
             }
             offset = 10;
         }
-        frame[0] = (byte) (0x80 | opcode);
+        frame[0] = (byte) (0x80 | (compressed ? 0x40 : 0) | opcode);
         System.arraycopy(payload, 0, frame, offset, length);
         writeLock.lock();
         try {
-            out.write(frame);
+            connection.write(frame, 0, frame.length); // under the engine's write deadline
+        } catch (java.io.UncheckedIOException e) {
+            throw e.getCause();
         } finally {
             writeLock.unlock();
         }
@@ -316,10 +407,45 @@ final class WebSocketConnection implements WsSession {
         if (closeSent) {
             return;
         }
+        sendMessage(OP_TEXT, message.getBytes(StandardCharsets.UTF_8));
+    }
+
+    @Override
+    public void send(byte[] message) {
+        if (closeSent) {
+            return;
+        }
+        sendMessage(OP_BINARY, message);
+    }
+
+    private void sendMessage(int opcode, byte[] payload) {
         try {
-            writeFrame(OP_TEXT, message.getBytes(StandardCharsets.UTF_8));
+            if (deflate && payload.length >= 128) {
+                writeFrame(opcode, true, deflate(payload));
+            } else {
+                writeFrame(opcode, payload);
+            }
         } catch (IOException e) {
             handler.onError(this, e);
+        }
+    }
+
+    /** One message, compressed on its own (no context carried over), without the trailing 00 00 ff ff. */
+    private static byte[] deflate(byte[] payload) {
+        java.util.zip.Deflater deflater = new java.util.zip.Deflater(java.util.zip.Deflater.DEFAULT_COMPRESSION, true);
+        try {
+            deflater.setInput(payload);
+            ByteArrayOutputStream result = new ByteArrayOutputStream(payload.length / 2 + 16);
+            byte[] chunk = new byte[8 * 1024];
+            int n;
+            do {
+                n = deflater.deflate(chunk, 0, chunk.length, java.util.zip.Deflater.SYNC_FLUSH);
+                result.write(chunk, 0, n);
+            } while (n == chunk.length);
+            byte[] bytes = result.toByteArray();
+            return java.util.Arrays.copyOf(bytes, bytes.length - 4);
+        } finally {
+            deflater.end();
         }
     }
 

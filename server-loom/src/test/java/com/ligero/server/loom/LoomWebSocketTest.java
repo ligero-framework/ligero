@@ -290,8 +290,10 @@ class LoomWebSocketTest {
         assertThat(closeCodeAfter(frame(0x09, new byte[0], true))).isEqualTo(1002);
         // unknown opcode
         assertThat(closeCodeAfter(frame(0x83, new byte[0], true))).isEqualTo(1002);
-        // binary: the handler API is text-only
+        // binary, to a handler that did not opt in to binary messages
         assertThat(closeCodeAfter(frame(0x82, new byte[] {1, 2, 3}, true))).isEqualTo(1003);
+        // "compressed" although no extension was negotiated
+        assertThat(closeCodeAfter(frame(0xC1, "hi".getBytes(StandardCharsets.UTF_8), true))).isEqualTo(1002);
         // invalid UTF-8 in a text frame
         assertThat(closeCodeAfter(frame(0x81, new byte[] {(byte) 0xC3, (byte) 0x28}, true))).isEqualTo(1007);
         // larger than the configured message limit (1000 bytes)
@@ -333,5 +335,145 @@ class LoomWebSocketTest {
         socket.close();
         awaitEvent("close");
         assertThat(events).contains("close 1006").anyMatch(e -> e.startsWith("error"));
+    }
+
+    // ------------------------------------------------------------------ binary and compression
+
+    private void startBinaryEcho(LoomServerEngine.Limits limits) throws IOException {
+        app = Ligero.create(LigeroConfig.builder().environment(Map.of()).host("127.0.0.1").port(0).build());
+        app.engine(new LoomServerEngine(limits));
+        app.websocket("/echo", new WsHandler() {
+            @Override
+            public void onMessage(WsSession session, String message) {
+                session.send(message);
+            }
+
+            @Override
+            public void onBinary(WsSession session, byte[] message) {
+                session.send(message);
+            }
+
+            @Override
+            public void onClose(WsSession session, int statusCode, String reason) {
+                events.add("close " + statusCode);
+            }
+        });
+        app.start();
+    }
+
+    @Test
+    void binaryMessagesReachHandlersThatAcceptThem() throws Exception {
+        startBinaryEcho(LoomServerEngine.Limits.defaults());
+        byte[] blob = new byte[70_000];
+        new java.util.Random(7).nextBytes(blob);
+
+        CompletableFuture<byte[]> echoed = new CompletableFuture<>();
+        ByteArrayOutputStream collected = new ByteArrayOutputStream();
+        WebSocket socket = HttpClient.newHttpClient().newWebSocketBuilder()
+            .buildAsync(URI.create("ws://127.0.0.1:" + app.port() + "/echo"), new WebSocket.Listener() {
+                @Override
+                public CompletionStage<?> onBinary(WebSocket webSocket, java.nio.ByteBuffer data, boolean last) {
+                    byte[] part = new byte[data.remaining()];
+                    data.get(part);
+                    collected.writeBytes(part);
+                    if (last) {
+                        echoed.complete(collected.toByteArray());
+                    }
+                    webSocket.request(1);
+                    return null;
+                }
+            }).get(5, TimeUnit.SECONDS);
+
+        socket.sendBinary(java.nio.ByteBuffer.wrap(blob), true).get(5, TimeUnit.SECONDS);
+        assertThat(echoed.get(5, TimeUnit.SECONDS)).isEqualTo(blob);
+        socket.sendClose(WebSocket.NORMAL_CLOSURE, "").get(5, TimeUnit.SECONDS);
+    }
+
+    private static byte[] rawDeflate(byte[] data) {
+        java.util.zip.Deflater deflater = new java.util.zip.Deflater(java.util.zip.Deflater.DEFAULT_COMPRESSION, true);
+        deflater.setInput(data);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] chunk = new byte[8192];
+        int n;
+        do {
+            n = deflater.deflate(chunk, 0, chunk.length, java.util.zip.Deflater.SYNC_FLUSH);
+            out.write(chunk, 0, n);
+        } while (n == chunk.length);
+        deflater.end();
+        byte[] bytes = out.toByteArray();
+        return java.util.Arrays.copyOf(bytes, bytes.length - 4);
+    }
+
+    private static byte[] rawInflate(byte[] data) throws Exception {
+        java.util.zip.Inflater inflater = new java.util.zip.Inflater(true);
+        byte[] input = java.util.Arrays.copyOf(data, data.length + 4);
+        input[data.length + 2] = (byte) 0xff;
+        input[data.length + 3] = (byte) 0xff;
+        inflater.setInput(input);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] chunk = new byte[8192];
+        while (!inflater.needsInput()) {
+            int n = inflater.inflate(chunk);
+            if (n == 0) {
+                break;
+            }
+            out.write(chunk, 0, n);
+        }
+        inflater.end();
+        return out.toByteArray();
+    }
+
+    @Test
+    void compressesMessagesWhenTheClientOffersPermessageDeflate() throws Exception {
+        startBinaryEcho(LoomServerEngine.Limits.defaults());
+        try (Socket socket = handshake("Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits\r\n")) {
+            String head = readHead(socket.getInputStream());
+            assertThat(head).startsWith("HTTP/1.1 101")
+                .contains("Sec-WebSocket-Extensions: permessage-deflate; server_no_context_takeover; client_no_context_takeover");
+
+            String text = "ligero websocket ".repeat(200);
+            // RSV1 (0x40) marks a compressed message
+            socket.getOutputStream().write(frame(0xC1, rawDeflate(text.getBytes(StandardCharsets.UTF_8)), true));
+
+            DataInputStream in = new DataInputStream(socket.getInputStream());
+            int b0 = in.readUnsignedByte();
+            assertThat(b0 & 0x40).as("the echo comes back compressed").isEqualTo(0x40);
+            int length = in.readUnsignedByte() & 0x7f;
+            if (length == 126) {
+                length = in.readUnsignedShort();
+            }
+            byte[] payload = new byte[length];
+            in.readFully(payload);
+            assertThat(length).isLessThan(text.length() / 10);
+            assertThat(new String(rawInflate(payload), StandardCharsets.UTF_8)).isEqualTo(text);
+
+            // short messages are sent as they are, and uncompressed frames are still accepted
+            socket.getOutputStream().write(text("hi"));
+            Frame small = readFrame(socket.getInputStream());
+            assertThat(small.textPayload()).isEqualTo("hi");
+        }
+    }
+
+    @Test
+    void compressedMessagesCannotInflatePastTheMessageLimit() throws Exception {
+        startBinaryEcho(LoomServerEngine.Limits.defaults().withMaxWsMessageBytes(64 * 1024));
+        try (Socket socket = handshake("Sec-WebSocket-Extensions: permessage-deflate\r\n")) {
+            readHead(socket.getInputStream());
+            // 8 MB of zeros deflate to a few kilobytes: a "zip bomb" in one frame
+            byte[] bomb = rawDeflate(new byte[8 * 1024 * 1024]);
+            assertThat(bomb.length).isLessThan(64 * 1024);
+            socket.getOutputStream().write(frame(0xC2, bomb, true));
+
+            Frame close = readFrame(socket.getInputStream());
+            assertThat(close.opcode()).isEqualTo(8);
+            assertThat(close.closeCode()).isEqualTo(1009);
+        }
+        // corrupt compressed data is refused too
+        try (Socket socket = handshake("Sec-WebSocket-Extensions: permessage-deflate\r\n")) {
+            readHead(socket.getInputStream());
+            socket.getOutputStream().write(frame(0xC1, new byte[] {(byte) 0xff, (byte) 0xff, (byte) 0xff, 0x12, 0x34}, true));
+            Frame close = readFrame(socket.getInputStream());
+            assertThat(close.closeCode()).isEqualTo(1007);
+        }
     }
 }

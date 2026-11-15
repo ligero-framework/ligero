@@ -51,6 +51,18 @@ public final class JettyWsAdapter implements Session.Listener.AutoDemanding {
     }
 
     @Override
+    public void onWebSocketBinary(java.nio.ByteBuffer payload, Callback callback) {
+        byte[] message = new byte[payload.remaining()];
+        payload.get(message);
+        callback.succeed();
+        try {
+            handler.onBinary(wsSession, message);
+        } catch (Exception e) {
+            handler.onError(wsSession, e);
+        }
+    }
+
+    @Override
     public void onWebSocketClose(int statusCode, String reason) {
         try {
             handler.onClose(wsSession, statusCode, reason);
@@ -89,6 +101,11 @@ public final class JettyWsAdapter implements Session.Listener.AutoDemanding {
         @Override
         public void send(String message) {
             session.sendText(message, Callback.NOOP);
+        }
+
+        @Override
+        public void send(byte[] message) {
+            session.sendBinary(java.nio.ByteBuffer.wrap(message), Callback.NOOP);
         }
 
         @Override
