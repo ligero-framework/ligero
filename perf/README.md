@@ -46,6 +46,28 @@ The [`Benchmark` workflow](../.github/workflows/benchmark.yml) runs this on
 every pull request against the PR's target branch and publishes the table in
 the job summary.
 
+## HTTP/2 and TLS
+
+`run.py` drives HTTP/1.1. The Loom engine's other protocols were measured
+with [`h2load`](https://nghttp2.org/documentation/h2load-howto.html) (the
+nghttp2 load generator) against the same app on the same 4-CPU machine,
+`GET /products`, requests/s:
+
+| | Plain | TLS 1.3 |
+|---|--:|--:|
+| HTTP/1.1, 32 connections | 140,437 | 95,445 |
+| HTTP/2, 8 connections × 16 streams | 141,564 | 120,482 |
+| HTTP/2, 32 connections × 1 stream | 78,145 | — |
+
+No request failed in any run. Multiplexed HTTP/2 matches HTTP/1.1; with a
+single stream per connection it is slower, because each HTTP/2 request is
+handed to its own thread while an HTTP/1.1 request runs on the connection's.
+
+```bash
+h2load -t 2 -c 8 -m 16 -D 10 http://127.0.0.1:8080/products         # HTTP/2, prior knowledge
+h2load -t 2 -c 32 --h1 -D 10 https://127.0.0.1:8443/products        # HTTP/1.1 over TLS
+```
+
 ## Run it locally
 
 ```bash

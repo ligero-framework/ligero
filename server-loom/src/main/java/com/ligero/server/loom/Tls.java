@@ -48,17 +48,85 @@ public final class Tls {
 
     private static final String[] PROTOCOLS = {"TLSv1.3", "TLSv1.2"};
 
-    private final SSLContext context;
-    private final String[] cipherSuites;
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(Tls.class);
+    private static final long RELOAD_CHECK_NANOS = java.util.concurrent.TimeUnit.SECONDS.toNanos(5);
 
-    private Tls(SSLContext context) {
-        this.context = context;
-        this.cipherSuites = safeCipherSuites(context);
+    /** A loaded certificate and the cipher suites offered with it. */
+    private record Material(SSLContext context, String[] cipherSuites) {
+    }
+
+    /** Loads the certificate from wherever it lives. */
+    private interface Source {
+        SSLContext load() throws IOException, GeneralSecurityException;
+    }
+
+    private final Source source;         // null when the context was supplied ready-made
+    private final Path[] watched;        // files whose change triggers a reload
+    private volatile Material material;
+    private volatile long lastModified;
+    private volatile long nextCheckNanos;
+
+    private Tls(SSLContext context, Source source, Path... watched) {
+        this.material = new Material(context, safeCipherSuites(context));
+        this.source = source;
+        this.watched = watched;
+        this.lastModified = stamp();
+        this.nextCheckNanos = System.nanoTime() + RELOAD_CHECK_NANOS;
     }
 
     /** Uses an {@link SSLContext} you built yourself (custom key managers, HSM, ...). */
     public static Tls of(SSLContext context) {
-        return new Tls(context);
+        return new Tls(context, null);
+    }
+
+    /**
+     * The certificate currently in force. Renewed certificate files (Let's
+     * Encrypt replaces them every couple of months) are picked up without a
+     * restart: the files are checked every few seconds and reloaded when they
+     * change. A renewal that cannot be loaded — a half-written file, a key
+     * that does not match — is logged and the previous certificate stays in
+     * use, so a bad deploy cannot take HTTPS down.
+     */
+    private Material current() {
+        if (source == null || System.nanoTime() - nextCheckNanos < 0) {
+            return material;
+        }
+        synchronized (this) {
+            if (System.nanoTime() - nextCheckNanos < 0) {
+                return material;
+            }
+            nextCheckNanos = System.nanoTime() + RELOAD_CHECK_NANOS;
+            long stamp = stamp();
+            if (stamp != lastModified) {
+                try {
+                    SSLContext reloaded = source.load();
+                    material = new Material(reloaded, safeCipherSuites(reloaded));
+                    lastModified = stamp;
+                    log.info("TLS certificate reloaded");
+                } catch (IOException | GeneralSecurityException | RuntimeException e) {
+                    log.warn("Could not reload the TLS certificate; keeping the current one: {}", e.toString());
+                }
+            }
+            return material;
+        }
+    }
+
+    /** Changes whenever one of the watched files does. */
+    private long stamp() {
+        long stamp = 0;
+        for (Path file : watched) {
+            try {
+                stamp = stamp * 31 + Files.getLastModifiedTime(file).toMillis() + Files.size(file);
+            } catch (IOException missing) {
+                stamp = stamp * 31 - 1;
+            }
+        }
+        return stamp;
+    }
+
+    /** Forces the next connection to check the certificate files (tests). */
+    void checkNow() {
+        nextCheckNanos = System.nanoTime();
     }
 
     /**
@@ -66,32 +134,44 @@ public final class Tls {
      * unencrypted PKCS#8 key ({@code -----BEGIN PRIVATE KEY-----}), RSA or EC.
      */
     public static Tls fromPem(Path certificateChain, Path privateKey) {
+        Source source = () -> pemContext(certificateChain, privateKey);
         try {
-            List<Certificate> chain = new ArrayList<>();
-            try (InputStream in = Files.newInputStream(certificateChain)) {
-                chain.addAll(CertificateFactory.getInstance("X.509").generateCertificates(in));
-            }
-            if (chain.isEmpty()) {
-                throw new IllegalArgumentException("No certificate found in " + certificateChain);
-            }
-            PrivateKey key = readPrivateKey(Files.readString(privateKey, StandardCharsets.US_ASCII), privateKey);
-            KeyStore store = KeyStore.getInstance("PKCS12");
-            store.load(null, null);
-            char[] none = new char[0];
-            store.setKeyEntry("ligero", key, none, chain.toArray(new Certificate[0]));
-            return fromStore(store, none);
+            return new Tls(source.load(), source, certificateChain, privateKey);
         } catch (IOException | GeneralSecurityException e) {
             throw new IllegalArgumentException("Could not load the TLS certificate/key: " + e.getMessage(), e);
         }
     }
 
+    private static SSLContext pemContext(Path certificateChain, Path privateKey)
+            throws IOException, GeneralSecurityException {
+        List<Certificate> chain = new ArrayList<>();
+        try (InputStream in = Files.newInputStream(certificateChain)) {
+            chain.addAll(CertificateFactory.getInstance("X.509").generateCertificates(in));
+        }
+        if (chain.isEmpty()) {
+            throw new IllegalArgumentException("No certificate found in " + certificateChain);
+        }
+        PrivateKey key = readPrivateKey(Files.readString(privateKey, StandardCharsets.US_ASCII), privateKey);
+        KeyStore store = KeyStore.getInstance("PKCS12");
+        store.load(null, null);
+        char[] none = new char[0];
+        store.setKeyEntry("ligero", key, none, chain.toArray(new Certificate[0]));
+        return context(store, none);
+    }
+
     /** Certificate and key from a PKCS#12 (or JKS) keystore file. */
     public static Tls fromKeyStore(Path keyStore, char[] password) {
-        try (InputStream in = Files.newInputStream(keyStore)) {
-            KeyStore store = KeyStore.getInstance(
-                keyStore.toString().toLowerCase(java.util.Locale.ROOT).endsWith(".jks") ? "JKS" : "PKCS12");
-            store.load(in, password);
-            return fromStore(store, password);
+        char[] secret = password.clone();
+        Source source = () -> {
+            try (InputStream in = Files.newInputStream(keyStore)) {
+                KeyStore store = KeyStore.getInstance(
+                    keyStore.toString().toLowerCase(java.util.Locale.ROOT).endsWith(".jks") ? "JKS" : "PKCS12");
+                store.load(in, secret);
+                return context(store, secret);
+            }
+        };
+        try {
+            return new Tls(source.load(), source, keyStore);
         } catch (IOException | GeneralSecurityException e) {
             throw new IllegalArgumentException("Could not load the TLS keystore: " + e.getMessage(), e);
         }
@@ -122,12 +202,12 @@ public final class Tls {
         return value != null && !value.isBlank();
     }
 
-    private static Tls fromStore(KeyStore store, char[] password) throws GeneralSecurityException {
+    private static SSLContext context(KeyStore store, char[] password) throws GeneralSecurityException {
         KeyManagerFactory keys = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         keys.init(store, password);
         SSLContext context = SSLContext.getInstance("TLS");
         context.init(keys.getKeyManagers(), null, null);
-        return new Tls(context);
+        return context;
     }
 
     private static PrivateKey readPrivateKey(String pem, Path source) throws GeneralSecurityException {
@@ -179,12 +259,13 @@ public final class Tls {
      * @param applicationProtocols ALPN protocols offered, most preferred first
      */
     SSLSocket wrap(Socket socket, String... applicationProtocols) throws IOException {
-        SSLSocket secure = (SSLSocket) context.getSocketFactory()
+        Material current = current();
+        SSLSocket secure = (SSLSocket) current.context().getSocketFactory()
             .createSocket(socket, new ByteArrayInputStream(new byte[0]), true);
         secure.setUseClientMode(false);
         SSLParameters parameters = secure.getSSLParameters();
         parameters.setProtocols(PROTOCOLS);
-        parameters.setCipherSuites(cipherSuites);
+        parameters.setCipherSuites(current.cipherSuites());
         parameters.setUseCipherSuitesOrder(true);
         parameters.setApplicationProtocols(applicationProtocols);
         secure.setSSLParameters(parameters);

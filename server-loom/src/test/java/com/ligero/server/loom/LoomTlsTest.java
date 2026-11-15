@@ -196,4 +196,32 @@ class LoomTlsTest {
         assertThatThrownBy(() -> Tls.fromKeyStore(rsa.keyStore, "wrong".toCharArray()))
             .isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void renewedCertificatesAreServedWithoutARestart() throws Exception {
+        Path cert = directory.resolve("live-cert.pem");
+        Path key = directory.resolve("live-key.pem");
+        Files.copy(rsa.certificatePem, cert, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(rsa.privateKeyPem, key, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        Tls tls = Tls.fromPem(cert, key);
+        String base = start(tls);
+        HttpRequest request = HttpRequest.newBuilder(URI.create(base + "/hello")).build();
+
+        assertThat(client(rsa).send(request, HttpResponse.BodyHandlers.ofString()).body()).isEqualTo("secure hello");
+
+        // a broken renewal (key that does not belong to the certificate file's format) is ignored
+        Files.writeString(key, "-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n");
+        tls.checkNow();
+        assertThat(client(rsa).send(request, HttpResponse.BodyHandlers.ofString()).body())
+            .as("the previous certificate stays in force").isEqualTo("secure hello");
+
+        // the real renewal: new certificate and key on disk
+        Files.copy(ec.certificatePem, cert, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(ec.privateKeyPem, key, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        tls.checkNow();
+        assertThat(client(ec).send(request, HttpResponse.BodyHandlers.ofString()).body()).isEqualTo("secure hello");
+        // and a client that only trusts the old certificate is now refused
+        assertThatThrownBy(() -> client(rsa).send(request, HttpResponse.BodyHandlers.ofString()))
+            .isInstanceOf(SSLHandshakeException.class);
+    }
 }

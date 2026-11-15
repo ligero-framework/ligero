@@ -396,8 +396,9 @@ HTTPS needs only a certificate:
 LIGERO_TLS_CERT=fullchain.pem LIGERO_TLS_KEY=privkey.pem java -jar app.jar
 ```
 
-TLS 1.3 and 1.2 are offered, with forward-secret AEAD cipher suites only, and
-clients that support it get HTTP/2 automatically.
+TLS 1.3 and 1.2 are offered, with forward-secret AEAD cipher suites only,
+clients that support it get HTTP/2 automatically, and renewed certificate
+files are picked up without a restart.
 
 ### Graceful Shutdown
 

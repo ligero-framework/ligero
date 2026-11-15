@@ -93,6 +93,8 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
   - **TLS** with the JDK's own implementation: `Tls.fromPem(cert, key)`,
     `Tls.fromKeyStore(...)`, or just `LIGERO_TLS_CERT` + `LIGERO_TLS_KEY`.
     TLS 1.3 and 1.2 only, and for 1.2 only ECDHE with AEAD cipher suites.
+    Renewed certificate files are picked up without a restart; a renewal
+    that cannot be loaded is logged and the previous certificate stays.
   - **HTTP/2** (RFC 9113), negotiated by ALPN on TLS and by prior knowledge
     on plain connections, with HPACK, multiplexing and flow control. Bounded
     against rapid reset (CVE-2023-44487), CONTINUATION and control-frame
