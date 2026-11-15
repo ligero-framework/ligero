@@ -92,13 +92,18 @@ final class Connection implements Runnable, BodySource {
                 // The handshake runs here, on the connection's thread, and under the
                 // same deadline as a request head: a client cannot stall it for long.
                 rawSocket.setSoTimeout((int) Math.max(1, limits.headerTimeout().toMillis()));
-                javax.net.ssl.SSLSocket secure = tls.wrap(rawSocket, "http/1.1");
+                javax.net.ssl.SSLSocket secure = tls.wrap(rawSocket, "h2", "http/1.1");
                 secure.startHandshake();
                 socket = secure;
                 currentTimeoutMillis = -1;
             }
             in = socket.getInputStream();
             out = socket.getOutputStream();
+            if (socket instanceof javax.net.ssl.SSLSocket secure && "h2".equals(secure.getApplicationProtocol())) {
+                // the client chose HTTP/2 during the TLS handshake (ALPN)
+                serveHttp2(in, 0, true);
+                return;
+            }
             InetSocketAddress remote = (InetSocketAddress) socket.getRemoteSocketAddress();
             remoteAddress = remote == null || remote.getAddress() == null
                 ? null : remote.getAddress().getHostAddress();
@@ -115,6 +120,12 @@ final class Connection implements Runnable, BodySource {
                     }
                     return;
                 }
+                if (head == HTTP2_PREFACE) {
+                    // HTTP/2 without TLS, "prior knowledge": the rest of the preface and
+                    // every frame after it come from our buffer first, then from the socket
+                    serveHttp2(new BufferedThenSocket(), HTTP2_PREFACE_HEAD.length, false);
+                    return;
+                }
                 if (head == null || !serve(head)) {
                     return;
                 }
@@ -127,6 +138,47 @@ final class Connection implements Runnable, BodySource {
             forceClose();
             engine.connectionClosed(this);
         }
+    }
+
+    /** What the first 18 bytes of an HTTP/2 connection look like to an HTTP/1 parser. */
+    private static final byte[] HTTP2_PREFACE_HEAD = "PRI * HTTP/2.0\r\n\r\n".getBytes(StandardCharsets.US_ASCII);
+    private static final RequestHead HTTP2_PREFACE = new RequestHead("PRI", "*", false, new String[0],
+        new String[0], 0, 0, false, false, false, false);
+
+    private volatile Http2Connection http2;
+
+    private void serveHttp2(InputStream input, int prefaceConsumed, boolean secure) throws IOException {
+        Http2Connection connection = new Http2Connection(this, input, config, handler, limits,
+            engine.streamExecutor(), engine.compression(), secure);
+        http2 = connection;
+        connection.run(prefaceConsumed);
+    }
+
+    /** Reads what {@link #readHead} already buffered, then straight from the socket. */
+    private final class BufferedThenSocket extends InputStream {
+        @Override
+        public int read() throws IOException {
+            if (pos < lim) {
+                return buf[pos++] & 0xff;
+            }
+            return in.read();
+        }
+
+        @Override
+        public int read(byte[] target, int offset, int length) throws IOException {
+            if (pos < lim) {
+                int n = Math.min(length, lim - pos);
+                System.arraycopy(buf, pos, target, offset, n);
+                pos += n;
+                return n;
+            }
+            return in.read(target, offset, length);
+        }
+    }
+
+    /** Sets how long the next reads may block. */
+    void readTimeout(long millis) throws IOException {
+        timeout(millis);
     }
 
     /** Serves one request; returns whether the connection can take another. */
@@ -187,6 +239,14 @@ final class Connection implements Runnable, BodySource {
     }
 
     void closeIfIdle() {
+        Http2Connection connection = http2;
+        if (connection != null) {
+            connection.shutdown(); // GOAWAY: no new requests on this connection
+            if (connection.quiescent()) {
+                forceClose();
+            }
+            return;
+        }
         if (idle) {
             forceClose();
         }
@@ -238,9 +298,35 @@ final class Connection implements Runnable, BodySource {
             + "Connection: close\r\n\r\n" + body;
         try {
             out.write(response.getBytes(StandardCharsets.US_ASCII));
-            socket.shutdownOutput(); // lets the client read the answer before the close
         } catch (IOException ignored) {
-            // client already gone
+            return; // client already gone
+        }
+        lingeringClose();
+    }
+
+    /**
+     * Ends the connection without destroying what we just sent. Closing a
+     * socket that still has unread input makes TCP send a reset, and a reset
+     * can discard our final message (an error response, a GOAWAY) before the
+     * peer reads it. So: finish our side, then swallow what the peer is still
+     * sending — briefly and within a bound — and only then close.
+     */
+    void lingeringClose() {
+        try {
+            socket.shutdownOutput();
+            rawSocket.setSoTimeout(250);
+            byte[] discard = new byte[8 * 1024];
+            long budget = 256 * 1024;
+            long deadline = System.nanoTime() + 1_000_000_000L;
+            while (budget > 0 && System.nanoTime() < deadline) {
+                int read = in.read(discard);
+                if (read < 0) {
+                    break;
+                }
+                budget -= read;
+            }
+        } catch (IOException ignored) {
+            // timed out or already closed: either way we are done
         }
     }
 
@@ -264,6 +350,11 @@ final class Connection implements Runnable, BodySource {
             }
             int end = indexOfHeadEnd(scanFrom);
             if (end >= 0) {
+                if (end - pos == HTTP2_PREFACE_HEAD.length
+                        && java.util.Arrays.equals(buf, pos, end, HTTP2_PREFACE_HEAD, 0, HTTP2_PREFACE_HEAD.length)) {
+                    pos = end;
+                    return HTTP2_PREFACE;
+                }
                 RequestHead head = HeadParser.parse(buf, pos, end, limits.maxHeaders());
                 pos = end;
                 return head;

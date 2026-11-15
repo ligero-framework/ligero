@@ -302,6 +302,12 @@ public final class LoomServerEngine implements ServerEngine {
         return socket.getLocalPort();
     }
 
+    /** Where HTTP/2 requests run: one thread per stream. */
+    java.util.concurrent.Executor streamExecutor() {
+        ExecutorService virtual = virtualThreads;
+        return virtual != null ? virtual : platformThreads;
+    }
+
     Compression compression() {
         return compression;
     }

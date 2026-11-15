@@ -20,6 +20,12 @@ final class HttpDate {
     private HttpDate() {
     }
 
+    /** The date alone, for HTTP/2's {@code date} field. */
+    static String value() {
+        byte[] line = headerLine();
+        return new String(line, 6, line.length - 8, StandardCharsets.US_ASCII);
+    }
+
     /** {@code "Date: <IMF-fixdate>\r\n"} for the current second. */
     static byte[] headerLine() {
         long second = System.currentTimeMillis() / 1000;
