@@ -42,9 +42,9 @@ concept and the affected version/commit when possible.
 - Mark session cookies `Secure` (`SessionMiddleware.of(secret).secureCookie(true)`)
   and call `SessionMiddleware.regenerate(ctx)` after a successful login.
 - Behind a reverse proxy, install `TrustedProxyMiddleware` with your proxies'
-  addresses so rate limits and logs see the real client, and raise the Loom
+  addresses so rate limits and logs see the real client, and raise the Pluma
   engine's per-address connection limit.
-- Serving TLS directly: use `ligero-server-loom` with `LIGERO_TLS_CERT` /
+- Serving TLS directly: use `ligero-server-pluma` with `LIGERO_TLS_CERT` /
   `LIGERO_TLS_KEY`; only TLS 1.3/1.2 with forward-secret AEAD suites are
   offered.
 - Do not enable response compression on routes whose body mixes secrets with

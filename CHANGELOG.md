@@ -77,7 +77,7 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
   auto-commit used to commit the partial transaction.
 
 ### Added
-- **`ligero-server-loom` — Ligero's own server engine.** HTTP/1.1 and
+- **`ligero-server-pluma` — Ligero's own server engine.** HTTP/1.1 and
   WebSockets implemented from scratch on sockets (no `com.sun.net.httpserver`,
   no Jetty, no dependencies): one thread per connection with blocking I/O —
   dedicated platform threads for the first 256 concurrent connections, virtual
@@ -89,7 +89,7 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
   conflicting lengths, folded headers, missing `Host`) is refused; response
   headers are validated against header injection. Opt in by depending on it
   instead of `ligero-server-jdk`.
-- **HTTPS, HTTP/2 and more in `ligero-server-loom`.**
+- **HTTPS, HTTP/2 and more in `ligero-server-pluma`.**
   - **TLS** with the JDK's own implementation: `Tls.fromPem(cert, key)`,
     `Tls.fromKeyStore(...)`, or just `LIGERO_TLS_CERT` + `LIGERO_TLS_KEY`.
     TLS 1.3 and 1.2 only, and for 1.2 only ECDHE with AEAD cipher suites.

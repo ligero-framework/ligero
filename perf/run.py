@@ -163,14 +163,14 @@ def main():
     out_root.mkdir(exist_ok=True)
     apps = HERE / "apps"
     # (key, label, source dir, gradle properties, role)
-    plan = [("loom", "Ligero — this build (Loom engine)", apps / "ligero-app",
-             {"ligeroVersion": args.candidate, "engine": "loom"}, "candidate"),
+    plan = [("pluma", "Ligero — this build (Pluma engine)", apps / "ligero-app",
+             {"ligeroVersion": args.candidate, "engine": "pluma"}, "candidate"),
             ("candidate", "Ligero — this build (JDK engine)", apps / "ligero-app",
              {"ligeroVersion": args.candidate}, "candidate")]
     if args.baseline:
-        # a baseline that predates the Loom engine simply has no such row
-        plan.append(("baseline-loom", "Ligero — baseline (Loom engine)", apps / "ligero-app",
-                     {"ligeroVersion": args.baseline, "engine": "loom"}, "optional"))
+        # a baseline that predates the Pluma engine simply has no such row
+        plan.append(("baseline-pluma", "Ligero — baseline (Pluma engine)", apps / "ligero-app",
+                     {"ligeroVersion": args.baseline, "engine": "pluma"}, "optional"))
         plan.append(("baseline", "Ligero — baseline (JDK engine)", apps / "ligero-app",
                      {"ligeroVersion": args.baseline}, "baseline"))
     if not args.no_typed:
@@ -228,14 +228,14 @@ def main():
 
     failures = []
     # Standing is judged with Ligero's own engine: the one built to lead.
-    candidate = stats["loom"]
+    candidate = stats["pluma"]
 
     lines.append("### Gate 1 — no regression against the baseline")
     if args.baseline:
         lines += ["", "| Engine | Scenario | Baseline | This build | Change | |", "|---|---|--:|--:|--:|---|"]
         pairs = [("JDK", "baseline", "candidate")]
-        if "baseline-loom" in stats:
-            pairs.insert(0, ("Loom", "baseline-loom", "loom"))
+        if "baseline-pluma" in stats:
+            pairs.insert(0, ("Pluma", "baseline-pluma", "pluma"))
         for engine, base_key, new_key in pairs:
             for scenario, label in SCENARIOS:
                 before, after = stats[base_key][scenario]["throughput"], stats[new_key][scenario]["throughput"]
@@ -253,7 +253,7 @@ def main():
     floors = json.loads((HERE / "thresholds.json").read_text())["min_ratio_vs"]
     others = [(key, label, stats[key]) for key, label, *_rest, role in plan if role == "other"]
     if others:
-        lines += ["", "Overall throughput of this build (Loom engine) divided by the other framework's; "
+        lines += ["", "Overall throughput of this build (Pluma engine) divided by the other framework's; "
                   "it must not fall below the floor in `perf/thresholds.json`.", "",
                   "| Framework | Overall | Ligero vs it | Floor | |", "|---|--:|--:|--:|---|"]
         for key, label, other in others:

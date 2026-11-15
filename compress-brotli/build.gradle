@@ -12,7 +12,7 @@ dependencies {
     runtimeOnly libs.brotli4j.osx.arm64
     runtimeOnly libs.brotli4j.windows.x64
 
-    testImplementation project(':server-loom')
+    testImplementation project(':server-pluma')
     testImplementation project(':json')
     testImplementation libs.junit.jupiter
     testRuntimeOnly libs.junit.launcher

@@ -59,7 +59,7 @@ you need it, carry nothing you don't.
 |---|---|
 | `ligero-core` | Public API, router, middleware, DI (`Beans`), feature modules, SPIs — zero deps (slf4j-api only) |
 | `ligero-server-jdk` | Default `ServerEngine` (JDK http server, virtual threads, TCP_NODELAY) |
-| `ligero-server-loom` | Ligero's **own** `ServerEngine`: HTTP/1.1, **HTTP/2**, **HTTPS** and WebSockets written from scratch on sockets and virtual threads — zero dependencies, strict parsing, the fastest of the three |
+| `ligero-server-pluma` | Ligero's **own** `ServerEngine`: HTTP/1.1, **HTTP/2**, **HTTPS** and WebSockets written from scratch on sockets and virtual threads — zero dependencies, strict parsing, the fastest of the three |
 | `ligero-compress-brotli` | Brotli (`br`) response compression, preferred over gzip when the client accepts it |
 | `ligero-server-jetty` | Alternative `ServerEngine` on Jetty 12 — adds **HTTP/2 (h2c)** and WebSockets |
 | `ligero-json` | Jackson `BodyMapper` (`ctx.body()` / `ctx.json()`), with `java.time` support |
@@ -361,14 +361,14 @@ app.engine(new FakeEngine());
 app.bodyMapper(new JacksonBodyMapper());
 ```
 
-#### The Loom engine — Ligero's own server
+#### The Pluma engine — Ligero's own server
 
-`ligero-server-loom` does not wrap anybody else's HTTP server: it reads and
+`ligero-server-pluma` does not wrap anybody else's HTTP server: it reads and
 writes HTTP/1.1 (and WebSockets) directly on sockets. Swap the dependency and
 nothing else changes:
 
 ```groovy
-runtimeOnly 'com.ligeroframework:ligero-server-loom:<version>'   // instead of ligero-server-jdk
+runtimeOnly 'com.ligeroframework:ligero-server-pluma:<version>'   // instead of ligero-server-jdk
 ```
 
 - **Fast.** One thread per connection with blocking I/O — no dispatcher, no

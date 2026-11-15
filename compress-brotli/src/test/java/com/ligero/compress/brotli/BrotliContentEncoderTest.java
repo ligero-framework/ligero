@@ -4,7 +4,7 @@ import com.aayushatharva.brotli4j.decoder.BrotliInputStream;
 import com.aayushatharva.brotli4j.decoder.Decoder;
 import com.ligero.Ligero;
 import com.ligero.config.LigeroConfig;
-import com.ligero.server.loom.LoomServerEngine;
+import com.ligero.server.pluma.PlumaServerEngine;
 import com.ligero.spi.ContentEncoder;
 
 import org.junit.jupiter.api.AfterEach;
@@ -79,10 +79,10 @@ class BrotliContentEncoderTest {
     }
 
     @Test
-    void theLoomEngineServesBrotliWhenTheClientAcceptsIt() throws Exception {
+    void thePlumaEngineServesBrotliWhenTheClientAcceptsIt() throws Exception {
         app = Ligero.create(LigeroConfig.builder().environment(Map.of()).host("127.0.0.1").port(0)
             .gzip(true).gzipMinBytes(100).build());
-        app.engine(new LoomServerEngine());
+        app.engine(new PlumaServerEngine());
         app.get("/data", ctx -> ctx.res().contentType("application/json").send(TEXT));
         app.get("/stream", ctx -> {
             try (OutputStream out = ctx.res().contentType("text/plain").getOutputStream()) {
