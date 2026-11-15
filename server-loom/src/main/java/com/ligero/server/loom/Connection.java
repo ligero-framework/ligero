@@ -25,7 +25,7 @@ import java.nio.charset.StandardCharsets;
  * serves it, and repeats while the connection is kept alive. Everything here
  * runs on the connection's own (virtual) thread with blocking I/O.
  */
-final class Connection implements Runnable {
+final class Connection implements Runnable, BodySource {
 
     private static final Logger log = LoggerFactory.getLogger(Connection.class);
 
@@ -36,7 +36,9 @@ final class Connection implements Runnable {
     private static final byte[] CONTINUE = "HTTP/1.1 100 Continue\r\n\r\n".getBytes(StandardCharsets.US_ASCII);
 
     private final LoomServerEngine engine;
-    private final Socket socket;
+    /** The accepted TCP socket; {@link #socket} is the same one, or its TLS wrapper. */
+    private final Socket rawSocket;
+    private Socket socket;
     private final EngineConfig config;
     private final HttpHandler handler;
     private final LoomServerEngine.Limits limits;
@@ -59,13 +61,21 @@ final class Connection implements Runnable {
     private boolean bodyDone;
     private boolean expectContinue;
     private boolean continueSent;
+    private BodyStream openStream;
 
     private final boolean dedicated;
+    private final String peerAddress;
+    private final long writeTimeoutNanos;
+    /** Non-zero while a write is in progress: when it must have finished. */
+    private volatile long writeDeadlineNanos;
 
     Connection(LoomServerEngine engine, Socket socket, EngineConfig config, HttpHandler handler,
-               LoomServerEngine.Limits limits, boolean dedicated) {
+               LoomServerEngine.Limits limits, boolean dedicated, String peerAddress) {
         this.dedicated = dedicated;
+        this.peerAddress = peerAddress;
+        this.writeTimeoutNanos = limits.writeTimeout().toNanos();
         this.engine = engine;
+        this.rawSocket = socket;
         this.socket = socket;
         this.config = config;
         this.handler = handler;
@@ -75,8 +85,18 @@ final class Connection implements Runnable {
     @Override
     public void run() {
         try {
-            socket.setTcpNoDelay(true);
-            socket.setKeepAlive(true);
+            rawSocket.setTcpNoDelay(true);
+            rawSocket.setKeepAlive(true);
+            Tls tls = engine.tls();
+            if (tls != null) {
+                // The handshake runs here, on the connection's thread, and under the
+                // same deadline as a request head: a client cannot stall it for long.
+                rawSocket.setSoTimeout((int) Math.max(1, limits.headerTimeout().toMillis()));
+                javax.net.ssl.SSLSocket secure = tls.wrap(rawSocket, "http/1.1");
+                secure.startHandshake();
+                socket = secure;
+                currentTimeoutMillis = -1;
+            }
             in = socket.getInputStream();
             out = socket.getOutputStream();
             InetSocketAddress remote = (InetSocketAddress) socket.getRemoteSocketAddress();
@@ -116,6 +136,7 @@ final class Connection implements Runnable {
         bodyDone = !chunked && bodyRemaining == 0;
         expectContinue = head.expectContinue && !bodyDone;
         continueSent = false;
+        openStream = null;
 
         if (head.webSocketUpgrade && !config.webSockets().isEmpty()) {
             WsHandler wsHandler = config.webSockets().get(PathNormalizer.normalize(head.path()));
@@ -125,8 +146,9 @@ final class Connection implements Runnable {
             }
         }
 
-        LoomHttpRequest request = new LoomHttpRequest(this, head, config.maxBodyBytes());
-        LoomHttpResponse response = new LoomHttpResponse(this, head, config);
+        LoomHttpRequest request = new LoomHttpRequest(this, head, config.maxBodyBytes(),
+            head.http10 ? "HTTP/1.0" : "HTTP/1.1");
+        LoomHttpResponse response = new LoomHttpResponse(this, head, config, engine.compression());
         try {
             handler.handle(request, response);
         } catch (Exception e) {
@@ -155,7 +177,8 @@ final class Connection implements Runnable {
         return dedicated;
     }
 
-    String remoteAddress() {
+    @Override
+    public String remoteAddress() {
         return remoteAddress;
     }
 
@@ -171,7 +194,8 @@ final class Connection implements Runnable {
 
     void forceClose() {
         try {
-            socket.close();
+            // the TCP socket itself: closing the TLS layer first could block on a peer that is not reading
+            rawSocket.close();
         } catch (IOException ignored) {
             // already closed
         }
@@ -182,11 +206,27 @@ final class Connection implements Runnable {
     // ------------------------------------------------------------------
 
     void write(byte[] bytes, int offset, int length) {
+        writeDeadlineNanos = System.nanoTime() + writeTimeoutNanos | 1; // never 0 while writing
         try {
             out.write(bytes, offset, length);
         } catch (IOException e) {
             throw new java.io.UncheckedIOException("Could not send response", e);
+        } finally {
+            writeDeadlineNanos = 0;
         }
+    }
+
+    /** Called by the engine's watchdog: drops a client that stopped reading our response. */
+    void closeIfWriteOverdue(long nowNanos) {
+        long deadline = writeDeadlineNanos;
+        if (deadline != 0 && nowNanos - deadline > 0) {
+            forceClose();
+        }
+    }
+
+    /** Address the connection was accepted from (the key of the per-address limit). */
+    String peerAddress() {
+        return peerAddress;
     }
 
     private void writeError(int status, String reason) {
@@ -303,7 +343,8 @@ final class Connection implements Runnable {
      * @throws PayloadTooLargeException when the body exceeds the limit
      * @throws BadRequestException      when chunked framing is malformed
      */
-    byte[] readBody(long maxBytes) {
+    @Override
+    public byte[] readBody(long maxBytes) {
         if (bodyDone) {
             return EMPTY;
         }
@@ -385,6 +426,17 @@ final class Connection implements Runnable {
         try {
             timeout(limits.readTimeout().toMillis());
             long budget = DRAIN_LIMIT;
+            if (openStream != null) {
+                // a handler abandoned its body stream part-way: finish it from where it stopped
+                byte[] scratch = new byte[8 * 1024];
+                for (int n = openStream.read(scratch); n >= 0; n = openStream.read(scratch)) {
+                    budget -= n;
+                    if (budget < 0) {
+                        return false;
+                    }
+                }
+                return bodyDone;
+            }
             if (!chunked) {
                 if (bodyRemaining > budget) {
                     return false;
@@ -410,6 +462,95 @@ final class Connection implements Runnable {
         } catch (IOException | RuntimeException e) {
             return false;
         }
+    }
+
+    @Override
+    public InputStream openBodyStream(long maxBytes) {
+        if (!chunked && bodyRemaining > maxBytes) {
+            throw new PayloadTooLargeException(maxBytes);
+        }
+        openStream = new BodyStream(maxBytes);
+        return openStream;
+    }
+
+    /**
+     * The request body handed to the application piece by piece, straight
+     * from the socket: memory use stays constant however large the upload.
+     */
+    private final class BodyStream extends InputStream {
+
+        private final long maxBytes;
+        private long delivered;
+        private int chunkRemaining;
+        private boolean chunkOpen;
+        private boolean started;
+
+        BodyStream(long maxBytes) {
+            this.maxBytes = maxBytes;
+        }
+
+        @Override
+        public int read() throws IOException {
+            byte[] one = new byte[1];
+            return read(one, 0, 1) < 0 ? -1 : one[0] & 0xff;
+        }
+
+        @Override
+        public int read(byte[] target, int offset, int length) throws IOException {
+            if (bodyDone) {
+                return -1;
+            }
+            if (length == 0) {
+                return 0;
+            }
+            if (!started) {
+                started = true;
+                sendContinueIfExpected();
+                timeout(limits.readTimeout().toMillis());
+            }
+            if (!chunked) {
+                int n = readSome(target, offset, (int) Math.min(length, bodyRemaining));
+                bodyRemaining -= n;
+                bodyDone = bodyRemaining == 0;
+                return n;
+            }
+            if (chunkRemaining == 0) {
+                if (chunkOpen) {
+                    expectCrLf();
+                    chunkOpen = false;
+                }
+                int size = readChunkSize();
+                if (size == 0) {
+                    readTrailers();
+                    bodyDone = true;
+                    return -1;
+                }
+                delivered += size;
+                if (delivered > maxBytes) {
+                    throw new PayloadTooLargeException(maxBytes);
+                }
+                chunkRemaining = size;
+                chunkOpen = true;
+            }
+            int n = readSome(target, offset, Math.min(length, chunkRemaining));
+            chunkRemaining -= n;
+            return n;
+        }
+    }
+
+    /** Up to {@code length} bytes: whatever is buffered, otherwise one read from the socket. */
+    private int readSome(byte[] target, int offset, int length) throws IOException {
+        int buffered = Math.min(length, lim - pos);
+        if (buffered > 0) {
+            System.arraycopy(buf, pos, target, offset, buffered);
+            pos += buffered;
+            return buffered;
+        }
+        int read = in.read(target, offset, length);
+        if (read < 0) {
+            throw new EOFException("connection closed mid-request");
+        }
+        return read;
     }
 
     private void sendContinueIfExpected() throws IOException {

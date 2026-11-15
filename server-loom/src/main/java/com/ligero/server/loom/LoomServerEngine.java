@@ -59,39 +59,103 @@ public final class LoomServerEngine implements ServerEngine {
     private static final Logger log = LoggerFactory.getLogger(LoomServerEngine.class);
 
     /**
-     * Protective limits. The defaults suit an application server; tests and
-     * unusual deployments can tighten or relax them.
+     * Protective limits. The defaults suit an application server; change one
+     * with the matching {@code with...} method:
+     *
+     * <pre>{@code
+     * new LoomServerEngine(Limits.defaults().withMaxConnectionsPerAddress(200));
+     * }</pre>
      *
      * @param maxHeaderBytes  largest accepted request line + headers
      * @param maxHeaders      largest accepted number of header lines
      * @param headerTimeout   time allowed to receive a complete request head
      * @param idleTimeout     how long a keep-alive connection may sit idle
      * @param readTimeout     longest wait for more request-body bytes
+     * @param writeTimeout    longest a single write may be stuck on a client
+     *                        that is not reading (slow-read attacks)
      * @param maxConnections  concurrent connections; further ones are refused
+     * @param maxConnectionsPerAddress concurrent connections from one client
+     *                        address, so a single client cannot take them all;
+     *                        raise it when every request arrives through one
+     *                        reverse proxy
      * @param maxWsMessageBytes largest accepted WebSocket message
      * @param dedicatedThreads how many concurrent connections are served on a
      *                         dedicated platform thread before falling back to
      *                         virtual threads; 0 means virtual threads only
+     * @param maxConcurrentStreams HTTP/2: concurrent requests per connection
      */
     public record Limits(int maxHeaderBytes, int maxHeaders, Duration headerTimeout, Duration idleTimeout,
-                         Duration readTimeout, int maxConnections, int maxWsMessageBytes, int dedicatedThreads) {
+                         Duration readTimeout, Duration writeTimeout, int maxConnections,
+                         int maxConnectionsPerAddress, int maxWsMessageBytes, int dedicatedThreads,
+                         int maxConcurrentStreams) {
 
         public Limits {
-            if (maxHeaderBytes < 512 || maxHeaders < 1 || maxConnections < 1 || maxWsMessageBytes < 125
-                    || dedicatedThreads < 0) {
+            if (maxHeaderBytes < 512 || maxHeaders < 1 || maxConnections < 1 || maxConnectionsPerAddress < 1
+                    || maxWsMessageBytes < 125 || dedicatedThreads < 0 || maxConcurrentStreams < 1) {
                 throw new IllegalArgumentException("limits are too small to serve any request");
             }
         }
 
         public static Limits defaults() {
             return new Limits(16 * 1024, 100, Duration.ofSeconds(10), Duration.ofSeconds(60),
-                Duration.ofSeconds(30), 20_000, 1024 * 1024, 256);
+                Duration.ofSeconds(30), Duration.ofSeconds(30), 20_000, 5_000, 1024 * 1024, 256, 100);
+        }
+
+        public Limits withMaxHeaderBytes(int value) {
+            return new Limits(value, maxHeaders, headerTimeout, idleTimeout, readTimeout, writeTimeout,
+                maxConnections, maxConnectionsPerAddress, maxWsMessageBytes, dedicatedThreads, maxConcurrentStreams);
+        }
+
+        public Limits withMaxHeaders(int value) {
+            return new Limits(maxHeaderBytes, value, headerTimeout, idleTimeout, readTimeout, writeTimeout,
+                maxConnections, maxConnectionsPerAddress, maxWsMessageBytes, dedicatedThreads, maxConcurrentStreams);
+        }
+
+        public Limits withHeaderTimeout(Duration value) {
+            return new Limits(maxHeaderBytes, maxHeaders, value, idleTimeout, readTimeout, writeTimeout,
+                maxConnections, maxConnectionsPerAddress, maxWsMessageBytes, dedicatedThreads, maxConcurrentStreams);
+        }
+
+        public Limits withIdleTimeout(Duration value) {
+            return new Limits(maxHeaderBytes, maxHeaders, headerTimeout, value, readTimeout, writeTimeout,
+                maxConnections, maxConnectionsPerAddress, maxWsMessageBytes, dedicatedThreads, maxConcurrentStreams);
+        }
+
+        public Limits withReadTimeout(Duration value) {
+            return new Limits(maxHeaderBytes, maxHeaders, headerTimeout, idleTimeout, value, writeTimeout,
+                maxConnections, maxConnectionsPerAddress, maxWsMessageBytes, dedicatedThreads, maxConcurrentStreams);
+        }
+
+        public Limits withWriteTimeout(Duration value) {
+            return new Limits(maxHeaderBytes, maxHeaders, headerTimeout, idleTimeout, readTimeout, value,
+                maxConnections, maxConnectionsPerAddress, maxWsMessageBytes, dedicatedThreads, maxConcurrentStreams);
+        }
+
+        public Limits withMaxConnections(int value) {
+            return new Limits(maxHeaderBytes, maxHeaders, headerTimeout, idleTimeout, readTimeout, writeTimeout,
+                value, Math.min(maxConnectionsPerAddress, value), maxWsMessageBytes, dedicatedThreads,
+                maxConcurrentStreams);
+        }
+
+        public Limits withMaxConnectionsPerAddress(int value) {
+            return new Limits(maxHeaderBytes, maxHeaders, headerTimeout, idleTimeout, readTimeout, writeTimeout,
+                maxConnections, value, maxWsMessageBytes, dedicatedThreads, maxConcurrentStreams);
+        }
+
+        public Limits withMaxWsMessageBytes(int value) {
+            return new Limits(maxHeaderBytes, maxHeaders, headerTimeout, idleTimeout, readTimeout, writeTimeout,
+                maxConnections, maxConnectionsPerAddress, value, dedicatedThreads, maxConcurrentStreams);
         }
 
         /** A copy with a different number of dedicated platform threads. */
-        public Limits withDedicatedThreads(int dedicatedThreads) {
-            return new Limits(maxHeaderBytes, maxHeaders, headerTimeout, idleTimeout, readTimeout,
-                maxConnections, maxWsMessageBytes, dedicatedThreads);
+        public Limits withDedicatedThreads(int value) {
+            return new Limits(maxHeaderBytes, maxHeaders, headerTimeout, idleTimeout, readTimeout, writeTimeout,
+                maxConnections, maxConnectionsPerAddress, maxWsMessageBytes, value, maxConcurrentStreams);
+        }
+
+        public Limits withMaxConcurrentStreams(int value) {
+            return new Limits(maxHeaderBytes, maxHeaders, headerTimeout, idleTimeout, readTimeout, writeTimeout,
+                maxConnections, maxConnectionsPerAddress, maxWsMessageBytes, dedicatedThreads, value);
         }
     }
 
@@ -99,18 +163,37 @@ public final class LoomServerEngine implements ServerEngine {
     private final Set<Connection> connections = ConcurrentHashMap.newKeySet();
     private final java.util.concurrent.atomic.AtomicInteger dedicatedInUse =
         new java.util.concurrent.atomic.AtomicInteger();
+    /** Open connections per client address. */
+    private final java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.atomic.AtomicInteger>
+        perAddress = new java.util.concurrent.ConcurrentHashMap<>();
+    private Thread watchdog;
+    private Compression compression;
     private ServerSocket serverSocket;
     private ExecutorService platformThreads;
     private ExecutorService virtualThreads;
     private Thread acceptor;
     private volatile boolean stopping;
 
+    private final Tls tls;
+
+    /** Default limits; HTTPS when the {@code LIGERO_TLS_*} environment variables are set (see {@link Tls}). */
     public LoomServerEngine() {
         this(Limits.defaults());
     }
 
+    /** Custom limits; HTTPS when the {@code LIGERO_TLS_*} environment variables are set. */
     public LoomServerEngine(Limits limits) {
+        this(limits, Tls.fromEnvironment(System.getenv()));
+    }
+
+    /** Custom limits and explicit TLS settings ({@code null} for plain HTTP). */
+    public LoomServerEngine(Limits limits, Tls tls) {
         this.limits = limits;
+        this.tls = tls;
+    }
+
+    Tls tls() {
+        return tls;
     }
 
     @Override
@@ -130,6 +213,9 @@ public final class LoomServerEngine implements ServerEngine {
             return thread;
         });
         virtualThreads = config.virtualThreads() ? Executors.newVirtualThreadPerTaskExecutor() : null;
+        perAddress.clear();
+        compression = Compression.load();
+        watchdog = Thread.ofPlatform().name("ligero-watchdog").daemon(true).start(this::watchLoop);
         acceptor = Thread.ofPlatform().name("ligero-acceptor").start(() -> acceptLoop(socket, config, rootHandler));
         log.debug("Loom server engine listening on {}:{}", config.host(), port());
     }
@@ -149,10 +235,18 @@ public final class LoomServerEngine implements ServerEngine {
                 closeQuietly(client); // shed load instead of queueing without bound
                 continue;
             }
+            String address = client.getInetAddress() == null ? "" : client.getInetAddress().getHostAddress();
+            java.util.concurrent.atomic.AtomicInteger fromAddress =
+                perAddress.computeIfAbsent(address, a -> new java.util.concurrent.atomic.AtomicInteger());
+            if (fromAddress.incrementAndGet() > limits.maxConnectionsPerAddress()) {
+                fromAddress.decrementAndGet(); // one client may not occupy the whole server
+                closeQuietly(client);
+                continue;
+            }
             // Dedicated platform threads first (fastest wake-up); virtual threads
             // once those are taken, so connection count is not bounded by OS threads.
             boolean dedicated = virtualThreads == null || claimDedicatedThread();
-            Connection connection = new Connection(this, client, config, rootHandler, limits, dedicated);
+            Connection connection = new Connection(this, client, config, rootHandler, limits, dedicated, address);
             connections.add(connection);
             try {
                 (dedicated ? platformThreads : virtualThreads).execute(connection);
@@ -184,6 +278,10 @@ public final class LoomServerEngine implements ServerEngine {
             Thread.currentThread().interrupt();
         }
         connections.forEach(Connection::forceClose);
+        if (watchdog != null) {
+            watchdog.interrupt();
+            watchdog = null;
+        }
         platformThreads.shutdownNow();
         if (virtualThreads != null) {
             virtualThreads.shutdownNow();
@@ -204,6 +302,10 @@ public final class LoomServerEngine implements ServerEngine {
         return socket.getLocalPort();
     }
 
+    Compression compression() {
+        return compression;
+    }
+
     boolean isStopping() {
         return stopping;
     }
@@ -222,8 +324,33 @@ public final class LoomServerEngine implements ServerEngine {
     }
 
     void connectionClosed(Connection connection) {
-        if (connections.remove(connection) && connection.dedicated() && virtualThreads != null) {
+        if (!connections.remove(connection)) {
+            return;
+        }
+        if (connection.dedicated() && virtualThreads != null) {
             dedicatedInUse.decrementAndGet();
+        }
+        perAddress.computeIfPresent(connection.peerAddress(),
+            (address, count) -> count.decrementAndGet() <= 0 ? null : count);
+    }
+
+    /**
+     * Blocking socket writes have no timeout of their own, so a client that
+     * requests a response and then stops reading would hold its thread
+     * forever. Each connection publishes a deadline while it is writing; this
+     * loop closes the ones that overstay it.
+     */
+    private void watchLoop() {
+        while (!stopping) {
+            try {
+                Thread.sleep(250);
+            } catch (InterruptedException e) {
+                return;
+            }
+            long now = System.nanoTime();
+            for (Connection connection : connections) {
+                connection.closeIfWriteOverdue(now);
+            }
         }
     }
 

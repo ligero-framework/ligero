@@ -17,18 +17,21 @@ import java.util.TreeMap;
 /** {@link HttpRequest} over a parsed {@link RequestHead}; everything derived is computed lazily. */
 final class LoomHttpRequest implements HttpRequest {
 
-    private final Connection connection;
+    private final BodySource source;
     private final RequestHead head;
+    private final String protocol;
+    private boolean streamed;
     private final long maxBodyBytes;
     private Map<String, List<String>> headers;
     private Map<String, List<String>> queryParams;
     private byte[] body;
     private String bodyText;
 
-    LoomHttpRequest(Connection connection, RequestHead head, long maxBodyBytes) {
-        this.connection = connection;
+    LoomHttpRequest(BodySource source, RequestHead head, long maxBodyBytes, String protocol) {
+        this.source = source;
         this.head = head;
         this.maxBodyBytes = maxBodyBytes;
+        this.protocol = protocol;
     }
 
     @Override
@@ -43,7 +46,7 @@ final class LoomHttpRequest implements HttpRequest {
 
     @Override
     public String getProtocol() {
-        return head.http10 ? "HTTP/1.0" : "HTTP/1.1";
+        return protocol;
     }
 
     @Override
@@ -120,13 +123,29 @@ final class LoomHttpRequest implements HttpRequest {
     /** Read from the socket once, then served from memory in any order. */
     private byte[] bodyBytes() {
         if (body == null) {
-            body = connection.readBody(maxBodyBytes);
+            if (streamed) {
+                throw new IllegalStateException(
+                    "The request body was opened as a stream; it cannot also be read as a whole");
+            }
+            body = source.readBody(maxBodyBytes);
         }
         return body;
     }
 
     @Override
+    public InputStream openBodyStream(long maxBytes) {
+        if (body != null) {
+            return new ByteArrayInputStream(body); // already buffered: serve it from memory
+        }
+        if (streamed) {
+            throw new IllegalStateException("The request body stream was already opened");
+        }
+        streamed = true;
+        return source.openBodyStream(maxBytes < 0 ? maxBodyBytes : maxBytes);
+    }
+
+    @Override
     public String getRemoteAddress() {
-        return connection.remoteAddress();
+        return source.remoteAddress();
     }
 }

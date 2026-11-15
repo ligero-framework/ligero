@@ -16,11 +16,10 @@ final class RequestHead {
     final boolean keepAlive;
     final boolean expectContinue;
     final boolean webSocketUpgrade;
-    final boolean acceptsGzip;
 
     RequestHead(String method, String target, boolean http10, String[] names, String[] values, int headerCount,
                 long contentLength, boolean chunked, boolean keepAlive, boolean expectContinue,
-                boolean webSocketUpgrade, boolean acceptsGzip) {
+                boolean webSocketUpgrade) {
         this.method = method;
         this.target = target;
         this.http10 = http10;
@@ -32,7 +31,6 @@ final class RequestHead {
         this.keepAlive = keepAlive;
         this.expectContinue = expectContinue;
         this.webSocketUpgrade = webSocketUpgrade;
-        this.acceptsGzip = acceptsGzip;
     }
 
     /** First value of a header (case-insensitive), or {@code null}. */

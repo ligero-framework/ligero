@@ -57,7 +57,6 @@ final class HeadParser {
         boolean connectionUpgrade = false;
         boolean upgradeWebSocket = false;
         boolean expectContinue = false;
-        boolean acceptsGzip = false;
         int hosts = 0;
 
         int p = lineEnd + 2;
@@ -140,11 +139,6 @@ final class HeadParser {
                         contentLength = length;
                     }
                 }
-                case 15 -> {
-                    if (name.equalsIgnoreCase("Accept-Encoding")) {
-                        acceptsGzip |= value.contains("gzip");
-                    }
-                }
                 case 17 -> {
                     if (name.equalsIgnoreCase("Transfer-Encoding")) {
                         if (transferEncoding) {
@@ -176,7 +170,7 @@ final class HeadParser {
         boolean keepAlive = !http10 && !close;
         return new RequestHead(method, target, http10, names, values, count,
             Math.max(0, contentLength), chunked, keepAlive, expectContinue,
-            upgradeWebSocket && connectionUpgrade, acceptsGzip);
+            upgradeWebSocket && connectionUpgrade);
     }
 
     private static ProtocolException bad() {

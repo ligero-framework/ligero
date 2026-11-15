@@ -27,4 +27,5 @@ module com.ligero.core {
     uses com.ligero.spi.MetricsCollector;
     uses com.ligero.spi.Tracer;
     uses com.ligero.spi.RequestValidator;
+    uses com.ligero.spi.ContentEncoder;
 }

@@ -278,8 +278,7 @@ class LoomWebSocketTest {
 
     @Test
     void protocolViolationsCloseTheSocketWithTheRightCode() throws Exception {
-        start(new LoomServerEngine.Limits(16 * 1024, 100, Duration.ofSeconds(5), Duration.ofSeconds(30),
-            Duration.ofSeconds(5), 100, 1000, 4));
+        start(LoomServerEngine.Limits.defaults().withMaxWsMessageBytes(1000));
 
         // unmasked client frame
         assertThat(closeCodeAfter(frame(0x81, "hi".getBytes(StandardCharsets.UTF_8), false))).isEqualTo(1002);

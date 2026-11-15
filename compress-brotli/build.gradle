@@ -1,0 +1,21 @@
+description = 'Ligero Brotli compression: a ContentEncoder for the "br" content coding (brotli4j)'
+
+dependencies {
+    api project(':core')
+    implementation libs.brotli4j
+    // Brotli is native code; ship the libraries for the common platforms so
+    // the codec works out of the box. On any other platform it reports itself
+    // unavailable and responses fall back to gzip.
+    runtimeOnly libs.brotli4j.linux.x64
+    runtimeOnly libs.brotli4j.linux.arm64
+    runtimeOnly libs.brotli4j.osx.x64
+    runtimeOnly libs.brotli4j.osx.arm64
+    runtimeOnly libs.brotli4j.windows.x64
+
+    testImplementation project(':server-loom')
+    testImplementation project(':json')
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+    testRuntimeOnly libs.slf4j.simple
+}

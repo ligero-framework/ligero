@@ -145,6 +145,32 @@ public final class Context {
         return request.getBody();
     }
 
+    /**
+     * The request body as a one-shot stream that is <em>not</em> held in
+     * memory — for large uploads. Bounded by the configured body limit; use
+     * {@link #bodyStream(long)} to allow more (or less) for one route.
+     *
+     * <pre>{@code
+     * app.put("/files/{name}", ctx -> {
+     *     try (InputStream in = ctx.bodyStream(500L * 1024 * 1024)) {
+     *         Files.copy(in, uploads.resolve(safeName), StandardCopyOption.REPLACE_EXISTING);
+     *     }
+     *     ctx.status(204).res().end();
+     * });
+     * }</pre>
+     *
+     * <p>Do not combine with {@code body(...)}, {@code bodyAsString()} or
+     * {@code bodyAsBytes()} on the same request.</p>
+     */
+    public InputStream bodyStream() {
+        return request.openBodyStream(-1);
+    }
+
+    /** Like {@link #bodyStream()}, with an explicit size limit for this request. */
+    public InputStream bodyStream(long maxBytes) {
+        return request.openBodyStream(maxBytes);
+    }
+
     /** Request body fully read as bytes (cached; needed for binary uploads). */
     public byte[] bodyAsBytes() {
         if (cachedBodyBytes == null) {
@@ -451,6 +477,11 @@ public final class Context {
         @Override
         public String getBodyAsString() {
             return request.getBodyAsString();
+        }
+
+        @Override
+        public InputStream openBodyStream(long maxBytes) {
+            return request.openBodyStream(maxBytes);
         }
 
         @Override

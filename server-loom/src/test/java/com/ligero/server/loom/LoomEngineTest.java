@@ -380,8 +380,8 @@ class LoomEngineTest {
 
     @Test
     void slowRequestHeadsAreCutOff() throws Exception {
-        LoomServerEngine.Limits limits = new LoomServerEngine.Limits(16 * 1024, 100, Duration.ofMillis(300),
-            Duration.ofSeconds(30), Duration.ofSeconds(5), 100, 1024 * 1024, 4);
+        LoomServerEngine.Limits limits = LoomServerEngine.Limits.defaults()
+            .withHeaderTimeout(Duration.ofMillis(300)).withDedicatedThreads(4);
         start(newApp().get("/x", ctx -> ctx.text("ok")), limits);
 
         try (Socket socket = new Socket("127.0.0.1", app.port())) {
@@ -410,8 +410,8 @@ class LoomEngineTest {
 
     @Test
     void idleKeepAliveConnectionsAreClosed() throws Exception {
-        LoomServerEngine.Limits limits = new LoomServerEngine.Limits(16 * 1024, 100, Duration.ofSeconds(5),
-            Duration.ofMillis(300), Duration.ofSeconds(5), 100, 1024 * 1024, 4);
+        LoomServerEngine.Limits limits = LoomServerEngine.Limits.defaults()
+            .withIdleTimeout(Duration.ofMillis(300)).withDedicatedThreads(4);
         start(newApp().get("/x", ctx -> ctx.text("ok")), limits);
 
         try (Socket socket = new Socket("127.0.0.1", app.port())) {
@@ -424,8 +424,8 @@ class LoomEngineTest {
 
     @Test
     void connectionsBeyondTheLimitAreRefused() throws Exception {
-        LoomServerEngine.Limits limits = new LoomServerEngine.Limits(16 * 1024, 100, Duration.ofSeconds(5),
-            Duration.ofSeconds(30), Duration.ofSeconds(5), 2, 1024 * 1024, 4);
+        LoomServerEngine.Limits limits = LoomServerEngine.Limits.defaults()
+            .withMaxConnections(2).withDedicatedThreads(4);
         start(newApp().get("/x", ctx -> ctx.text("ok")), limits);
 
         try (Socket first = new Socket("127.0.0.1", app.port());
@@ -559,5 +559,149 @@ class LoomEngineTest {
         for (int i = 0; i < pending.size(); i++) {
             assertThat(pending.get(i).get(20, TimeUnit.SECONDS).body()).isEqualTo(String.valueOf(i));
         }
+    }
+
+    // ------------------------------------------------------------------ hardening
+
+    @Test
+    void clientsThatStopReadingAreDisconnected() throws Exception {
+        byte[] large = new byte[32 * 1024 * 1024]; // far more than the socket buffers hold
+        start(newApp().get("/big", ctx -> {
+            try (OutputStream out = ctx.res().contentType("application/octet-stream").getOutputStream()) {
+                out.write(large);
+            }
+        }), LoomServerEngine.Limits.defaults().withWriteTimeout(Duration.ofMillis(400)));
+
+        try (Socket socket = new Socket("127.0.0.1", app.port())) {
+            socket.setReceiveBufferSize(4096);
+            socket.getOutputStream().write("GET /big HTTP/1.1\r\nHost: x\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
+            // ...and never read the response: the handler's thread is stuck in write()
+            long deadline = System.nanoTime() + Duration.ofSeconds(8).toNanos();
+            while (engine.openConnections() > 0 && System.nanoTime() < deadline) {
+                Thread.sleep(50);
+            }
+            assertThat(engine.openConnections()).as("the stalled connection was dropped").isZero();
+        }
+    }
+
+    @Test
+    void oneAddressCannotTakeEveryConnection() throws Exception {
+        start(newApp().get("/x", ctx -> ctx.text("ok")),
+            LoomServerEngine.Limits.defaults().withMaxConnectionsPerAddress(3));
+
+        List<Socket> held = new java.util.ArrayList<>();
+        try {
+            for (int i = 0; i < 3; i++) {
+                Socket socket = new Socket("127.0.0.1", app.port());
+                socket.setSoTimeout(3000);
+                socket.getOutputStream().write("GET /x HTTP/1.1\r\nHost: x\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
+                assertThat((char) socket.getInputStream().read()).isEqualTo('H');
+                held.add(socket);
+            }
+            try (Socket fourth = new Socket("127.0.0.1", app.port())) {
+                fourth.setSoTimeout(3000);
+                fourth.getOutputStream().write("GET /x HTTP/1.1\r\nHost: x\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
+                int answer;
+                try {
+                    answer = fourth.getInputStream().read();
+                } catch (IOException reset) {
+                    answer = -1;
+                }
+                assertThat(answer).isEqualTo(-1);
+            }
+            // closing one frees a slot again
+            held.remove(0).close();
+            Thread.sleep(200);
+            assertThat(raw("GET /x HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n")).endsWith("ok");
+        } finally {
+            for (Socket socket : held) {
+                socket.close();
+            }
+        }
+    }
+
+    @Test
+    void requestBodiesCanBeStreamedWithoutBuffering() throws Exception {
+        String base = start(Ligero.create(config().maxBodyBytes(1024).build())
+            .put("/upload", ctx -> {
+                long total = 0;
+                long sum = 0;
+                byte[] chunk = new byte[4096];
+                try (InputStream in = ctx.bodyStream(8L * 1024 * 1024)) { // this route allows more than the default
+                    for (int n = in.read(chunk); n >= 0; n = in.read(chunk)) {
+                        total += n;
+                        for (int i = 0; i < n; i++) {
+                            sum += chunk[i];
+                        }
+                    }
+                }
+                ctx.text(total + ":" + sum);
+            })
+            .put("/default-limit", ctx -> {
+                try (InputStream in = ctx.bodyStream()) {
+                    ctx.text(String.valueOf(in.readAllBytes().length));
+                }
+            }));
+
+        byte[] upload = new byte[3_000_000];
+        java.util.Arrays.fill(upload, (byte) 1);
+
+        // Content-Length framing
+        HttpResponse<String> fixed = client.send(HttpRequest.newBuilder(URI.create(base + "/upload"))
+            .PUT(HttpRequest.BodyPublishers.ofByteArray(upload)).build(), HttpResponse.BodyHandlers.ofString());
+        assertThat(fixed.body()).isEqualTo("3000000:3000000");
+
+        // chunked framing (no length known in advance)
+        HttpResponse<String> chunked = client.send(HttpRequest.newBuilder(URI.create(base + "/upload"))
+            .PUT(HttpRequest.BodyPublishers.ofInputStream(() -> new java.io.ByteArrayInputStream(upload))).build(),
+            HttpResponse.BodyHandlers.ofString());
+        assertThat(chunked.body()).isEqualTo("3000000:3000000");
+
+        // the stream still honours the configured limit when none is given
+        HttpResponse<String> tooBig = client.send(HttpRequest.newBuilder(URI.create(base + "/default-limit"))
+            .PUT(HttpRequest.BodyPublishers.ofByteArray(new byte[5000])).build(), HttpResponse.BodyHandlers.ofString());
+        assertThat(tooBig.statusCode()).isEqualTo(413);
+    }
+
+    @Test
+    void abandonedBodyStreamDoesNotCorruptTheConnection() throws Exception {
+        start(newApp()
+            .post("/peek", ctx -> {
+                InputStream in = ctx.bodyStream();
+                ctx.text("first byte " + (char) in.read()); // reads one byte and walks away
+            })
+            .get("/next", ctx -> ctx.text("next")));
+
+        String response = raw("POST /peek HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n"
+            + "4\r\nabcd\r\n4\r\nefgh\r\n0\r\n\r\n"
+            + "GET /next HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n");
+
+        assertThat(response).contains("first byte a").endsWith("next");
+        assertThat(response.split("HTTP/1.1 200 OK", -1)).hasSize(3);
+    }
+
+    @Test
+    void streamedResponsesAreCompressedAndStillFlushable() throws Exception {
+        String base = start(Ligero.create(config().gzip(true).gzipMinBytes(10).build())
+            .get("/events", ctx -> {
+                try (var sse = ctx.sse()) {
+                    sse.send("tick", "1");
+                    sse.send("tick", "2");
+                }
+            })
+            .get("/image", ctx -> ctx.res().contentType("image/png").send("not really a png, but long enough ".repeat(20))));
+
+        HttpResponse<byte[]> events = client.send(HttpRequest.newBuilder(URI.create(base + "/events"))
+            .header("Accept-Encoding", "gzip").build(), HttpResponse.BodyHandlers.ofByteArray());
+        assertThat(events.headers().firstValue("Content-Encoding")).contains("gzip");
+        try (GZIPInputStream in = new GZIPInputStream(new java.io.ByteArrayInputStream(events.body()))) {
+            assertThat(new String(in.readAllBytes(), StandardCharsets.UTF_8))
+                .isEqualTo("event: tick\ndata: 1\n\nevent: tick\ndata: 2\n\n");
+        }
+
+        // already-compressed media types are left alone
+        HttpResponse<byte[]> image = client.send(HttpRequest.newBuilder(URI.create(base + "/image"))
+            .header("Accept-Encoding", "gzip").build(), HttpResponse.BodyHandlers.ofByteArray());
+        assertThat(image.headers().firstValue("Content-Encoding")).isEmpty();
     }
 }
