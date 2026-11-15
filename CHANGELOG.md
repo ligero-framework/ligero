@@ -89,6 +89,27 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
   conflicting lengths, folded headers, missing `Host`) is refused; response
   headers are validated against header injection. Opt in by depending on it
   instead of `ligero-server-jdk`.
+- **HTTPS, HTTP/2 and more in `ligero-server-loom`.**
+  - **TLS** with the JDK's own implementation: `Tls.fromPem(cert, key)`,
+    `Tls.fromKeyStore(...)`, or just `LIGERO_TLS_CERT` + `LIGERO_TLS_KEY`.
+    TLS 1.3 and 1.2 only, and for 1.2 only ECDHE with AEAD cipher suites.
+  - **HTTP/2** (RFC 9113), negotiated by ALPN on TLS and by prior knowledge
+    on plain connections, with HPACK, multiplexing and flow control. Bounded
+    against rapid reset (CVE-2023-44487), CONTINUATION and control-frame
+    floods and HPACK bombs; malformed requests are refused, not repaired.
+  - **Streaming request bodies**: `ctx.bodyStream()` /
+    `ctx.bodyStream(maxBytes)` read an upload without holding it in memory.
+  - **Compression for streamed responses**, and only for content types that
+    benefit; `flush()` still delivers (Server-Sent Events).
+  - **Write timeout** for clients that stop reading, and a **per-address
+    connection limit**.
+  - **WebSockets**: binary messages (`WsHandler.onBinary`,
+    `WsSession.send(byte[])`, also on Jetty) and `permessage-deflate`.
+- **`ligero-compress-brotli`** — Brotli responses through the new
+  `ContentEncoder` SPI; preferred over gzip when the client accepts it.
+- **`TrustedProxyMiddleware`** — `ctx.remoteAddress()` returns the client
+  address forwarded by the reverse proxies you list; `X-Forwarded-For` is
+  only believed from them and is read from the right.
 - **Typed controllers** (`com.ligero.web` + `ligero-processor`). Declare
   endpoints as methods on a `@Controller("/prefix")` class with `@Get`,
   `@Post`, `@Put`, `@Patch`, `@Delete` (or `@Route(method = ..)`), bind inputs

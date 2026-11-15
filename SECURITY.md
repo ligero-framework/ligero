@@ -41,8 +41,14 @@ concept and the affected version/commit when possible.
   `SecurityHeadersMiddleware.builder().hsts(Duration.ofDays(365)).build()`.
 - Mark session cookies `Secure` (`SessionMiddleware.of(secret).secureCookie(true)`)
   and call `SessionMiddleware.regenerate(ctx)` after a successful login.
-- Behind a reverse proxy, key rate limits on the client address the proxy
-  forwards (a custom key extractor), not on the proxy's own address.
+- Behind a reverse proxy, install `TrustedProxyMiddleware` with your proxies'
+  addresses so rate limits and logs see the real client, and raise the Loom
+  engine's per-address connection limit.
+- Serving TLS directly: use `ligero-server-loom` with `LIGERO_TLS_CERT` /
+  `LIGERO_TLS_KEY`; only TLS 1.3/1.2 with forward-secret AEAD suites are
+  offered.
+- Do not enable response compression on routes whose body mixes secrets with
+  attacker-influenced text (BREACH).
 - Keep secrets (JWT keys, session secrets, database passwords) in the
   environment, never in `ligero.yml` committed to source control.
 - Use `UploadedFile.safeFilename()` — never the raw client filename — when

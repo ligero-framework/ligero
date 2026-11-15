@@ -59,7 +59,8 @@ you need it, carry nothing you don't.
 |---|---|
 | `ligero-core` | Public API, router, middleware, DI (`Beans`), feature modules, SPIs — zero deps (slf4j-api only) |
 | `ligero-server-jdk` | Default `ServerEngine` (JDK http server, virtual threads, TCP_NODELAY) |
-| `ligero-server-loom` | Ligero's **own** `ServerEngine`: HTTP/1.1 + WebSockets written from scratch on sockets and virtual threads — zero dependencies, strict parsing, the fastest of the three |
+| `ligero-server-loom` | Ligero's **own** `ServerEngine`: HTTP/1.1, **HTTP/2**, **HTTPS** and WebSockets written from scratch on sockets and virtual threads — zero dependencies, strict parsing, the fastest of the three |
+| `ligero-compress-brotli` | Brotli (`br`) response compression, preferred over gzip when the client accepts it |
 | `ligero-server-jetty` | Alternative `ServerEngine` on Jetty 12 — adds **HTTP/2 (h2c)** and WebSockets |
 | `ligero-json` | Jackson `BodyMapper` (`ctx.body()` / `ctx.json()`), with `java.time` support |
 | `ligero-processor` | Optional compile-time annotation processor that generates the DI wiring |
@@ -375,18 +376,28 @@ runtimeOnly 'com.ligeroframework:ligero-server-loom:<version>'   // instead of l
   and a response is normally one write. The first 256 concurrent connections
   get a dedicated platform thread, the rest run on virtual threads. See
   [`perf/`](perf/README.md) for how it compares.
-- **Complete.** Keep-alive and pipelining, chunked requests and streaming
-  responses (SSE), `Expect: 100-continue`, `HEAD`, gzip, graceful shutdown,
-  and WebSockets (handshake, fragmentation, ping/pong, close codes).
-- **Strict.** Bounded head, header count, body and connections; a deadline for
-  slow request heads; and anything ambiguous is refused — `Content-Length`
-  with `Transfer-Encoding`, conflicting lengths, folded headers, a missing
-  `Host` — which is what request smuggling relies on. Response headers are
-  validated so application data cannot split a response.
+- **Complete.** HTTP/1.1 with keep-alive and pipelining, **HTTP/2** (ALPN on
+  TLS, prior knowledge on plain TCP), **HTTPS** with the JDK's own TLS,
+  chunked and streamed request bodies (`ctx.bodyStream()`), streaming
+  responses (SSE), `Expect: 100-continue`, gzip and Brotli, graceful
+  shutdown, and WebSockets — text, binary and `permessage-deflate`.
+- **Strict.** Bounded head, header count, body and connections (in total and
+  per client address); deadlines for slow request heads and for clients that
+  stop reading; and anything ambiguous is refused — `Content-Length` with
+  `Transfer-Encoding`, conflicting lengths, folded headers, a missing `Host` —
+  which is what request smuggling relies on. HTTP/2 is bounded against rapid
+  reset, CONTINUATION and control-frame floods and HPACK bombs. Response
+  headers are validated so application data cannot split a response.
 - **Zero dependencies**, like the core.
 
-It speaks HTTP/1.1; terminate TLS and HTTP/2 at your proxy or load balancer,
-or use the Jetty engine for h2c.
+HTTPS needs only a certificate:
+
+```bash
+LIGERO_TLS_CERT=fullchain.pem LIGERO_TLS_KEY=privkey.pem java -jar app.jar
+```
+
+TLS 1.3 and 1.2 are offered, with forward-secret AEAD cipher suites only, and
+clients that support it get HTTP/2 automatically.
 
 ### Graceful Shutdown
 
