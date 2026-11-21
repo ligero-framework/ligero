@@ -30,5 +30,6 @@ include 'scheduler'      // ligero-scheduler: tareas en segundo plano (virtual t
 include 'resilience'     // ligero-resilience: retry, timeout y circuit-breaker
 include 'http-client'    // ligero-http-client: cliente HTTP fluido y declarativo (java.net.http), Problem Details, anti-SSRF
 include 'graphql'        // ligero-graphql: API GraphQL (graphql-java) con límites de profundidad, complejidad y tamaño
+include 'grpc'           // ligero-grpc: servicios gRPC (grpc-java) junto al servidor HTTP, mismo ciclo de vida
 include 'arch-test'      // solo tests de arquitectura (ArchUnit); no se publica
 include 'examples'  // Aplicación de ejemplo (no se publica)

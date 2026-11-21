@@ -72,6 +72,7 @@ grpc-netty-shaded = { module = "io.grpc:grpc-netty-shaded", version.ref = "grpc"
 grpc-services = { module = "io.grpc:grpc-services", version.ref = "grpc" }
 grpc-stub = { module = "io.grpc:grpc-stub", version.ref = "grpc" }
 grpc-inprocess = { module = "io.grpc:grpc-inprocess", version.ref = "grpc" }
+grpc-protobuf = { module = "io.grpc:grpc-protobuf", version.ref = "grpc" }
 kafka-clients = { module = "org.apache.kafka:kafka-clients", version.ref = "kafka" }
 protonj2-client = { module = "org.apache.qpid:protonj2-client", version.ref = "protonj2" }
 jakarta-jms-api = { module = "jakarta.jms:jakarta.jms-api", version.ref = "jakartaJms" }
