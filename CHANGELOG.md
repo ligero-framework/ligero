@@ -6,6 +6,11 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-11-21
+
+> Version 0.7.0 was tagged but never published to Maven Central. Everything
+> that was meant for 0.7.0 ships as part of 0.8.0.
+
 ### Security
 - **CORS**: `allowCredentials(true)` together with the wildcard origin used to
   echo *any* `Origin` back with `Access-Control-Allow-Credentials: true`,
