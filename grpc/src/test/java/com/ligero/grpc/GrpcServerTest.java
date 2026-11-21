@@ -200,4 +200,27 @@ class GrpcServerTest {
         server.start();
         assertThatThrownBy(server::start).isInstanceOf(IllegalStateException.class);
     }
+
+    @Test
+    void everyLimitCanBeTuned() {
+        server = GrpcServer.builder(0).host("127.0.0.1").service(greeter())
+            .credentials(io.grpc.InsecureServerCredentials.create())
+            .maxMetadataBytes(4096).maxConcurrentCallsPerConnection(10)
+            .handshakeTimeout(java.time.Duration.ofSeconds(5)).maxConnectionIdle(java.time.Duration.ofMinutes(1))
+            .shutdownGrace(java.time.Duration.ofMillis(100))
+            .build();
+        server.start();
+        assertThat(ClientCalls.blockingUnaryCall(connect(server.port()), GREET, CallOptions.DEFAULT, "Bo"))
+            .isEqualTo("Hello, Bo");
+        assertThatThrownBy(() -> GrpcServer.builder(0).tls(new java.io.File("missing-cert.pem"),
+            new java.io.File("missing-key.pem"))).isInstanceOf(UncheckedIOException.class);
+    }
+
+    @Test
+    void aPortInUseIsReported() {
+        server = GrpcServer.builder(0).host("127.0.0.1").service(greeter()).build();
+        server.start();
+        GrpcServer second = GrpcServer.builder(server.port()).host("127.0.0.1").service(greeter()).build();
+        assertThatThrownBy(second::start).isInstanceOf(UncheckedIOException.class);
+    }
 }
