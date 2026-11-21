@@ -1,0 +1,14 @@
+description = 'Ligero GraphQL: serve a GraphQL API (graphql-java) over HTTP, with depth, complexity and size limits'
+
+dependencies {
+    api project(':core')
+    api libs.graphql.java
+
+    testImplementation project(':json')
+    testImplementation project(':testkit')
+    testImplementation project(':server')
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+    testRuntimeOnly libs.slf4j.simple
+}
