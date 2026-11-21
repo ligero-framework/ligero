@@ -308,6 +308,65 @@ class LigeroProcessorTest {
     }
 
     @Test
+    void clientApiMistakesAreCompileErrors() throws IOException {
+        assertRouteError("""
+            @ClientApi public class C {
+            }""", "@ClientApi goes on an interface");
+        assertRouteError("""
+            @ClientApi public interface C {
+                String get();
+            }""", "say which call this is");
+        assertRouteError("""
+            @ClientApi public interface C {
+                @Get("/x") @Post("/x") String both();
+            }""", "more than one HTTP method annotation");
+        assertRouteError("""
+            @ClientApi public interface C {
+                @Get("/{id}") String get(long id);
+            }""", "say where this parameter goes");
+        assertRouteError("""
+            @ClientApi public interface C {
+                @Get("/{id}") String get(@PathParam @QueryParam long id);
+            }""", "pick one of");
+        assertRouteError("""
+            @ClientApi public interface C {
+                @Get("/x") String get(@PathParam long id);
+            }""", "has no {id} segment");
+        assertRouteError("""
+            @ClientApi public interface C {
+                @Get("/{id}/{other}") String get(@PathParam long id);
+            }""", "no @PathParam for {other}");
+        assertRouteError("""
+            @ClientApi public interface C {
+                @Post("/x") String post(@Body String a, @Body String b);
+            }""", "a single @Body");
+        assertRouteError("""
+            @ClientApi public interface C {
+                @Get("/x") java.util.List<java.util.Map<String, String>> get();
+            }""", "needs a concrete element type");
+        assertRouteError("""
+            @ClientApi public interface C {
+                @Get("/x") java.util.Map<String, String> get();
+            }""", "unsupported generic return type");
+        assertRouteError("""
+            @ClientApi public interface C {
+                @Get("/x") String[] get();
+            }""", "return a List<T> instead of an array");
+        assertRouteError("""
+            @ClientApi public interface C<T> {
+                @Get("/x") String get();
+            }""", "cannot be generic");
+        assertRouteError("""
+            @ClientApi public interface C {
+                @Get("/x") <T> T get();
+            }""", "client methods cannot be generic");
+        assertRouteError("""
+            @ClientApi public interface C {
+                @Get("/x") char get();
+            }""", "unsupported return type");
+    }
+
+    @Test
     void classLevelApiVersionAppliesToEveryMethod() throws IOException {
         Path src = freshDir("src/demo");
         write(src, "C.java", """
