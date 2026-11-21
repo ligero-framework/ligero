@@ -75,7 +75,15 @@ you need it, carry nothing you don't.
 | `ligero-template-mustache` | `TemplateEngine` adapter (JMustache) |
 | `ligero-template-freemarker` | `TemplateEngine` adapter (FreeMarker) |
 | `ligero-template-pebble` | `TemplateEngine` adapter (Pebble, Twig/Jinja syntax) |
-| `ligero-otel` | `Tracer` adapter for OpenTelemetry (vendor-neutral tracing) |
+| `ligero-otel` | OpenTelemetry adapters: tracing, `http.server.request.duration` metrics and per-request logs, joined by trace id |
+| `ligero-otel-otlp` | `Otlp.instrument(app)`: exports traces, metrics and logs over OTLP, configured with the standard `OTEL_*` variables |
+| `ligero-http-client` | `RestClient` on `java.net.http` and **declarative clients** (`@ClientApi` interfaces implemented at compile time); Problem Details errors; SSRF protection |
+| `ligero-resilience` | Retry, timeout, circuit breaker and concurrency limit (bulkhead) for outbound calls |
+| `ligero-graphql` | GraphQL APIs (graphql-java) with depth, complexity and size limits |
+| `ligero-grpc` | gRPC services (grpc-java) next to the HTTP server, on virtual threads, with health checks |
+| `ligero-kafka` | Kafka producer and consumers with JSON values, retries and a dead-letter topic |
+| `ligero-jms` | JSON messaging over Jakarta Messaging brokers (ActiveMQ Artemis, IBM MQ, ...) |
+| `ligero-amqp` | JSON messaging over AMQP 1.0 (RabbitMQ 4, Artemis, Azure Service Bus, ...) |
 | `ligero-openapi` | OpenAPI 3 generation + Swagger UI |
 | `ligero-metrics-micrometer` | Metrics adapter for Micrometer registries |
 | `ligero-test` | End-to-end testing utilities |
@@ -319,6 +327,57 @@ app.exception(SQLException.class, (e, ctx) ->
 ```
 
 Unexpected exceptions become an opaque `500` — details go to the log, never to the client.
+
+Prefer the standard error format? `app.problemDetails(true)` answers every
+error as an RFC 9457 problem (`application/problem+json`), and
+`ProblemException` carries your own type, title and extension members:
+
+```java
+throw new ProblemException(ProblemDetail.of(409)
+    .type("https://example.com/probs/out-of-stock")
+    .title("Out of stock")
+    .detail("Item " + id + " is no longer available")
+    .with("item", id));
+```
+
+### API versioning
+
+```java
+app.use(ApiVersioning.builder()
+    .header("API-Version")                 // or queryParam, pathSegment, mediaTypeParameter
+    .supported("1", "2").defaultVersion("2")
+    .deprecate("1", ApiVersioning.Deprecation.since(Instant.parse("2026-06-01T00:00:00Z"))
+        .sunset(Instant.parse("2027-01-01T00:00:00Z")))
+    .build());
+
+app.get("/products", ApiVersioning.handlers()
+    .version("1", ctx -> ctx.json(catalog.allV1()))
+    .version("2+", ctx -> ctx.json(catalog.all()))     // 2 and later
+    .build());
+```
+
+Unsupported versions are a `400` problem; deprecated ones get `Deprecation`,
+`Sunset` and `Link` headers. On typed controllers, `@ApiVersion("2+")` does the
+same at compile time.
+
+### Calling other services
+
+```java
+@ClientApi("/api/products")
+public interface ProductsApi {
+    @Get("/{id}") Optional<Product> find(@PathParam long id);   // 404 -> empty
+    @Post Product create(@Body NewProduct product);
+}
+
+ProductsApi products = new ProductsApiClient(RestClient.builder()
+    .baseUrl("https://catalog.internal")
+    .addressFilter(AddressFilter.publicOnly())   // refuse internal addresses (SSRF)
+    .build());
+```
+
+`ligero-processor` writes `ProductsApiClient` at compile time; the fluent
+`RestClient` (`client.get("/products/{id}", 42).retrieve(Product.class)`) is
+there for one-off calls.
 
 ### Validation
 

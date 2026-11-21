@@ -6,7 +6,74 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **API versioning** (`com.ligero.versioning`): `ApiVersioning` reads the
+  requested version from a header, query parameter, path segment or media type
+  parameter, refuses unsupported or malformed versions with a `400` problem and
+  marks deprecated ones with `Deprecation` (RFC 9745), `Sunset` (RFC 8594) and
+  `Link` headers. `ApiVersioning.handlers()` serves one route with a handler per
+  version (`"2"` exactly, `"2+"` and later); `@ApiVersion` on typed controller
+  methods (or the class) generates the same dispatch at compile time.
+- **Problem Details** (RFC 9457): `ProblemDetail`, `ProblemException` and
+  `ctx.problem(...)`. `app.problemDetails(true)` renders every framework error —
+  `HttpException`s, validation failures (with an `errors` array), 404/405 and
+  unexpected exceptions — as `application/problem+json`.
+- **`ligero-http-client`**: `RestClient` on the JDK's `java.net.http` with
+  JSON bodies, encoded path values, size-limited responses, Problem Details on
+  error statuses (`HttpStatusException.problem()`), and redirects followed by
+  the client itself so every hop is checked and credentials are dropped when a
+  redirect changes origin. `AddressFilter.publicOnly()` protects against
+  server-side request forgery: loopback, private, link-local (cloud metadata),
+  CGNAT, multicast and reserved addresses are refused, including IPv6 forms
+  that embed an IPv4 address.
+- **Declarative HTTP clients**: annotate an interface with `@ClientApi` and the
+  same `@Get` / `@PathParam` / `@QueryParam` / `@HeaderParam` / `@Body`
+  annotations as typed controllers; `ligero-processor` generates the
+  implementation (`<Interface>Client`) at compile time, with compile errors for
+  mistakes.
+- **Concurrency limits**: `ConcurrencyLimit` in `ligero-resilience` caps
+  concurrent calls to a dependency (bulkhead); `ConcurrencyLimitMiddleware`
+  caps requests in flight and answers `503` with `Retry-After`.
+- **Internationalisation**: `Messages` over UTF-8 resource bundles,
+  `LocaleMiddleware` (Accept-Language, query parameter or cookie among the
+  supported locales, `Content-Language` and `Vary` in the response),
+  `ctx.locale()` and `ctx.message(key, args)`.
+- **`Forwarded` header** (RFC 7239): `TrustedProxyMiddleware...withForwardedHeader()`
+  reads the standard header from trusted proxies, including the original scheme
+  and host.
+- **OpenTelemetry metrics and logs**: `OtelMetricsCollector` records
+  `http.server.request.duration` with the HTTP semantic conventions;
+  `OtelRequestLogs` emits one log record per request joined to its trace.
+  The new **`ligero-otel-otlp`** module exports traces, metrics and logs over
+  OTLP/HTTP in one call (`Otlp.instrument(app)`), configured with the standard
+  `OTEL_*` variables and flushed on stop.
+- **`ligero-graphql`**: GraphQL APIs on graphql-java as a normal route, with
+  query length, token, depth and complexity limits, JSON-only `POST` and
+  query-only `GET` (no cross-site mutations), internal errors hidden from
+  clients, and optional introspection.
+- **`ligero-grpc`**: gRPC services on their own port with the app's lifecycle,
+  each call on a virtual thread, safe limits, `HttpException` mapped to gRPC
+  status codes, health checks and optional reflection.
+- **Messaging**: `ligero-kafka` (idempotent producer, consumers with retries and
+  a `<topic>.DLT` dead-letter topic), `ligero-jms` (Jakarta Messaging,
+  transacted at-least-once delivery, never deserializes `ObjectMessage`) and
+  `ligero-amqp` (AMQP 1.0 via Qpid ProtonJ2, accept / modified / reject).
+  All three use JSON payloads, run consumers on virtual threads and start and
+  stop with the app (`attach(app)`).
+
 ### Changed
+- `ctx.vary(header)` adds a `Vary` entry once; `LocaleMiddleware` and
+  `ApiVersioning` use it so they do not repeat each other.
+- Spans are named `METHOD /route` once the route is known (`Tracer.Span.updateName`),
+  and the OpenTelemetry span is current for the whole request so logs and
+  outgoing calls join the trace.
+
+### Security
+- `MetricsMiddleware` reports requests that matched no route as `UNMATCHED`
+  instead of their raw path, and `TracingMiddleware` no longer names spans after
+  the raw path: made-up URLs could otherwise create an unbounded number of
+  metric series and span names.
+
 - **Benchmark against Spring Boot 4.2.** The `perf/` harness and the PR gate
   now compare with the latest Spring Boot (4.2.0, on Spring Framework 7.1 and
   Tomcat 11) instead of 3.4. `perf/run.py --spring-extras` also measures
