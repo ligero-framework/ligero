@@ -6,6 +6,12 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- **Benchmark against Spring Boot 4.2.** The `perf/` harness and the PR gate
+  now compare with the latest Spring Boot (4.2.0, on Spring Framework 7.1 and
+  Tomcat 11) instead of 3.4. `perf/run.py --spring-extras` also measures
+  Spring Boot 4.2 on virtual threads and Spring Boot 3.5.
+
 ## [0.8.0] — 2026-11-21
 
 > Version 0.7.0 was tagged but never published to Maven Central. Everything
