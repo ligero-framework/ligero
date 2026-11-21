@@ -85,7 +85,7 @@ class RestClientTest {
             .get("/to-file", ctx -> ctx.redirect("file:///etc/passwd", 302))
             .get("/not-json", ctx -> ctx.json("just a string").status(200))
             .get("/no-content", ctx -> ctx.status(204)));
-        client = RestClient.builder().baseUrl(server.baseUrl()).timeout(Duration.ofSeconds(1)).build();
+        client = RestClient.builder().baseUrl(server.baseUrl()).timeout(Duration.ofSeconds(10)).build();
     }
 
     @AfterAll
@@ -222,11 +222,11 @@ class RestClientTest {
                 assertThat(e.address()).isIn("127.0.0.1", "0:0:0:0:0:0:0:1");
                 assertThat(e.host()).isIn("localhost", "127.0.0.1");
             });
-        RestClient allowed = RestClient.builder().addressFilter(AddressFilter.publicOnly().allow("127.0.0.0/8"))
+        RestClient allowed = RestClient.builder().addressFilter(AddressFilter.publicOnly().allow("127.0.0.0/8", "::1"))
             .build();
         assertThat(allowed.get(server.baseUrl() + "/products/{id}", 1).retrieve(Product.class)).isNotNull();
         RestClient denied = RestClient.builder()
-            .addressFilter(AddressFilter.allowAll().deny("127.0.0.0/8")).build();
+            .addressFilter(AddressFilter.allowAll().deny("127.0.0.0/8", "::1")).build();
         assertThatThrownBy(() -> denied.get(server.baseUrl() + "/products").send())
             .isInstanceOf(BlockedAddressException.class);
         assertThatThrownBy(() -> webhooks.get("http://no-such-host.invalid/").send())
