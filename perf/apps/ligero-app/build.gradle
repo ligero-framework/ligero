@@ -1,0 +1,30 @@
+plugins {
+    id 'application'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+application {
+    mainClass = 'bench.App'
+}
+
+// The framework build under test is taken from mavenLocal:
+//   -PligeroVersion=<version published with publishToMavenLocal>
+//   -Pengine=jdk|jetty   (same App.java, only the runtime engine changes)
+def ligeroVersion = findProperty('ligeroVersion') ?: '0.5.0-SNAPSHOT'
+def engine = findProperty('engine') ?: 'jdk'
+
+dependencies {
+    implementation "com.ligeroframework:ligero-core:$ligeroVersion"
+    runtimeOnly "com.ligeroframework:ligero-server-$engine:$ligeroVersion"
+    runtimeOnly "com.ligeroframework:ligero-json:$ligeroVersion"
+    runtimeOnly 'org.slf4j:slf4j-simple:2.0.16'
+}

@@ -20,7 +20,8 @@ public final class RequestIdMiddleware implements Middleware {
     @Override
     public void handle(Context ctx, Chain chain) throws Exception {
         String id = ctx.header(HEADER);
-        if (id == null || id.isBlank()) {
+        if (!isWellFormed(id)) {
+            // absent, or not safe to echo into headers and logs
             id = UUID.randomUUID().toString();
         }
         ctx.attribute(ATTRIBUTE, id);
@@ -34,13 +35,33 @@ public final class RequestIdMiddleware implements Middleware {
         chain.proceed();
     }
 
+    /**
+     * An incoming id is client-controlled and ends up in a response header and
+     * in log lines, so only a conservative alphabet and length are accepted.
+     */
+    static boolean isWellFormed(String id) {
+        if (id == null || id.isEmpty() || id.length() > 128) {
+            return false;
+        }
+        for (int i = 0; i < id.length(); i++) {
+            char c = id.charAt(i);
+            boolean ok = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
+                || c == '-' || c == '_' || c == '.' || c == ':';
+            if (!ok) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /** Extracts the trace-id field from a {@code version-traceid-spanid-flags} header. */
     static String parseTraceId(String traceparent) {
         if (traceparent == null) {
             return null;
         }
         String[] parts = traceparent.trim().split("-");
-        if (parts.length == 4 && parts[1].length() == 32 && !parts[1].equals("0".repeat(32))) {
+        if (parts.length == 4 && parts[1].length() == 32 && !parts[1].equals("0".repeat(32))
+                && parts[1].chars().allMatch(c -> (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))) {
             return parts[1];
         }
         return null;

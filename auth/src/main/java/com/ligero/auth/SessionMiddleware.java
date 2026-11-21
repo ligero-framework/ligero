@@ -32,15 +32,77 @@ public final class SessionMiddleware implements Middleware {
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final Base64.Encoder B64E = Base64.getUrlEncoder().withoutPadding();
 
+    private static final String SELF_ATTRIBUTE = "ligero.session.middleware";
+
     private final byte[] secret;
     private final SessionStore store;
+    private final boolean secureCookie;
 
-    private SessionMiddleware(byte[] secret, SessionStore store) {
+    private SessionMiddleware(byte[] secret, SessionStore store, boolean secureCookie) {
         if (secret == null || secret.length < 32) {
             throw new IllegalArgumentException("Session secret must be at least 32 bytes");
         }
         this.secret = secret.clone();
         this.store = store;
+        this.secureCookie = secureCookie;
+    }
+
+    /**
+     * Marks the session cookie {@code Secure} so browsers only send it over
+     * HTTPS. Turn this on in every deployment served over TLS (directly or
+     * behind a proxy):
+     *
+     * <pre>{@code app.use(SessionMiddleware.of(secret).secureCookie(true));}</pre>
+     */
+    public SessionMiddleware secureCookie(boolean secure) {
+        return new SessionMiddleware(secret, store, secure);
+    }
+
+    /**
+     * Replaces the current session id with a fresh one, keeping its
+     * attributes. Call this right after a successful login (or any privilege
+     * change): it defeats session fixation, where an attacker plants a known
+     * session id in the victim's browser before they authenticate.
+     */
+    public static Session regenerate(Context ctx) {
+        SessionMiddleware self = require(ctx);
+        Session current = ctx.attribute(ATTRIBUTE);
+        Session fresh = self.start(ctx);
+        if (current != null) {
+            current.attributes().forEach(fresh::set);
+            self.store.delete(current.id());
+        }
+        ctx.attribute(ATTRIBUTE, fresh);
+        return fresh;
+    }
+
+    /** Destroys the current session (logout) and expires its cookie. */
+    public static void invalidate(Context ctx) {
+        SessionMiddleware self = require(ctx);
+        Session current = ctx.attribute(ATTRIBUTE);
+        if (current != null) {
+            self.store.delete(current.id());
+        }
+        ctx.attribute(ATTRIBUTE, null);
+        ctx.removeCookie(COOKIE);
+    }
+
+    private static SessionMiddleware require(Context ctx) {
+        SessionMiddleware self = ctx.attribute(SELF_ATTRIBUTE);
+        if (self == null) {
+            throw new IllegalStateException("No session on this request — is SessionMiddleware installed?");
+        }
+        return self;
+    }
+
+    /** Creates a session and sends its signed cookie. */
+    private Session start(Context ctx) {
+        String id = B64E.encodeToString(randomBytes(24));
+        Session session = store.create(id);
+        ctx.setCookie(Cookie.of(COOKIE, id + "." + B64E.encodeToString(hmac(id)))
+            .withSameSite("Lax")
+            .withSecure(secureCookie));
+        return session;
     }
 
     public static SessionMiddleware of(String secret) {
@@ -48,24 +110,26 @@ public final class SessionMiddleware implements Middleware {
     }
 
     public static SessionMiddleware of(String secret, SessionStore store) {
-        return new SessionMiddleware(secret.getBytes(StandardCharsets.UTF_8), store);
+        return new SessionMiddleware(secret.getBytes(StandardCharsets.UTF_8), store, false);
     }
 
     @Override
     public void handle(Context ctx, Chain chain) throws Exception {
         Session session = resolve(ctx.cookie(COOKIE));
         if (session == null) {
-            String id = B64E.encodeToString(randomBytes(24));
-            session = store.create(id);
-            ctx.setCookie(Cookie.of(COOKIE, id + "." + B64E.encodeToString(hmac(id)))
-                .withSameSite("Lax"));
+            session = start(ctx);
         }
         ctx.attribute(ATTRIBUTE, session);
+        ctx.attribute(SELF_ATTRIBUTE, this);
         try {
             chain.proceed();
         } finally {
-            // flush attribute changes (no-op for the in-memory store)
-            store.save(session);
+            // flush attribute changes (no-op for the in-memory store); the
+            // handler may have regenerated or invalidated the session
+            Session current = ctx.attribute(ATTRIBUTE);
+            if (current != null) {
+                store.save(current);
+            }
         }
     }
 

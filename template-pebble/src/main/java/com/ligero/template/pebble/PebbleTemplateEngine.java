@@ -26,7 +26,11 @@ public final class PebbleTemplateEngine implements TemplateEngine {
 
     public PebbleTemplateEngine(String classpathPrefix) {
         this.prefix = classpathPrefix.endsWith("/") ? classpathPrefix : classpathPrefix + "/";
-        this.engine = new PebbleEngine.Builder().build();
+        // Classpath only: Pebble's default loader also falls back to the file
+        // system, which would turn a user-influenced template name into a file read.
+        this.engine = new PebbleEngine.Builder()
+            .loader(new io.pebbletemplates.pebble.loader.ClasspathLoader())
+            .build();
     }
 
     @Override

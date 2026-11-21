@@ -36,4 +36,22 @@ class RequestHygieneMiddlewareTest {
                 .isInstanceOf(BadRequestException.class);
         }
     }
+
+    @Test
+    void singlePassCheckAgreesWithTheReadablePredicates() {
+        String[] pieces = {"a", "..", ".", "%2e", "%2E", "/", "\\", "%5c", "%00", "?", "x.y", "%20", "b", "..."};
+        java.util.Random random = new java.util.Random(42);
+        for (int n = 0; n < 200_000; n++) {
+            StringBuilder sb = new StringBuilder("/");
+            int parts = 1 + random.nextInt(6);
+            for (int i = 0; i < parts; i++) {
+                sb.append(pieces[random.nextInt(pieces.length)]);
+            }
+            String uri = sb.toString();
+            boolean expected = RequestHygieneMiddleware.hasControlCharacters(uri)
+                || RequestHygieneMiddleware.hasEncodedTraversal(uri)
+                || RequestHygieneMiddleware.hasTraversalSegment(uri);
+            assertThat(RequestHygieneMiddleware.isMalformed(uri)).as(uri).isEqualTo(expected);
+        }
+    }
 }

@@ -40,7 +40,9 @@ import java.util.function.Consumer;
  *
  * <p><strong>Development profile only.</strong> The dashboard exposes
  * arguments and return values of your beans; never install it in
- * production. Setting the environment variable {@code LIGERO_DEVTOOLS=false}
+ * production. As a safety net it only answers to loopback clients unless
+ * {@link #allowRemote(boolean)} (or {@code LIGERO_DEVTOOLS_REMOTE=true}) says
+ * otherwise. Setting the environment variable {@code LIGERO_DEVTOOLS=false}
  * turns {@link #install(Ligero, Beans)} into a no-op, so a deploy can switch
  * it off without a code change.</p>
  */
@@ -54,8 +56,44 @@ public final class Devtools {
 
     private final TraceStore store = new TraceStore(HISTORY);
     private final DevtoolsRecorder recorder = new DevtoolsRecorder();
+    private boolean allowRemote = "true".equalsIgnoreCase(System.getenv("LIGERO_DEVTOOLS_REMOTE"));
 
     private Devtools() {
+    }
+
+    /**
+     * By default the dashboard and its API answer only to requests coming
+     * from the local machine (loopback); anyone else gets a 404. Pass
+     * {@code true} — or set {@code LIGERO_DEVTOOLS_REMOTE=true} — to open it
+     * to other hosts, e.g. when the app runs inside a container and you
+     * browse from the host. Only do that on a network you trust: the
+     * dashboard shows bean arguments and return values.
+     */
+    public Devtools allowRemote(boolean allowRemote) {
+        this.allowRemote = allowRemote;
+        return this;
+    }
+
+    /** True when {@code address} is a loopback IP literal ({@code 127.0.0.1}, {@code ::1}). */
+    static boolean isLoopback(String address) {
+        if (address == null || address.isBlank()) {
+            return false;
+        }
+        String literal = address.startsWith("[") && address.endsWith("]")
+            ? address.substring(1, address.length() - 1) : address;
+        int zone = literal.indexOf('%');
+        if (zone >= 0) {
+            literal = literal.substring(0, zone);
+        }
+        // only IP literals are accepted, so no DNS lookup can happen here
+        if (!literal.matches("[0-9a-fA-F:.]+")) {
+            return false;
+        }
+        try {
+            return java.net.InetAddress.getByName(literal).isLoopbackAddress();
+        } catch (java.net.UnknownHostException e) {
+            return false;
+        }
     }
 
     public static Devtools create() {
@@ -79,6 +117,16 @@ public final class Devtools {
         if ("false".equalsIgnoreCase(System.getenv("LIGERO_DEVTOOLS"))) {
             log.info("LIGERO_DEVTOOLS=false — devtools disabled");
             return this;
+        }
+        if (!allowRemote) {
+            app.use(BASE_PATH, (ctx, chain) -> {
+                if (!isLoopback(ctx.remoteAddress())) {
+                    // look like any unknown route: do not advertise the dashboard
+                    throw new com.ligero.http.NotFoundException(
+                        "No route matches " + ctx.method() + " " + ctx.path());
+                }
+                chain.proceed();
+            });
         }
         app.use(new TraceMiddleware(store));
 

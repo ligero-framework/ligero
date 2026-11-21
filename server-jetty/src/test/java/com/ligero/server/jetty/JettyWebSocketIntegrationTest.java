@@ -93,6 +93,56 @@ class JettyWebSocketIntegrationTest {
     }
 
     @Test
+    void crossSiteHandshakeIsRefused() throws Exception {
+        app = newApp();
+        List<String> serverEvents = new CopyOnWriteArrayList<>();
+        app.websocket("/ws", new WsHandler() {
+            @Override
+            public void onConnect(WsSession session) {
+                serverEvents.add("connect");
+            }
+        });
+        app.start();
+
+        // a raw handshake, exactly as a page on another site would trigger it
+        try (java.net.Socket socket = new java.net.Socket("127.0.0.1", app.port())) {
+            socket.setSoTimeout(5000);
+            String handshake = "GET /ws HTTP/1.1\r\n"
+                + "Host: 127.0.0.1:" + app.port() + "\r\n"
+                + "Upgrade: websocket\r\nConnection: Upgrade\r\n"
+                + "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n"
+                + "Origin: https://evil.example\r\n\r\n";
+            socket.getOutputStream().write(handshake.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+            socket.getOutputStream().flush();
+            String statusLine = new java.io.BufferedReader(new java.io.InputStreamReader(
+                socket.getInputStream(), java.nio.charset.StandardCharsets.US_ASCII)).readLine();
+            assertThat(statusLine).contains("403");
+        }
+        assertThat(serverEvents).isEmpty();
+    }
+
+    @Test
+    void sameOriginHandshakeIsAccepted() throws Exception {
+        app = newApp();
+        app.websocket("/ws", new WsHandler() { });
+        app.start();
+
+        try (java.net.Socket socket = new java.net.Socket("127.0.0.1", app.port())) {
+            socket.setSoTimeout(5000);
+            String handshake = "GET /ws HTTP/1.1\r\n"
+                + "Host: 127.0.0.1:" + app.port() + "\r\n"
+                + "Upgrade: websocket\r\nConnection: Upgrade\r\n"
+                + "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n"
+                + "Origin: http://127.0.0.1:" + app.port() + "\r\n\r\n";
+            socket.getOutputStream().write(handshake.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+            socket.getOutputStream().flush();
+            String statusLine = new java.io.BufferedReader(new java.io.InputStreamReader(
+                socket.getInputStream(), java.nio.charset.StandardCharsets.US_ASCII)).readLine();
+            assertThat(statusLine).contains("101");
+        }
+    }
+
+    @Test
     void httpRoutesStillWorkAlongsideWebSockets() throws Exception {
         app = newApp();
         app.get("/plain", ctx -> ctx.text("http ok"));

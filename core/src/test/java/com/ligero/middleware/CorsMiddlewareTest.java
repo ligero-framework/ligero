@@ -75,14 +75,39 @@ class CorsMiddlewareTest {
     }
 
     @Test
-    void echoesOriginWhenCredentialsAreAllowed() throws Exception {
+    void echoesAllowListedOriginWhenCredentialsAreAllowed() throws Exception {
         FakeResponse response = new FakeResponse();
         FakeRequest request = FakeRequest.of("GET", "/data").header("Origin", "https://a.example");
         Context ctx = new Context(request, response, "/", null, null);
 
-        CorsMiddleware.builder().allowCredentials(true).build().handle(ctx, () -> { });
+        CorsMiddleware.builder().allowOrigins("https://a.example").allowCredentials(true).build()
+            .handle(ctx, () -> { });
 
         assertThat(response.headerValue("Access-Control-Allow-Origin")).isEqualTo("https://a.example");
         assertThat(response.headerValue("Access-Control-Allow-Credentials")).isEqualTo("true");
+        assertThat(response.headerValue("Vary")).isEqualTo("Origin");
+    }
+
+    @Test
+    void credentialsWithWildcardOriginAreRefusedAtBuildTime() {
+        // reflecting any origin together with credentials would let every site
+        // read authenticated responses
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                () -> CorsMiddleware.builder().allowCredentials(true).build())
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("allowOrigins");
+    }
+
+    @Test
+    void credentialsAreNeverSentToOriginsOutsideTheAllowList() throws Exception {
+        FakeResponse response = new FakeResponse();
+        FakeRequest request = FakeRequest.of("GET", "/data").header("Origin", "https://evil.example");
+        Context ctx = new Context(request, response, "/", null, null);
+
+        CorsMiddleware.builder().allowOrigins("https://a.example").allowCredentials(true).build()
+            .handle(ctx, () -> { });
+
+        assertThat(response.headerValue("Access-Control-Allow-Origin")).isNull();
+        assertThat(response.headerValue("Access-Control-Allow-Credentials")).isNull();
     }
 }

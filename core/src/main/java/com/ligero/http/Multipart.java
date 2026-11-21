@@ -12,8 +12,35 @@ import java.util.Map;
  */
 public final class Multipart {
 
+    /** Upper bound on parts per request; more is rejected with 400. */
+    public static final int MAX_PARTS = 1_000;
+
     /** One uploaded file part. */
     public record UploadedFile(String fieldName, String filename, String contentType, byte[] content) {
+
+        /**
+         * The client-supplied {@link #filename()} reduced to a bare file name:
+         * directory components ({@code ../../etc/passwd}, {@code C:\\x\\y}) and
+         * control characters are removed. Use this — never the raw filename —
+         * when deriving a path on disk. Returns {@code "upload"} when nothing
+         * usable is left.
+         */
+        public String safeFilename() {
+            String name = filename == null ? "" : filename;
+            int cut = Math.max(name.lastIndexOf('/'), name.lastIndexOf('\\'));
+            if (cut >= 0) {
+                name = name.substring(cut + 1);
+            }
+            StringBuilder sb = new StringBuilder(name.length());
+            for (int i = 0; i < name.length(); i++) {
+                char c = name.charAt(i);
+                if (c >= 0x20 && c != 0x7f && c != ':') {
+                    sb.append(c);
+                }
+            }
+            String cleaned = sb.toString().trim();
+            return cleaned.isEmpty() || ".".equals(cleaned) || "..".equals(cleaned) ? "upload" : cleaned;
+        }
     }
 
     private final Map<String, List<String>> fields = new LinkedHashMap<>();
@@ -55,10 +82,14 @@ public final class Multipart {
             throw new BadRequestException("Malformed multipart body");
         }
         pos += delimiter.length;
+        int parts = 0;
         while (true) {
             // "--" after the delimiter marks the closing boundary
             if (pos + 1 < body.length && body[pos] == '-' && body[pos + 1] == '-') {
                 break;
+            }
+            if (++parts > MAX_PARTS) {
+                throw new BadRequestException("Too many multipart parts (limit " + MAX_PARTS + ")");
             }
             pos = skipCrLf(body, pos);
             int headersEnd = indexOf(body, "\r\n\r\n".getBytes(StandardCharsets.UTF_8), pos);

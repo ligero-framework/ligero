@@ -8,4 +8,6 @@ module com.ligero.validation {
     requires org.hibernate.validator;
 
     exports com.ligero.validate;
+
+    provides com.ligero.spi.RequestValidator with com.ligero.validate.BeanValidationRequestValidator;
 }

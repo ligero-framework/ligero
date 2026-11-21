@@ -118,4 +118,23 @@ class JettyEngineIntegrationTest {
                 .map(p -> p.type().getName()))
             .contains(JettyServerEngine.class.getName());
     }
+
+    @Test
+    void bodyCanBeReadMoreThanOnceOnJetty() throws Exception {
+        Ligero app = newApp();
+        // a middleware inspects the raw bytes, the handler then reads the same body again
+        app.use((ctx, chain) -> {
+            ctx.attribute("length", ctx.bodyAsBytes().length);
+            chain.proceed();
+        });
+        app.post("/echo", ctx -> ctx.text(ctx.<Integer>attribute("length") + ":" + ctx.bodyAsString()
+            + ":" + new String(ctx.bodyAsStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)));
+        String base = start(app);
+
+        HttpResponse<String> response = client.send(
+            HttpRequest.newBuilder(URI.create(base + "/echo"))
+                .POST(HttpRequest.BodyPublishers.ofString("hello")).build(),
+            HttpResponse.BodyHandlers.ofString());
+        assertThat(response.body()).isEqualTo("5:hello:hello");
+    }
 }

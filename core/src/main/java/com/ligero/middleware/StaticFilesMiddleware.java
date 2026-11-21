@@ -127,6 +127,11 @@ public final class StaticFilesMiddleware implements Middleware {
         if (!file.startsWith(externalRoot) || !Files.isRegularFile(file)) {
             return false;
         }
+        // a symlink inside the root must not serve files that live outside it
+        Path realRoot = externalRoot.toRealPath();
+        if (!file.toRealPath().startsWith(realRoot)) {
+            return false;
+        }
         String etag = '"' + Long.toHexString(Files.getLastModifiedTime(file).toMillis())
             + '-' + Long.toHexString(Files.size(file)) + '"';
         if (etag.equals(ctx.header("If-None-Match"))) {

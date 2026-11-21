@@ -44,7 +44,12 @@ public final class CorsMiddleware implements Middleware {
         return new Builder();
     }
 
-    /** Permissive configuration: any origin, common methods and headers. */
+    /**
+     * Permissive configuration: any origin, common methods and headers, no
+     * credentials. Fine for public, unauthenticated APIs; use
+     * {@link #builder()} with an origin allow-list for anything that relies
+     * on cookies or other ambient credentials.
+     */
     public static CorsMiddleware permissive() {
         return builder().build();
     }
@@ -63,7 +68,10 @@ public final class CorsMiddleware implements Middleware {
 
         if (allowOriginValue != null) {
             ctx.header("Access-Control-Allow-Origin", allowOriginValue);
-            ctx.header("Vary", "Origin");
+            if (!"*".equals(allowOriginValue)) {
+                // the response depends on the request's Origin: keep caches honest
+                ctx.header("Vary", "Origin");
+            }
             if (allowCredentials) {
                 ctx.header("Access-Control-Allow-Credentials", "true");
             }
@@ -90,7 +98,7 @@ public final class CorsMiddleware implements Middleware {
 
     private String resolveOrigin(String origin) {
         if (allowedOrigins.contains("*")) {
-            return allowCredentials ? origin : "*";
+            return "*";
         }
         return allowedOrigins.contains(origin) ? origin : null;
     }
@@ -138,7 +146,19 @@ public final class CorsMiddleware implements Middleware {
             return this;
         }
 
+        /**
+         * @throws IllegalStateException when credentials are combined with the
+         *         {@code *} origin: echoing any origin back with
+         *         {@code Access-Control-Allow-Credentials: true} lets every
+         *         website read authenticated responses, so an explicit origin
+         *         allow-list is required
+         */
         public CorsMiddleware build() {
+            if (allowCredentials && allowedOrigins.contains("*")) {
+                throw new IllegalStateException(
+                    "CORS: allowCredentials(true) requires an explicit origin list — "
+                    + "call allowOrigins(\"https://your-frontend.example\") instead of the default \"*\"");
+            }
             return new CorsMiddleware(this);
         }
     }

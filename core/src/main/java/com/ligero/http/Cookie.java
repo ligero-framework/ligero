@@ -21,12 +21,18 @@ public final class Cookie {
     private final String sameSite; // Lax | Strict | None | null
 
     private Cookie(String name, String value, String path, String domain,
-                   long maxAgeSeconds, boolean secure, boolean httpOnly, String sameSite) {
-        if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("Cookie name must not be blank");
+                   long maxAgeSeconds, boolean secureFlag, boolean httpOnly, String sameSite) {
+        boolean secure = secureFlag;
+        requireToken(name);
+        if ("None".equalsIgnoreCase(sameSite) && !secure) {
+            // browsers silently drop SameSite=None cookies that are not Secure
+            secure = true;
         }
         this.name = name;
-        this.value = value == null ? "" : value;
+        this.value = requireValue(value == null ? "" : value, "value");
+        requireValue(path, "path");
+        requireValue(domain, "domain");
+        requireValue(sameSite, "SameSite");
         this.path = path;
         this.domain = domain;
         this.maxAgeSeconds = maxAgeSeconds;
@@ -94,6 +100,41 @@ public final class Cookie {
             sb.append("; SameSite=").append(sameSite);
         }
         return sb.toString();
+    }
+
+    /**
+     * Cookie names are RFC 6265 tokens. Rejecting anything else keeps
+     * attacker-influenced names from smuggling attributes or extra headers.
+     */
+    static void requireToken(String name) {
+        if (name == null || name.isEmpty()) {
+            throw new IllegalArgumentException("Cookie name must not be blank");
+        }
+        for (int i = 0; i < name.length(); i++) {
+            char c = name.charAt(i);
+            if (c <= 0x20 || c >= 0x7f || "()<>@,;:\\\"/[]?={}".indexOf(c) >= 0) {
+                throw new IllegalArgumentException("Illegal character in cookie name at index " + i);
+            }
+        }
+    }
+
+    /**
+     * Values and attributes must not contain control characters or the
+     * {@code ;} separator — otherwise user input stored in a cookie could
+     * append attributes ({@code ; Domain=evil}) or split the header.
+     */
+    private static String requireValue(String value, String what) {
+        if (value == null) {
+            return null;
+        }
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (c < 0x20 || c == 0x7f || c == ';') {
+                throw new IllegalArgumentException("Illegal character in cookie " + what + " at index " + i
+                    + " — URL-encode or Base64-encode values that may contain separators");
+            }
+        }
+        return value;
     }
 
     /** Parses a request {@code Cookie} header into a name/value map. */

@@ -81,9 +81,14 @@ public final class Jdbc implements SqlOps {
                 T result = work.apply(new Tx(c));
                 c.commit();
                 return result;
-            } catch (RuntimeException e) {
-                c.rollback();
-                throw e;
+            } catch (Throwable t) {
+                // Errors too: restoring auto-commit below would otherwise COMMIT a half-done transaction
+                try {
+                    c.rollback();
+                } catch (SQLException rollbackFailure) {
+                    t.addSuppressed(rollbackFailure);
+                }
+                throw t;
             } finally {
                 c.setAutoCommit(previous);
             }

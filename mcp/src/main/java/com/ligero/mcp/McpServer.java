@@ -38,6 +38,7 @@ public final class McpServer {
     private final String name;
     private final String version;
     private final Map<String, McpTool> tools = new LinkedHashMap<>();
+    private final java.util.Set<String> allowedOrigins = new java.util.LinkedHashSet<>();
 
     private McpServer(String name, String version) {
         this.name = name;
@@ -53,6 +54,55 @@ public final class McpServer {
                           Function<Map<String, Object>, String> handler) {
         tools.put(name, new McpTool(name, description, inputSchema, handler));
         return this;
+    }
+
+    /**
+     * Browser origins allowed to call the HTTP endpoint, e.g.
+     * {@code "https://app.example.com"}. Requests without an {@code Origin}
+     * header (native MCP clients) and requests from loopback origins
+     * ({@code localhost}, {@code 127.0.0.1}, {@code [::1]}) are always
+     * accepted; any other origin gets a {@code 403}. This is the
+     * DNS-rebinding protection the MCP specification requires of HTTP
+     * servers: without it, any web page the user visits could drive a server
+     * listening on their machine.
+     */
+    public McpServer allowedOrigins(String... origins) {
+        for (String origin : origins) {
+            allowedOrigins.add(normalizeOrigin(origin));
+        }
+        return this;
+    }
+
+    boolean isOriginAllowed(String origin) {
+        if (origin == null || origin.isBlank()) {
+            return true;
+        }
+        String normalized = normalizeOrigin(origin);
+        if (allowedOrigins.contains(normalized)) {
+            return true;
+        }
+        String host = hostOf(normalized);
+        return "localhost".equals(host) || "127.0.0.1".equals(host) || "[::1]".equals(host);
+    }
+
+    private static String normalizeOrigin(String origin) {
+        String trimmed = origin.trim().toLowerCase(java.util.Locale.ROOT);
+        return trimmed.endsWith("/") ? trimmed.substring(0, trimmed.length() - 1) : trimmed;
+    }
+
+    /** {@code scheme://host[:port]} -> {@code host}; anything else is returned as-is. */
+    private static String hostOf(String origin) {
+        int scheme = origin.indexOf("://");
+        if (scheme < 0) {
+            return origin;
+        }
+        String authority = origin.substring(scheme + 3);
+        if (authority.startsWith("[")) {
+            int end = authority.indexOf(']');
+            return end < 0 ? authority : authority.substring(0, end + 1);
+        }
+        int port = authority.indexOf(':');
+        return port < 0 ? authority : authority.substring(0, port);
     }
 
     /** A middleware that serves this MCP server at {@code path} (POST). */
@@ -88,6 +138,9 @@ public final class McpServer {
      * for a notification (no {@code id}) that produces no reply.
      */
     public Map<String, Object> handle(Map<String, Object> message) {
+        if (message == null) {
+            return error(null, -32600, "Invalid Request");
+        }
         Object id = message.get("id");
         Object methodValue = message.get("method");
         if (!(methodValue instanceof String method)) {
@@ -120,7 +173,8 @@ public final class McpServer {
             return response;
         } catch (RuntimeException e) {
             log.error("MCP method {} failed", method, e);
-            return error(id, -32603, "Internal error: " + e.getMessage());
+            // details stay in the server log; clients only learn that it failed
+            return error(id, -32603, "Internal error");
         }
     }
 

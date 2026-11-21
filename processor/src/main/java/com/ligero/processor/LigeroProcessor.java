@@ -32,6 +32,15 @@ import java.util.Set;
  * {@code bind(...)} wiring you would otherwise write by hand — so there is no
  * classpath scanning and no runtime reflection.
  *
+ * <p>For {@code @Controller} classes with typed routes ({@code @Get},
+ * {@code @Post}, ... from {@code com.ligero.web}) it also emits a
+ * {@code <Controller>Routes} class next to the controller whose
+ * {@code mount(app, controller)} registers each method as a plain
+ * {@code app.route(...)} lambda: parameters are converted with explicit,
+ * type-specific calls chosen here at compile time, and the return value is
+ * handed to {@code ctx.respond(...)}. Mistakes (an unknown path parameter, an
+ * unsupported type, a private method) are reported as compile errors.</p>
+ *
  * <p>Per Java package it emits {@code <pkg>.LigeroGeneratedModule} (a
  * {@link com.ligero.LigeroModule}) with the package's bindings and, for
  * controllers exposing {@code register(Ligero)}, their route mounting. It
@@ -46,6 +55,12 @@ import java.util.Set;
     "com.ligero.beans.stereotype.Repository",
     "com.ligero.beans.stereotype.Controller",
     "com.ligero.beans.Provides",
+    "com.ligero.web.Get",
+    "com.ligero.web.Post",
+    "com.ligero.web.Put",
+    "com.ligero.web.Patch",
+    "com.ligero.web.Delete",
+    "com.ligero.web.Route",
 })
 @SupportedSourceVersion(SourceVersion.RELEASE_21)
 public final class LigeroProcessor extends AbstractProcessor {
@@ -55,13 +70,32 @@ public final class LigeroProcessor extends AbstractProcessor {
         "com.ligero.beans.stereotype.Service",
         "com.ligero.beans.stereotype.Repository",
         "com.ligero.beans.stereotype.Controller");
+    private static final String CONTROLLER = "com.ligero.beans.stereotype.Controller";
     private static final String PROVIDES = "com.ligero.beans.Provides";
+    private static final String WEB = "com.ligero.web.";
+    /** Verb annotation -> HTTP method. {@code @Route} carries its own. */
+    private static final Map<String, String> VERBS = verbs();
+    private static final String ROUTE = WEB + "Route";
+    private static final String CONTEXT = "com.ligero.http.Context";
+    private static final String BINDING = "com.ligero.web.Binding";
     private static final String LIGERO = "com.ligero.Ligero";
     private static final String GENERATED_MODULE = "LigeroGeneratedModule";
     private static final String AGGREGATOR = "com.ligero.generated.GeneratedModules";
 
     /** package name -> its collected bindings, gathered across rounds. */
     private final Map<String, PackageModel> packages = new LinkedHashMap<>();
+    /** One entry per controller that declares typed routes. */
+    private final List<RoutesModel> routeClasses = new ArrayList<>();
+
+    private static Map<String, String> verbs() {
+        Map<String, String> verbs = new LinkedHashMap<>();
+        verbs.put(WEB + "Get", "GET");
+        verbs.put(WEB + "Post", "POST");
+        verbs.put(WEB + "Put", "PUT");
+        verbs.put(WEB + "Patch", "PATCH");
+        verbs.put(WEB + "Delete", "DELETE");
+        return verbs;
+    }
     private boolean generated;
 
     @Override
@@ -80,6 +114,7 @@ public final class LigeroProcessor extends AbstractProcessor {
                 handleProvides((ExecutableElement) element);
             }
         }
+        reportRoutesOutsideControllers(roundEnv);
         // Generate as soon as the annotated classes are in hand (they all arrive
         // in the first round). Emitting early — not in the processingOver round —
         // lets hand-written code reference the generated GeneratedModules.
@@ -116,11 +151,336 @@ public final class LigeroProcessor extends AbstractProcessor {
             }
             params.add(name);
         }
-        String key = bindingKey(type, stereotype);
         String impl = type.getQualifiedName().toString();
+        RoutesModel routes = CONTROLLER.equals(stereotype) ? collectRoutes(type, pkg) : null;
+        String key = bindingKey(type, stereotype);
+        if (routes != null) {
+            // typed routes call the controller's own methods, so it must be
+            // bound (and fetched) as its concrete class, not as an interface
+            String explicit = asAttribute(type, stereotype);
+            if (explicit != null && !explicit.equals("java.lang.Void") && !explicit.equals(impl)) {
+                error(type, "a controller with typed routes (@Get, @Post, ...) is bound as its own class — remove as = ...");
+                return;
+            }
+            key = impl;
+            routeClasses.add(routes);
+        }
         boolean hasRoutes = hasRegisterMethod(type);
         packages.computeIfAbsent(pkg, PackageModel::new)
-            .beans.add(new BeanBinding(key, impl, params, hasRoutes));
+            .beans.add(new BeanBinding(key, impl, params, hasRoutes,
+                routes == null ? null : routes.pkg + "." + routes.simpleName));
+    }
+
+    // ---------------------------------------------------------- typed routes
+
+    /** A verb annotation on a method whose class is not a @Controller would be silently dead. */
+    private void reportRoutesOutsideControllers(RoundEnvironment roundEnv) {
+        List<String> annotations = new ArrayList<>(VERBS.keySet());
+        annotations.add(ROUTE);
+        for (String name : annotations) {
+            TypeElement annotation = elements().getTypeElement(name);
+            if (annotation == null) {
+                continue;
+            }
+            for (Element element : roundEnv.getElementsAnnotatedWith(annotation)) {
+                Element owner = element.getEnclosingElement();
+                if (!hasAnnotation(owner, CONTROLLER)) {
+                    error(element, "@" + annotation.getSimpleName() + " only works inside a class annotated with "
+                        + "@Controller (com.ligero.beans.stereotype.Controller)");
+                }
+            }
+        }
+    }
+
+    /** The controller's typed routes, or {@code null} when it declares none (or they are invalid). */
+    private RoutesModel collectRoutes(TypeElement type, String pkg) {
+        Object prefixValue = annotationValue(type, CONTROLLER, "value");
+        String prefix = prefixValue == null ? "" : prefixValue.toString();
+        List<RouteMethod> routes = new ArrayList<>();
+        boolean valid = true;
+        boolean usesValidation = false;
+        for (ExecutableElement method : ElementFilter.methodsIn(type.getEnclosedElements())) {
+            String httpMethod = null;
+            String subPath = "";
+            int verbCount = 0;
+            for (Map.Entry<String, String> verb : VERBS.entrySet()) {
+                if (hasAnnotation(method, verb.getKey())) {
+                    verbCount++;
+                    httpMethod = verb.getValue();
+                    Object value = annotationValue(method, verb.getKey(), "value");
+                    subPath = value == null ? "" : value.toString();
+                }
+            }
+            if (hasAnnotation(method, ROUTE)) {
+                verbCount++;
+                Object value = annotationValue(method, ROUTE, "method");
+                httpMethod = value == null ? "" : value.toString().trim().toUpperCase(java.util.Locale.ROOT);
+                Object path = annotationValue(method, ROUTE, "path");
+                subPath = path == null ? "" : path.toString();
+                if (!httpMethod.matches("[A-Z]+")) {
+                    error(method, "@Route method must be an HTTP method name such as \"QUERY\"");
+                    valid = false;
+                    continue;
+                }
+            }
+            if (verbCount == 0) {
+                continue;
+            }
+            if (verbCount > 1) {
+                error(method, "declares more than one HTTP method annotation — keep one, or split the method");
+                valid = false;
+                continue;
+            }
+            Set<Modifier> modifiers = method.getModifiers();
+            if (modifiers.contains(Modifier.PRIVATE) || modifiers.contains(Modifier.STATIC)
+                    || modifiers.contains(Modifier.ABSTRACT)) {
+                error(method, "route methods must be non-private instance methods "
+                    + "(the generated routes class lives in the same package and calls them directly)");
+                valid = false;
+                continue;
+            }
+            String fullPath = joinPath(prefix, subPath);
+            List<String> arguments = new ArrayList<>();
+            boolean argumentsOk = true;
+            boolean bodySeen = false;
+            for (VariableElement param : method.getParameters()) {
+                boolean isBody = hasAnnotation(param, WEB + "Body");
+                if (isBody && bodySeen) {
+                    error(param, "a route method can take a single @Body parameter");
+                    argumentsOk = false;
+                    continue;
+                }
+                bodySeen |= isBody;
+                String argument = argumentFor(param, fullPath);
+                if (argument == null) {
+                    argumentsOk = false; // error already reported
+                } else {
+                    arguments.add(argument);
+                    usesValidation |= hasAnnotation(param, WEB + "Valid");
+                }
+            }
+            if (!argumentsOk) {
+                valid = false;
+                continue;
+            }
+            Object status = annotationValue(method, WEB + "Status", "value");
+            int statusCode = status instanceof Integer code ? code : 0;
+            if (status != null && (statusCode < 100 || statusCode > 599)) {
+                error(method, "@Status must be a valid HTTP status code (100-599)");
+                valid = false;
+                continue;
+            }
+            routes.add(new RouteMethod(httpMethod, fullPath, method.getSimpleName().toString(), arguments,
+                method.getReturnType().getKind() == TypeKind.VOID, statusCode));
+        }
+        if (!valid || routes.isEmpty()) {
+            return null;
+        }
+        String impl = type.getQualifiedName().toString();
+        // Outer.Inner -> Outer_InnerRoutes (a flat, top-level class in the same package)
+        String simpleName = impl.substring(pkg.length() + 1).replace('.', '_') + "Routes";
+        return new RoutesModel(pkg, simpleName, impl, routes, usesValidation);
+    }
+
+    /** The Java expression that produces one argument of a route method, or {@code null} after an error. */
+    private String argumentFor(VariableElement param, String fullPath) {
+        TypeMirror type = param.asType();
+        boolean path = hasAnnotation(param, WEB + "PathParam");
+        boolean query = hasAnnotation(param, WEB + "QueryParam");
+        boolean header = hasAnnotation(param, WEB + "HeaderParam");
+        boolean body = hasAnnotation(param, WEB + "Body");
+        boolean validated = hasAnnotation(param, WEB + "Valid");
+        int sources = (path ? 1 : 0) + (query ? 1 : 0) + (header ? 1 : 0) + (body ? 1 : 0);
+        if (sources > 1) {
+            error(param, "pick one of @PathParam, @QueryParam, @HeaderParam or @Body");
+            return null;
+        }
+        if (validated && !body) {
+            error(param, "@Valid applies to the @Body parameter");
+            return null;
+        }
+        if (sources == 0) {
+            if (CONTEXT.equals(qualifiedOf(type))) {
+                return "ctx";
+            }
+            error(param, "say where this parameter comes from: @PathParam, @QueryParam, @HeaderParam or @Body "
+                + "(or declare it as com.ligero.http.Context)");
+            return null;
+        }
+        if (body) {
+            return bodyArgument(param, type, validated);
+        }
+        String javaName = param.getSimpleName().toString();
+        if (path) {
+            String name = nameOf(param, WEB + "PathParam", javaName);
+            if (!declaresPathParam(fullPath, name)) {
+                error(param, "the route " + fullPath + " has no {" + name + "} segment");
+                return null;
+            }
+            String kind = "path parameter";
+            String raw = BINDING + ".required(ctx.pathParam(" + literal(name) + "), "
+                + literal(kind) + ", " + literal(name) + ")";
+            return convert(param, type, raw, kind, name);
+        }
+        String annotation = WEB + (query ? "QueryParam" : "HeaderParam");
+        String name = nameOf(param, annotation, javaName);
+        String kind = query ? "query parameter" : "header";
+        if (query && isListOfString(type)) {
+            return "ctx.queryParams(" + literal(name) + ")";
+        }
+        String raw = (query ? "ctx.queryParam(" : "ctx.header(") + literal(name) + ")";
+        Object defaultValue = annotationValue(param, annotation, "defaultValue");
+        if (defaultValue != null && !defaultValue.toString().isEmpty()) {
+            raw = BINDING + ".orDefault(" + raw + ", " + literal(defaultValue.toString()) + ")";
+        } else if (type.getKind().isPrimitive()) {
+            // a primitive cannot say "absent", so the parameter is required
+            raw = BINDING + ".required(" + raw + ", " + literal(kind) + ", " + literal(name) + ")";
+        }
+        return convert(param, type, raw, kind, name);
+    }
+
+    private String bodyArgument(VariableElement param, TypeMirror type, boolean validated) {
+        String expression;
+        if (type.getKind() == TypeKind.ARRAY && type.toString().equals("byte[]")) {
+            expression = "ctx.bodyAsBytes()";
+        } else if ("java.lang.String".equals(qualifiedOf(type))) {
+            expression = "ctx.bodyAsString()";
+        } else if (type.getKind() == TypeKind.DECLARED && ((DeclaredType) type).getTypeArguments().isEmpty()) {
+            expression = "ctx.body(" + qualifiedOf(type) + ".class)";
+        } else {
+            error(param, "@Body needs a concrete class or record (wrap generic payloads such as List<T> in a record)");
+            return null;
+        }
+        return validated ? BINDING + ".valid(" + expression + ")" : expression;
+    }
+
+    /** Picks the converter for the parameter's declared type — at compile time, no runtime lookup. */
+    private String convert(VariableElement param, TypeMirror type, String raw, String kind, String name) {
+        String tail = "(" + raw + ", " + literal(kind) + ", " + literal(name) + ")";
+        switch (type.getKind()) {
+            case INT:
+                return BINDING + ".toInt" + tail;
+            case LONG:
+                return BINDING + ".toLong" + tail;
+            case DOUBLE:
+                return BINDING + ".toDouble" + tail;
+            case BOOLEAN:
+                return BINDING + ".toBoolean" + tail;
+            case DECLARED:
+                break;
+            default:
+                error(param, "unsupported parameter type " + type + " — use String, int, long, double, boolean, "
+                    + "UUID, BigDecimal or an enum");
+                return null;
+        }
+        String qualified = qualifiedOf(type);
+        Element element = ((DeclaredType) type).asElement();
+        if (qualified == null) {
+            error(param, "unsupported parameter type " + type);
+            return null;
+        }
+        switch (qualified) {
+            case "java.lang.String":
+                return raw;
+            case "java.lang.Integer":
+                return BINDING + ".toInt" + tail;
+            case "java.lang.Long":
+                return BINDING + ".toLong" + tail;
+            case "java.lang.Double":
+                return BINDING + ".toDouble" + tail;
+            case "java.lang.Boolean":
+                return BINDING + ".toBoolean" + tail;
+            case "java.util.UUID":
+                return BINDING + ".toUuid" + tail;
+            case "java.math.BigDecimal":
+                return BINDING + ".toBigDecimal" + tail;
+            default:
+                if (element.getKind() == javax.lang.model.element.ElementKind.ENUM) {
+                    return BINDING + ".toEnum(" + qualified + ".values(), " + raw + ", "
+                        + literal(kind) + ", " + literal(name) + ")";
+                }
+                error(param, "unsupported parameter type " + type + " — use String, int, long, double, boolean, "
+                    + "UUID, BigDecimal or an enum");
+                return null;
+        }
+    }
+
+    private boolean isListOfString(TypeMirror type) {
+        if (type.getKind() != TypeKind.DECLARED || !"java.util.List".equals(qualifiedOf(type))) {
+            return false;
+        }
+        List<? extends TypeMirror> arguments = ((DeclaredType) type).getTypeArguments();
+        return arguments.size() == 1 && "java.lang.String".equals(qualifiedOf(arguments.get(0)));
+    }
+
+    private String nameOf(VariableElement param, String annotation, String fallback) {
+        Object value = annotationValue(param, annotation, "value");
+        return value == null || value.toString().isEmpty() ? fallback : value.toString();
+    }
+
+    /** True when the route pattern has a {@code {name}} or trailing {@code *name} segment. */
+    static boolean declaresPathParam(String path, String name) {
+        for (String segment : path.split("/")) {
+            if (segment.equals("{" + name + "}") || segment.equals("*" + name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Controller prefix + method path, normalized like the router does. */
+    static String joinPath(String prefix, String path) {
+        StringBuilder sb = new StringBuilder();
+        for (String segment : (prefix + "/" + path).split("/")) {
+            if (!segment.isEmpty()) {
+                sb.append('/').append(segment);
+            }
+        }
+        return sb.length() == 0 ? "/" : sb.toString();
+    }
+
+    /** A Java string literal for {@code value}. */
+    static String literal(String value) {
+        StringBuilder sb = new StringBuilder("\"");
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            switch (c) {
+                case '"':
+                    sb.append("\\\"");
+                    break;
+                case '\\':
+                    sb.append("\\\\");
+                    break;
+                case '\n':
+                    sb.append("\\n");
+                    break;
+                case '\r':
+                    sb.append("\\r");
+                    break;
+                default:
+                    if (c < 0x20 || c == 0x7f) {
+                        sb.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        sb.append(c);
+                    }
+            }
+        }
+        return sb.append('"').toString();
+    }
+
+    private Object annotationValue(Element element, String annotationName, String attribute) {
+        for (AnnotationMirror mirror : element.getAnnotationMirrors()) {
+            if (!mirror.getAnnotationType().toString().equals(annotationName)) {
+                continue;
+            }
+            for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> e
+                    : mirror.getElementValues().entrySet()) {
+                if (e.getKey().getSimpleName().contentEquals(attribute)) {
+                    return e.getValue().getValue();
+                }
+            }
+        }
+        return null;
     }
 
     private void handleProvides(ExecutableElement method) {
@@ -212,7 +572,59 @@ public final class LigeroProcessor extends AbstractProcessor {
             writeModule(fqcn, model);
             moduleClasses.add(fqcn);
         }
+        for (RoutesModel routes : routeClasses) {
+            writeRoutes(routes);
+        }
         writeAggregator(moduleClasses);
+    }
+
+    private void writeRoutes(RoutesModel model) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("package ").append(model.pkg).append(";\n\n");
+        sb.append("// Generated by ligero-processor from the typed routes of ").append(model.controller)
+          .append(". Do not edit.\n");
+        sb.append("public final class ").append(model.simpleName).append(" {\n\n");
+        sb.append("    private ").append(model.simpleName).append("() {\n    }\n\n");
+        sb.append("    /** Registers every typed route of the controller on the app. */\n");
+        sb.append("    public static void mount(com.ligero.Ligero app, ").append(model.controller)
+          .append(" controller) {\n");
+        if (model.usesValidation) {
+            sb.append("        ").append(BINDING).append(".requireValidator(); // fail at startup, not on the first request\n");
+        }
+        for (RouteMethod route : model.routes) {
+            sb.append("        app.route(").append(literal(route.httpMethod)).append(", ")
+              .append(literal(route.path)).append(", ctx -> {\n");
+            String call = "controller." + route.methodName + "(" + joinArguments(route.arguments) + ")";
+            if (route.returnsVoid) {
+                sb.append("            ").append(call).append(";\n");
+            } else {
+                sb.append("            Object result = ").append(call).append(";\n");
+            }
+            if (route.status != 0) {
+                sb.append("            if (!ctx.res().isCommitted()) {\n");
+                sb.append("                ctx.status(").append(route.status).append(");\n");
+                sb.append("            }\n");
+            }
+            sb.append("            ctx.respond(").append(route.returnsVoid ? "null" : "result").append(");\n");
+            sb.append("        });\n");
+        }
+        sb.append("    }\n");
+        sb.append("}\n");
+        write(model.pkg + "." + model.simpleName, sb.toString());
+    }
+
+    private static String joinArguments(List<String> arguments) {
+        if (arguments.isEmpty()) {
+            return "";
+        }
+        if (arguments.size() == 1) {
+            return arguments.get(0);
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < arguments.size(); i++) {
+            sb.append(i == 0 ? "\n                " : ",\n                ").append(arguments.get(i));
+        }
+        return sb.toString();
     }
 
     private void writeModule(String fqcn, PackageModel model) {
@@ -246,6 +658,10 @@ public final class LigeroProcessor extends AbstractProcessor {
         for (BeanBinding bean : model.beans) {
             if (bean.hasRoutes) {
                 sb.append("        beans.get(").append(bean.key).append(".class).register(app);\n");
+            }
+            if (bean.routesClass != null) {
+                sb.append("        ").append(bean.routesClass).append(".mount(app, beans.get(")
+                  .append(bean.key).append(".class));\n");
             }
         }
         sb.append("    }\n");
@@ -327,7 +743,16 @@ public final class LigeroProcessor extends AbstractProcessor {
         }
     }
 
-    private record BeanBinding(String key, String impl, List<String> params, boolean hasRoutes) {
+    private record BeanBinding(String key, String impl, List<String> params, boolean hasRoutes,
+                               String routesClass) {
+    }
+
+    private record RoutesModel(String pkg, String simpleName, String controller, List<RouteMethod> routes,
+                               boolean usesValidation) {
+    }
+
+    private record RouteMethod(String httpMethod, String path, String methodName, List<String> arguments,
+                               boolean returnsVoid, int status) {
     }
 
     private record ProvidesBinding(String returnType, String enclosing, String method) {

@@ -58,6 +58,21 @@ public interface HttpRequest {
     /** Request body as a stream. May enforce a configured size limit. */
     InputStream getBody();
 
+    /**
+     * Opens the request body as a one-shot stream <em>without buffering it in
+     * memory</em>, for uploads too large to hold whole. At most
+     * {@code maxBytes} are delivered (a larger body fails with
+     * {@link PayloadTooLargeException}); a negative value means the engine's
+     * configured body limit.
+     *
+     * <p>Use either this or the buffered accessors ({@link #getBody()},
+     * {@link #getBodyAsString()}) for a given request, not both. Engines that
+     * cannot stream fall back to the buffered body.</p>
+     */
+    default InputStream openBodyStream(long maxBytes) {
+        return getBody();
+    }
+
     /** Request body fully read as a UTF-8 string (cached after first read). */
     String getBodyAsString();
 

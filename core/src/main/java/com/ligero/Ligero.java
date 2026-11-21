@@ -402,7 +402,7 @@ public final class Ligero implements AutoCloseable {
 
         Router.RouteMatch match = router.match(method, path);
         if (match != null) {
-            ctx.pathParams().putAll(match.params());
+            match.params().forEach((name, raw) -> ctx.pathParams().put(name, decodePathParam(raw)));
             ctx.attribute(MATCHED_ROUTE_ATTRIBUTE, match.routePath());
             match.handler().handle(ctx);
             return;
@@ -417,6 +417,23 @@ public final class Ligero implements AutoCloseable {
             throw new MethodNotAllowedException(method, allowed);
         }
         throw new NotFoundException("No route matches " + method + " " + path);
+    }
+
+    /**
+     * Routes match on the raw path, so parameters arrive percent-encoded;
+     * handlers get the decoded value ({@code John%20Doe} becomes
+     * {@code John Doe}). {@code +} stays a plus sign — it only means a space
+     * in query strings.
+     */
+    private static String decodePathParam(String raw) {
+        if (raw.indexOf('%') < 0) {
+            return raw;
+        }
+        try {
+            return java.net.URLDecoder.decode(raw.replace("+", "%2B"), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            throw new com.ligero.http.BadRequestException("Malformed percent-encoding in request path");
+        }
     }
 
     /** Requests outside the configured context path never reach the routes. */

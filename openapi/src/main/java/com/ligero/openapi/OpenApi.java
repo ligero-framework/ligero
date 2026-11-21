@@ -69,7 +69,11 @@ public final class OpenApi implements Middleware {
         return new OpenApi(app, title, version, docPath, uiPath, componentSchemas, operations);
     }
 
-    /** Opt-in Swagger UI page (loads swagger-ui-dist from a public CDN). */
+    /**
+     * Opt-in Swagger UI page. It loads a pinned swagger-ui-dist release from a
+     * public CDN with Subresource Integrity, so the browser refuses the
+     * assets if the CDN ever serves different bytes.
+     */
     public OpenApi withSwaggerUi(String uiPath) {
         log.info("Swagger UI at {}", uiPath);
         return new OpenApi(app, title, version, docPath, uiPath, componentSchemas, operations);
@@ -151,17 +155,40 @@ public final class OpenApi implements Middleware {
             <head>
               <meta charset="utf-8">
               <title>%s — API docs</title>
-              <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+              <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui.css"
+                    integrity="sha384-wxLW6kwyHktdDGr6Pv1zgm/VGJh99lfUbzSn6HNHBENZlCN7W602k9VkGdxuFvPn"
+                    crossorigin="anonymous">
             </head>
             <body>
               <div id="swagger-ui"></div>
-              <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+              <script src="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-bundle.js"
+                      integrity="sha384-wmyclcVGX/WhUkdkATwhaK1X1JtiNrr2EoYJ+diV3vj4v6OC5yCeSu+yW13SYJep"
+                      crossorigin="anonymous"></script>
               <script>
                 SwaggerUIBundle({ url: '%s', dom_id: '#swagger-ui' });
               </script>
             </body>
             </html>
-            """.formatted(title, docPath);
+            """.formatted(escapeHtml(title), escapeJs(docPath));
+    }
+
+    private static String escapeHtml(String value) {
+        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            .replace("\"", "&quot;").replace("'", "&#39;");
+    }
+
+    /** For a value placed inside a single-quoted JavaScript string in the page. */
+    private static String escapeJs(String value) {
+        StringBuilder sb = new StringBuilder(value.length());
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (Character.isLetterOrDigit(c) || "/-_.~".indexOf(c) >= 0) {
+                sb.append(c);
+            } else {
+                sb.append(String.format("\\u%04x", (int) c));
+            }
+        }
+        return sb.toString();
     }
 
     /** Builds the OpenAPI document as a plain map (serialized by the BodyMapper). */

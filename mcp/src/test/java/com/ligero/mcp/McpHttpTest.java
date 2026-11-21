@@ -50,6 +50,42 @@ class McpHttpTest {
         }
     }
 
+    private static final String PING = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}";
+
+    @Test
+    void foreignBrowserOriginsAreRejected() {
+        // DNS-rebinding defence: a page on another site must not drive a local MCP server
+        try (LigeroTest test = mcpApp()) {
+            LigeroTest.TestResponse response = test.post("/mcp")
+                .header("Origin", "https://evil.example").json(PING).execute();
+            assertThat(response.status()).isEqualTo(403);
+        }
+    }
+
+    @Test
+    void loopbackAndAllowListedOriginsAreAccepted() {
+        try (LigeroTest test = LigeroTest.create(app -> app.use(
+                McpServer.create("calc", "1.0.0").allowedOrigins("https://app.example.com/").http("/mcp")))) {
+            for (String origin : new String[] {
+                "http://localhost:5173", "http://127.0.0.1:8080", "http://[::1]:3000", "https://APP.example.com"}) {
+                assertThat(test.post("/mcp").header("Origin", origin).json(PING).execute().status())
+                    .as(origin).isEqualTo(200);
+            }
+            // look-alike hosts are not loopback
+            for (String origin : new String[] {"http://localhost.evil.example", "http://127.0.0.1.evil.example"}) {
+                assertThat(test.post("/mcp").header("Origin", origin).json(PING).execute().status())
+                    .as(origin).isEqualTo(403);
+            }
+        }
+    }
+
+    @Test
+    void internalFailuresDoNotLeakDetails() {
+        McpServer server = McpServer.create("x", "1");
+        Map<String, Object> response = server.handle(null);
+        assertThat(response.get("error").toString()).contains("-32600");
+    }
+
     @Test
     void aNotificationIsAcceptedWithNoBody() {
         try (LigeroTest test = mcpApp()) {

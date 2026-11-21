@@ -14,6 +14,11 @@ public interface WsSession {
     /** Sends a text frame. */
     void send(String message);
 
+    /** Sends a binary frame. */
+    default void send(byte[] message) {
+        throw new UnsupportedOperationException("This engine does not send binary WebSocket messages");
+    }
+
     /** Closes with the given status code (RFC 6455) and reason. */
     void close(int statusCode, String reason);
 

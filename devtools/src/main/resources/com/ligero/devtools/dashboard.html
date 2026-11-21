@@ -173,7 +173,9 @@ const routeState = {};   // idx -> { pp:{}, query, body }
 const pendingRun = new Set();   // ids we fired from Send, to auto-select when their trace arrives
 
 const simple = f => (f || '').split(/[.$]/).pop();
-const esc = t => (t ?? '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const esc = t => (t ?? '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+// for values placed inside an inline handler's string literal: identifier characters only
+const jsId = t => (t ?? '').toString().replace(/[^A-Za-z0-9_.:$-]/g, '');
 const fmtUs = us => us == null ? '' : us >= 1000 ? (us / 1000).toFixed(us >= 10000 ? 0 : 1) + ' ms' : us + ' µs';
 const verbClass = m => ['get', 'post', 'put', 'delete', 'patch'].includes(m.toLowerCase()) ? 'v-' + m.toLowerCase() : 'v-other';
 const stColor = s => COLORS[s] || COLORS.bean;
@@ -263,7 +265,7 @@ function renderGraph() {
     const onPath = exec && path.nodes.has(type);
     let cls = 'gnode'; if (onPath) cls += ' hot'; else if (dimNode(type)) cls += ' dim'; if (selectedNode === type) cls += ' sel';
     const count = trace ? trace.calls.filter(c => simple(type) === c.declaredBy).length : 0;
-    s += `<g class="${cls}" onclick="clickNode('${type}')"><title>${esc(type)}</title>`
+    s += `<g class="${cls}" onclick="clickNode('${jsId(type)}')"><title>${esc(type)}</title>`
       + `<rect x="${x}" y="${y}" width="${NODE.W}" height="${NODE.H}" stroke="${color}"/>`
       + `<text x="${x + NODE.W / 2}" y="${y + NODE.H / 2 + 4}" text-anchor="middle">${esc(simple(type))}</text>`
       + (count ? `<text class="cnt" x="${x + NODE.W - 12}" y="${y + 14}" text-anchor="middle">${count}</text>` : '') + `</g>`; }
@@ -283,7 +285,7 @@ function renderLeft() {
         <span class="verb ${verbClass(r.method)}">${esc(r.method)}</span><span class="path">${esc(r.path)}</span></div>`; }).join('')
       : '<div class="list-empty">no routes registered</div>';
   } else {
-    box.innerHTML = TRACES.length ? TRACES.map(t => `<div class="row${currentTraceId === t.id ? ' sel' : ''}" onclick="selectHistory('${t.id}')">
+    box.innerHTML = TRACES.length ? TRACES.map(t => `<div class="row${currentTraceId === t.id ? ' sel' : ''}" onclick="selectHistory('${jsId(t.id)}')">
       <span class="verb ${verbClass(t.method)}">${esc(t.method)}</span><span class="path">${esc(t.path)}</span>
       <span class="st" style="background:${t.status < 400 ? 'var(--service)' : 'var(--error)'}"></span><span class="t">${fmtUs(t.durationUs)}</span></div>`).join('')
       : '<div class="list-empty">no requests yet — run one from the Requests tab</div>';

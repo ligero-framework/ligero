@@ -145,6 +145,32 @@ public final class Context {
         return request.getBody();
     }
 
+    /**
+     * The request body as a one-shot stream that is <em>not</em> held in
+     * memory — for large uploads. Bounded by the configured body limit; use
+     * {@link #bodyStream(long)} to allow more (or less) for one route.
+     *
+     * <pre>{@code
+     * app.put("/files/{name}", ctx -> {
+     *     try (InputStream in = ctx.bodyStream(500L * 1024 * 1024)) {
+     *         Files.copy(in, uploads.resolve(safeName), StandardCopyOption.REPLACE_EXISTING);
+     *     }
+     *     ctx.status(204).res().end();
+     * });
+     * }</pre>
+     *
+     * <p>Do not combine with {@code body(...)}, {@code bodyAsString()} or
+     * {@code bodyAsBytes()} on the same request.</p>
+     */
+    public InputStream bodyStream() {
+        return request.openBodyStream(-1);
+    }
+
+    /** Like {@link #bodyStream()}, with an explicit size limit for this request. */
+    public InputStream bodyStream(long maxBytes) {
+        return request.openBodyStream(maxBytes);
+    }
+
     /** Request body fully read as bytes (cached; needed for binary uploads). */
     public byte[] bodyAsBytes() {
         if (cachedBodyBytes == null) {
@@ -184,7 +210,16 @@ public final class Context {
 
     /** Deserializes the JSON request body. Requires a {@link BodyMapper} on the classpath. */
     public <T> T body(Class<T> type) {
-        return requireBodyMapper().readJson(request.getBodyAsString(), type);
+        String raw = request.getBodyAsString();
+        if (raw == null || raw.isBlank()) {
+            throw new BadRequestException("Request body is required");
+        }
+        T value = requireBodyMapper().readJson(raw, type);
+        if (value == null) {
+            // a literal JSON null would otherwise surface as a NullPointerException (500)
+            throw new BadRequestException("Request body is required");
+        }
+        return value;
     }
 
     /** Deserializes the body and returns a validator to declare constraints on it. */
@@ -221,8 +256,21 @@ public final class Context {
         return cookies;
     }
 
+    /**
+     * Attribute a middleware may set to override {@link #remoteAddress()} with
+     * the real client address — see
+     * {@link com.ligero.middleware.TrustedProxyMiddleware}.
+     */
+    public static final String CLIENT_ADDRESS_ATTRIBUTE = "ligero.clientAddress";
+
+    /**
+     * Address of the client. This is the peer of the TCP connection unless
+     * {@link com.ligero.middleware.TrustedProxyMiddleware} established the
+     * address a trusted reverse proxy forwarded.
+     */
     public String remoteAddress() {
-        return request.getRemoteAddress();
+        Object forwarded = attributes.get(CLIENT_ADDRESS_ATTRIBUTE);
+        return forwarded instanceof String address ? address : request.getRemoteAddress();
     }
 
     // ------------------------------------------------------------------
@@ -261,6 +309,61 @@ public final class Context {
         return this;
     }
 
+    /**
+     * Writes whatever a typed controller method returned — the single place
+     * that turns a Java value into an HTTP response:
+     *
+     * <ul>
+     *   <li>{@link Response} — its status and headers are applied, then its body follows these rules;</li>
+     *   <li>{@link java.util.Optional} — empty answers {@code 404}, otherwise its value is written;</li>
+     *   <li>{@code null} (and {@code void} methods) — no body; {@code 204} unless a status was already set;</li>
+     *   <li>{@code String} / {@code CharSequence} — {@code text/plain};</li>
+     *   <li>{@code byte[]} — {@code application/octet-stream};</li>
+     *   <li>anything else — JSON through the {@link BodyMapper}.</li>
+     * </ul>
+     *
+     * <p>Does nothing when the response is already committed, so a method
+     * that wrote through {@code ctx} itself is left alone.</p>
+     */
+    public Context respond(Object result) {
+        if (response.isCommitted()) {
+            return this;
+        }
+        Object body = result;
+        if (body instanceof Response<?> typed) {
+            response.status(typed.status());
+            typed.headers().forEach(response::header);
+            body = typed.body();
+        }
+        if (body instanceof java.util.Optional<?> optional) {
+            if (optional.isEmpty()) {
+                throw new NotFoundException("Not found");
+            }
+            body = optional.get();
+        }
+        if (body == null) {
+            if (response.getStatus() == 200) {
+                response.status(204);
+            }
+            response.end();
+            return this;
+        }
+        if (body instanceof CharSequence text) {
+            return text(text.toString());
+        }
+        if (body instanceof byte[] bytes) {
+            attributes.put(RESPONSE_BODY_ATTRIBUTE, bytes);
+            response.contentType("application/octet-stream");
+            try (java.io.OutputStream out = response.getOutputStream()) {
+                out.write(bytes);
+            } catch (java.io.IOException e) {
+                throw new java.io.UncheckedIOException("Could not send response", e);
+            }
+            return this;
+        }
+        return json(body);
+    }
+
     public Context redirect(String url) {
         response.redirect(url);
         return this;
@@ -277,7 +380,8 @@ public final class Context {
     }
 
     public Context removeCookie(String name) {
-        response.header("Set-Cookie", name + "=; Path=/; Max-Age=0");
+        response.header("Set-Cookie", Cookie.of(name, "").withMaxAge(java.time.Duration.ZERO)
+            .withHttpOnly(false).withSameSite(null).toSetCookieHeader());
         return this;
     }
 
@@ -336,10 +440,18 @@ public final class Context {
             int eq = pair.indexOf('=');
             String key = eq >= 0 ? pair.substring(0, eq) : pair;
             String value = eq >= 0 ? pair.substring(eq + 1) : "";
-            params.computeIfAbsent(URLDecoder.decode(key, StandardCharsets.UTF_8), k -> new ArrayList<>())
-                  .add(URLDecoder.decode(value, StandardCharsets.UTF_8));
+            params.computeIfAbsent(decode(key), k -> new ArrayList<>()).add(decode(value));
         }
         return params;
+    }
+
+    private static String decode(String encoded) {
+        try {
+            return URLDecoder.decode(encoded, StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            // broken percent-encoding is the client's mistake, not a server error
+            throw new BadRequestException("Malformed percent-encoding in form body");
+        }
     }
 
     /** Request view exposing this context's path parameters (legacy-style handlers). */
@@ -378,6 +490,11 @@ public final class Context {
         @Override
         public String getBodyAsString() {
             return request.getBodyAsString();
+        }
+
+        @Override
+        public InputStream openBodyStream(long maxBytes) {
+            return request.openBodyStream(maxBytes);
         }
 
         @Override
