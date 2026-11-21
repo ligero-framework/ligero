@@ -32,8 +32,7 @@ public final class TracingMiddleware implements Middleware {
 
     @Override
     public void handle(Context ctx, Chain chain) throws Exception {
-        try (Tracer.Span span = tracer.startSpan(
-                ctx.method() + " " + ctx.path(), ctx.header("traceparent"))) {
+        try (Tracer.Span span = tracer.startSpan(ctx.method(), ctx.header("traceparent"))) {
             span.setAttribute("http.request.method", ctx.method());
             span.setAttribute("url.path", ctx.path());
             if (span.traceId() != null) {
@@ -45,6 +44,9 @@ public final class TracingMiddleware implements Middleware {
                 String route = ctx.attribute(MetricsMiddleware.ROUTE_ATTRIBUTE);
                 if (route != null) {
                     span.setAttribute("http.route", route);
+                    span.updateName(ctx.method() + " " + route);
+                } else {
+                    span.updateName(ctx.method()); // unmatched: never name a span after a raw path
                 }
             } catch (Exception e) {
                 span.recordError(e);

@@ -26,6 +26,15 @@ import java.util.List;
  * app.use(TrustedProxyMiddleware.of("10.0.0.0/8", "192.168.1.10"));
  * app.use(RateLimitMiddleware.of(100, 100));
  * }</pre>
+ *
+ * <p>Proxies that send the standard {@code Forwarded} header
+ * (<a href="https://www.rfc-editor.org/rfc/rfc7239">RFC 7239</a>) instead —
+ * {@code Forwarded: for=203.0.113.7;proto=https;host=shop.example} — are
+ * read with {@link #withForwardedHeader()}. Pick the header your proxy
+ * actually writes: the other one arrives untouched from the client, so
+ * reading it would let the client choose its own address. In that mode the
+ * original scheme and host of the request are also available, as the
+ * {@link #PROTO_ATTRIBUTE} and {@link #HOST_ATTRIBUTE} context attributes.</p>
  */
 public final class TrustedProxyMiddleware implements Middleware {
 
@@ -50,10 +59,30 @@ public final class TrustedProxyMiddleware implements Middleware {
         }
     }
 
-    private final List<Network> trusted;
+    /** Context attribute: the scheme the client used ({@code http} / {@code https}), from {@code Forwarded}. */
+    public static final String PROTO_ATTRIBUTE = "ligero.forwarded.proto";
 
-    private TrustedProxyMiddleware(List<Network> trusted) {
+    /** Context attribute: the {@code Host} the client asked for, from {@code Forwarded}. */
+    public static final String HOST_ATTRIBUTE = "ligero.forwarded.host";
+
+    /** One element of a {@code Forwarded} header (one proxy hop). */
+    private record Hop(String forValue, String proto, String host) {
+    }
+
+    private final List<Network> trusted;
+    private final boolean forwardedHeader;
+
+    private TrustedProxyMiddleware(List<Network> trusted, boolean forwardedHeader) {
         this.trusted = trusted;
+        this.forwardedHeader = forwardedHeader;
+    }
+
+    /**
+     * The same proxies, read from the standard {@code Forwarded} header
+     * instead of {@code X-Forwarded-For}.
+     */
+    public TrustedProxyMiddleware withForwardedHeader() {
+        return new TrustedProxyMiddleware(trusted, true);
     }
 
     /**
@@ -86,19 +115,159 @@ public final class TrustedProxyMiddleware implements Middleware {
             }
             networks.add(new Network(address, bits));
         }
-        return new TrustedProxyMiddleware(List.copyOf(networks));
+        return new TrustedProxyMiddleware(List.copyOf(networks), false);
     }
 
     @Override
     public void handle(Context ctx, Chain chain) throws Exception {
         String peer = ctx.req().getRemoteAddress();
         if (isTrusted(peer)) {
-            String client = clientFrom(ctx.header("X-Forwarded-For"));
-            if (client != null) {
-                ctx.attribute(Context.CLIENT_ADDRESS_ATTRIBUTE, client);
+            if (forwardedHeader) {
+                applyForwarded(ctx);
+            } else {
+                String client = clientFrom(ctx.header("X-Forwarded-For"));
+                if (client != null) {
+                    ctx.attribute(Context.CLIENT_ADDRESS_ATTRIBUTE, client);
+                }
             }
         }
         chain.proceed();
+    }
+
+    private void applyForwarded(Context ctx) {
+        List<String> values = ctx.req().getHeaders().entrySet().stream()
+            .filter(header -> header.getKey().equalsIgnoreCase("Forwarded"))
+            .flatMap(header -> header.getValue().stream())
+            .toList();
+        if (values.isEmpty()) {
+            return;
+        }
+        List<Hop> hops = parseForwarded(String.join(",", values));
+        if (hops == null) {
+            return; // malformed: believe nothing
+        }
+        for (int i = hops.size() - 1; i >= 0; i--) {
+            Hop hop = hops.get(i);
+            String address = nodeAddress(hop.forValue());
+            if (address == null) {
+                return; // obfuscated, unknown or missing: nothing further left can be trusted
+            }
+            if (!isTrusted(parse(address))) {
+                ctx.attribute(Context.CLIENT_ADDRESS_ATTRIBUTE, address);
+                // the element that names the client was written by the first of our proxies,
+                // so its proto and host describe the request the client actually sent
+                if (hop.proto() != null && (hop.proto().equalsIgnoreCase("http") || hop.proto().equalsIgnoreCase("https"))) {
+                    ctx.attribute(PROTO_ATTRIBUTE, hop.proto().toLowerCase(java.util.Locale.ROOT));
+                }
+                if (hop.host() != null && hop.host().matches("[A-Za-z0-9.\\-]{1,253}(:[0-9]{1,5})?|\\[[0-9A-Fa-f:.]{2,45}\\](:[0-9]{1,5})?")) {
+                    ctx.attribute(HOST_ATTRIBUTE, hop.host());
+                }
+                return;
+            }
+        }
+    }
+
+    /**
+     * Splits a {@code Forwarded} value into hops ({@code ,}) of
+     * {@code name=value} pairs ({@code ;}), honouring quoted strings. Returns
+     * {@code null} when the value is malformed.
+     */
+    static List<Hop> parseForwarded(String header) {
+        if (header.length() > 8192) {
+            return null;
+        }
+        List<Hop> hops = new ArrayList<>();
+        String forValue = null;
+        String proto = null;
+        String host = null;
+        int i = 0;
+        int n = header.length();
+        while (i <= n) {
+            while (i < n && (header.charAt(i) == ' ' || header.charAt(i) == '\t')) {
+                i++;
+            }
+            if (i == n || header.charAt(i) == ',') { // end of a hop (empty hops are tolerated)
+                if (forValue != null || proto != null || host != null) {
+                    hops.add(new Hop(forValue, proto, host));
+                }
+                forValue = proto = host = null;
+                i++;
+                continue;
+            }
+            if (header.charAt(i) == ';') {
+                i++;
+                continue;
+            }
+            int eq = header.indexOf('=', i);
+            if (eq < 0) {
+                return null;
+            }
+            String name = header.substring(i, eq).trim().toLowerCase(java.util.Locale.ROOT);
+            if (!name.matches("[a-z0-9!#$%&'*+.^_`|~-]+")) {
+                return null;
+            }
+            i = eq + 1;
+            String value;
+            if (i < n && header.charAt(i) == '"') {
+                StringBuilder quoted = new StringBuilder();
+                i++;
+                boolean closed = false;
+                while (i < n) {
+                    char c = header.charAt(i++);
+                    if (c == '\\' && i < n) {
+                        quoted.append(header.charAt(i++));
+                    } else if (c == '"') {
+                        closed = true;
+                        break;
+                    } else {
+                        quoted.append(c);
+                    }
+                }
+                if (!closed) {
+                    return null;
+                }
+                value = quoted.toString();
+            } else {
+                int end = i;
+                while (end < n && header.charAt(end) != ';' && header.charAt(end) != ',') {
+                    end++;
+                }
+                value = header.substring(i, end).trim();
+                i = end;
+            }
+            switch (name) {
+                case "for" -> {
+                    if (forValue != null) {
+                        return null; // a parameter may appear only once per hop
+                    }
+                    forValue = value;
+                }
+                case "proto" -> proto = value;
+                case "host" -> host = value;
+                default -> {
+                    // "by" and extensions are not needed
+                }
+            }
+        }
+        return hops;
+    }
+
+    /** The IP of a {@code for=} node ({@code 192.0.2.1}, {@code 192.0.2.1:80}, {@code [2001:db8::1]:80}). */
+    private static String nodeAddress(String node) {
+        if (node == null || node.isEmpty()) {
+            return null;
+        }
+        String address = node;
+        if (address.startsWith("[")) {
+            int close = address.indexOf(']');
+            if (close < 0) {
+                return null;
+            }
+            address = address.substring(1, close);
+        } else if (address.indexOf(':') == address.lastIndexOf(':') && address.indexOf(':') >= 0) {
+            address = address.substring(0, address.indexOf(':')); // IPv4 with a port
+        }
+        return parse(address) == null ? null : address;
     }
 
     /** The right-most address in the header that is not one of our proxies. */

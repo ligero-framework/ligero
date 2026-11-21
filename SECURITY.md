@@ -53,3 +53,13 @@ concept and the affected version/commit when possible.
   environment, never in `ligero.yml` committed to source control.
 - Use `UploadedFile.safeFilename()` — never the raw client filename — when
   storing uploads.
+- When the application fetches URLs that users supply (webhooks, imports,
+  avatars), build that `RestClient` with `AddressFilter.publicOnly()` so it
+  cannot be pointed at internal services or the cloud metadata endpoint, and
+  restrict outbound traffic at the network level too (the filter cannot stop
+  DNS rebinding on its own).
+- Public GraphQL APIs: keep the depth and complexity limits, and consider
+  `introspection(false)`. Do not enable gRPC `reflection()` on public ports.
+- Message consumers (Kafka, JMS, AMQP) receive data from whoever can write to
+  the topic or queue: validate payloads like request bodies. Ligero never uses
+  Java serialization for messages.

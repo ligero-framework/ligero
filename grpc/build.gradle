@@ -1,0 +1,16 @@
+description = 'Ligero gRPC: run gRPC services (grpc-java) next to the HTTP server, sharing its lifecycle, on virtual threads'
+
+dependencies {
+    api project(':core')
+    api libs.grpc.stub
+    implementation libs.grpc.netty.shaded
+    api libs.grpc.services
+    implementation libs.grpc.protobuf
+
+    testImplementation project(':testkit')
+    testRuntimeOnly project(':server')
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+    testRuntimeOnly libs.slf4j.simple
+}

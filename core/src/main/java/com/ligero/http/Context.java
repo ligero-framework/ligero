@@ -35,6 +35,8 @@ public final class Context {
     private final HttpResponse response;
     private final String path;
     private final Map<String, String> pathParams = new HashMap<>();
+    private static final String VARY_ATTRIBUTE = "ligero.vary";
+
     private final Map<String, Object> attributes = new HashMap<>();
     private final BodyMapper bodyMapper;
     private final TemplateEngine templateEngine;
@@ -364,6 +366,19 @@ public final class Context {
         return json(body);
     }
 
+    /**
+     * Sends {@code problem} as {@code application/problem+json} with its
+     * status. The request path becomes the problem's {@code instance} unless
+     * it already has one.
+     */
+    public Context problem(ProblemDetail problem) {
+        if (problem.instance() == null) {
+            problem.instance(path());
+        }
+        response.status(problem.status()).contentType(ProblemDetail.MEDIA_TYPE).send(problem.toJson());
+        return this;
+    }
+
     public Context redirect(String url) {
         response.redirect(url);
         return this;
@@ -400,6 +415,68 @@ public final class Context {
     /** Starts a Server-Sent Events stream; the response is committed. */
     public SseEmitter sse() {
         return new SseEmitter(response);
+    }
+
+    /**
+     * The locale of this request: the one chosen by
+     * {@link com.ligero.middleware.LocaleMiddleware}, else the first language
+     * of {@code Accept-Language}, else the JVM's default.
+     */
+    public java.util.Locale locale() {
+        Object chosen = attributes.get(com.ligero.middleware.LocaleMiddleware.LOCALE_ATTRIBUTE);
+        if (chosen instanceof java.util.Locale locale) {
+            return locale;
+        }
+        String header = header("Accept-Language");
+        if (header != null && !header.isBlank() && header.length() <= 1024) {
+            try {
+                for (java.util.Locale.LanguageRange range : java.util.Locale.LanguageRange.parse(header)) {
+                    if (range.getWeight() > 0 && !range.getRange().contains("*")) {
+                        return java.util.Locale.forLanguageTag(range.getRange());
+                    }
+                }
+            } catch (IllegalArgumentException malformed) {
+                // fall through to the default
+            }
+        }
+        return java.util.Locale.getDefault();
+    }
+
+    /**
+     * The message for {@code key} in this request's {@link #locale()}, from
+     * the {@link com.ligero.i18n.Messages} registered with
+     * {@code app.register(Messages.class, ...)}.
+     */
+    public String message(String key, Object... args) {
+        return get(com.ligero.i18n.Messages.class).get(locale(), key, args);
+    }
+
+    /**
+     * The API version of this request, as resolved by
+     * {@link com.ligero.versioning.ApiVersioning}; {@code null} without it.
+     */
+    public com.ligero.versioning.ApiVersion apiVersion() {
+        return com.ligero.versioning.ApiVersioning.of(this);
+    }
+
+    /**
+     * Adds {@code headerName} to the response's {@code Vary} header (which
+     * tells caches the response depends on that request header), once,
+     * alongside whatever other middleware added.
+     */
+    public Context vary(String headerName) {
+        java.util.Set<String> vary = attribute(VARY_ATTRIBUTE);
+        if (vary == null) {
+            vary = new java.util.LinkedHashSet<>();
+            attributes.put(VARY_ATTRIBUTE, vary);
+        }
+        for (String existing : vary) {
+            if (existing.equalsIgnoreCase(headerName)) {
+                return this;
+            }
+        }
+        vary.add(headerName);
+        return header("Vary", headerName); // engines add Vary values instead of replacing them
     }
 
     // ------------------------------------------------------------------

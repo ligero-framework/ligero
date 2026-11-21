@@ -11,14 +11,21 @@ repositories {
     mavenCentral()
 }
 
+// -PspringBootVersion=<x.y.z> picks the Spring Boot release (default: the
+// latest GA); -PvirtualThreads=true serves requests on virtual threads
+// (spring.threads.virtual.enabled), Spring's own opt-in.
+def springBootVersion = findProperty('springBootVersion') ?: '4.2.0'
+def virtualThreads = findProperty('virtualThreads') ?: 'false'
+
 application {
     mainClass = 'bench.App'
+    applicationDefaultJvmArgs = ["-Dspring.threads.virtual.enabled=${virtualThreads}"]
 }
 
 // Spring Boot without the boot plugin: plain dependencies + the application
 // plugin, so every framework in this comparison is built and launched the
 // same way (installDist -> bin script).
 dependencies {
-    implementation platform('org.springframework.boot:spring-boot-dependencies:3.4.1')
+    implementation platform("org.springframework.boot:spring-boot-dependencies:${springBootVersion}")
     implementation 'org.springframework.boot:spring-boot-starter-web'
 }

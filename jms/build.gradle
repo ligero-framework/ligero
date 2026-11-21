@@ -1,0 +1,14 @@
+description = 'Ligero JMS: send and consume JSON messages over any Jakarta Messaging broker (ActiveMQ Artemis, IBM MQ, ...)'
+
+dependencies {
+    api project(':core')
+    api libs.jakarta.jms.api
+
+    testImplementation project(':json')
+    testImplementation libs.artemis.server
+    testImplementation libs.artemis.jakarta.client
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+    testRuntimeOnly libs.slf4j.simple
+}

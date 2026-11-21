@@ -45,6 +45,12 @@ def log(message):
     print(message, flush=True)
 
 
+# The Spring Boot release the standing gate compares against: the latest GA.
+SPRING_BOOT = "4.2.0"
+# The previous generation, for the --spring-extras comparison only.
+SPRING_BOOT_PREVIOUS = "3.5.16"
+
+
 def gradle():
     return shutil.which("gradle") or str(HERE.parent / "gradlew")
 
@@ -155,6 +161,8 @@ def main():
     parser.add_argument("--max-regression", type=float, default=float(os.environ.get("MAX_REGRESSION", 0.10)),
                         help="gate 1: allowed throughput drop vs the baseline, per scenario (0.10 = 10%%)")
     parser.add_argument("--skip-others", action="store_true", help="only Ligero builds (no Javalin / Spring Boot)")
+    parser.add_argument("--spring-extras", action="store_true",
+                        help=f"also Spring Boot {SPRING_BOOT} on virtual threads and Spring Boot {SPRING_BOOT_PREVIOUS}")
     parser.add_argument("--no-typed", action="store_true", help="skip the typed-controllers app")
     parser.add_argument("--no-gates", action="store_true", help="report only, always exit 0")
     args = parser.parse_args()
@@ -180,7 +188,13 @@ def main():
                  {"ligeroVersion": args.candidate, "engine": "jetty"}, "info"))
     if not args.skip_others:
         plan.append(("javalin", "Javalin 6 (Jetty)", apps / "javalin-app", {}, "other"))
-        plan.append(("spring", "Spring Boot 3.4 (MVC / Tomcat)", apps / "springboot-app", {}, "other"))
+        plan.append(("spring", f"Spring Boot {SPRING_BOOT} (MVC / Tomcat)", apps / "springboot-app",
+                     {"springBootVersion": SPRING_BOOT}, "other"))
+        if args.spring_extras:
+            plan.append(("spring-vt", f"Spring Boot {SPRING_BOOT}, virtual threads", apps / "springboot-app",
+                         {"springBootVersion": SPRING_BOOT, "virtualThreads": "true"}, "info"))
+            plan.append(("spring-prev", f"Spring Boot {SPRING_BOOT_PREVIOUS} (MVC / Tomcat)", apps / "springboot-app",
+                         {"springBootVersion": SPRING_BOOT_PREVIOUS}, "info"))
 
     binaries, libs = {}, {}
     for key, label, source, props, role in list(plan):

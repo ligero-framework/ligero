@@ -35,7 +35,9 @@ class MetricsMiddlewareTest {
                 .handle(ctx, () -> { throw new IllegalStateException("boom"); }))
             .isInstanceOf(IllegalStateException.class);
 
-        var metrics = collector.snapshot().get("GET /boom");
+        // no route matched: reported as UNMATCHED, never as the raw path
+        assertThat(collector.snapshot()).doesNotContainKey("GET /boom");
+        var metrics = collector.snapshot().get("GET " + MetricsMiddleware.UNMATCHED_ROUTE);
         assertThat(metrics.count()).isEqualTo(1);
         assertThat(metrics.errors()).isEqualTo(1);
     }

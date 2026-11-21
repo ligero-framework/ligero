@@ -93,6 +93,12 @@ public final class FakeResponse implements HttpResponse {
         return stream.size() > 0 ? stream.toString(StandardCharsets.UTF_8) : null;
     }
 
+    /** Every value of a header, in the order they were set. */
+    public List<String> headerValues(String name) {
+        List<String> values = headers.get(name);
+        return values == null ? List.of() : List.copyOf(values);
+    }
+
     public String headerValue(String name) {
         List<String> values = headers.get(name);
         return values == null || values.isEmpty() ? null : values.get(0);

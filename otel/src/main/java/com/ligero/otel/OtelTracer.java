@@ -54,10 +54,18 @@ public final class OtelTracer implements Tracer {
             .setSpanKind(SpanKind.SERVER)
             .setParent(parent)
             .startSpan();
-        return new OtelSpan(otelSpan);
+        // current for the rest of the request, so logs and outgoing calls join the trace
+        return new OtelSpan(otelSpan, otelSpan.makeCurrent());
     }
 
-    private record OtelSpan(io.opentelemetry.api.trace.Span span) implements Tracer.Span {
+    private record OtelSpan(io.opentelemetry.api.trace.Span span, io.opentelemetry.context.Scope scope)
+            implements Tracer.Span {
+
+        @Override
+        public Tracer.Span updateName(String name) {
+            span.updateName(name);
+            return this;
+        }
 
         @Override
         public Tracer.Span setAttribute(String key, String value) {
@@ -85,7 +93,11 @@ public final class OtelTracer implements Tracer {
 
         @Override
         public void close() {
-            span.end();
+            try {
+                scope.close();
+            } finally {
+                span.end();
+            }
         }
     }
 }

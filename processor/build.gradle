@@ -13,6 +13,7 @@ dependencies {
     testAnnotationProcessor project(':core')
     testImplementation project(':testkit')
     testImplementation project(':validation')
+    testImplementation project(':http-client')
     testRuntimeOnly project(':server')
     testRuntimeOnly project(':json')
     testRuntimeOnly libs.slf4j.simple

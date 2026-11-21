@@ -1,4 +1,4 @@
-description = 'Ligero Tracer adapter for OpenTelemetry'
+description = 'Ligero OpenTelemetry adapters: traces, metrics and request logs through the OpenTelemetry API'
 
 dependencies {
     api project(':core')

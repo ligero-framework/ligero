@@ -8,7 +8,7 @@ The same products API — `GET /products`, `GET /products/{id}`,
 | `apps/ligero-app` | Ligero, lambda routes; engine chosen with `-Pengine=pluma\|jdk\|jetty` |
 | `apps/ligero-typed-app` | Ligero, typed controllers, JDK engine |
 | `apps/javalin-app` | Javalin 6 on Jetty |
-| `apps/springboot-app` | Spring Boot 3.4, Web MVC on Tomcat |
+| `apps/springboot-app` | Spring Boot, Web MVC on Tomcat: the latest GA (4.2.0) by default; `-PspringBootVersion` picks another, `-PvirtualThreads=true` turns on Spring's virtual threads |
 
 `run.py` builds each one (`installDist`), starts it cold several times in
 interleaved rounds, drives it with [`Load.java`](Load.java) — a raw-socket,
@@ -26,21 +26,26 @@ bottleneck — and compares the medians.
    Ligero gains ground, raise the floor so the gain is locked in.
 
 Startup time, memory, the Jetty engine and typed controllers are reported but
-not gated.
+not gated. `--spring-extras` adds two informational rows: Spring Boot 4.2 on
+virtual threads, and Spring Boot 3.5 (the last 3.x line).
 
 The size of the lead depends on the machine. On the GitHub-hosted runner the
 workflow uses, the Pluma engine measured 117,695 requests/s overall against
-83,956 for Javalin (1.40×) and 45,257 for Spring Boot (2.60×); the floors are
-calibrated there. A run on a 4-CPU development machine showed a wider gap
+83,956 for Javalin (1.40×) and 45,257 for Spring Boot 3.4 (2.60×); the floors
+are calibrated there. Spring Boot 4.2 is about 9 % faster than 3.x on the
+development machine, so expect a somewhat smaller ratio against it on the
+runner, still well above the 2.0× floor. A run on a 4-CPU development machine showed a wider gap
 (32 connections, medians of 3 rounds, requests/s):
 
-| | GET list | GET by id | POST | Overall |
-|---|--:|--:|--:|--:|
-| Ligero, Pluma engine | 188,813 | 173,212 | 129,087 | 161,621 |
-| Javalin 6 (Jetty) | 59,451 | 60,681 | 50,025 | 56,511 |
-| Ligero, Jetty engine | 44,794 | 44,613 | 35,569 | 41,424 |
-| Ligero, JDK engine | 38,196 | 38,299 | 31,016 | 35,667 |
-| Spring Boot 3.4 (Tomcat) | 29,338 | 29,114 | 23,394 | 27,136 |
+| | GET list | GET by id | POST | Overall | Startup (ms) |
+|---|--:|--:|--:|--:|--:|
+| Ligero, Pluma engine | 173,758 | 184,657 | 131,595 | 161,628 | 369 |
+| Javalin 6 (Jetty) | 58,387 | 58,481 | 48,437 | 54,891 | 637 |
+| Ligero, Jetty engine | 44,856 | 43,598 | 35,750 | 41,196 | 593 |
+| Ligero, JDK engine | 39,401 | 38,806 | 31,870 | 36,525 | 478 |
+| Spring Boot 4.2.0, virtual threads | 36,419 | 33,688 | 26,048 | 31,734 | 1,901 |
+| Spring Boot 4.2.0 (Tomcat) | 35,570 | 32,158 | 24,833 | 30,512 | 1,842 |
+| Spring Boot 3.5.16 (Tomcat) | 28,198 | 29,508 | 26,348 | 27,988 | 1,892 |
 
 The [`Benchmark` workflow](../.github/workflows/benchmark.yml) runs this on
 every pull request against the PR's target branch and publishes the table in
