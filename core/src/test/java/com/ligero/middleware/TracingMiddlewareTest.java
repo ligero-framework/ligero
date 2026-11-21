@@ -38,6 +38,12 @@ class TracingMiddlewareTest {
                 }
 
                 @Override
+                public Span updateName(String newName) {
+                    events.add("name " + newName);
+                    return this;
+                }
+
+                @Override
                 public Span recordError(Throwable error) {
                     events.add("error " + error.getMessage());
                     return this;
@@ -67,7 +73,7 @@ class TracingMiddlewareTest {
         new TracingMiddleware(tracer).handle(ctx, () -> ctx.res().status(200).send("ok"));
 
         assertThat(tracer.lastTraceparent).startsWith("00-");
-        assertThat(tracer.events).contains("start GET /users/9",
+        assertThat(tracer.events).contains("start GET", "name GET /users/{id}",
             "http.request.method=GET", "http.response.status_code=200",
             "http.route=/users/{id}", "end");
         assertThat(ctx.<String>attribute(TracingMiddleware.TRACE_ID_ATTRIBUTE)).hasSize(32);
@@ -83,6 +89,7 @@ class TracingMiddlewareTest {
         })).isInstanceOf(IllegalStateException.class);
 
         assertThat(tracer.events).contains("error kaput", "end");
+        assertThat(tracer.events).noneMatch(event -> (event.startsWith("start") || event.startsWith("name")) && event.contains("/boom"));
     }
 
     @Test
