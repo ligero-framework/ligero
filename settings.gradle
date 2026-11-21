@@ -32,5 +32,6 @@ include 'http-client'    // ligero-http-client: cliente HTTP fluido y declarativ
 include 'graphql'        // ligero-graphql: API GraphQL (graphql-java) con límites de profundidad, complejidad y tamaño
 include 'grpc'           // ligero-grpc: servicios gRPC (grpc-java) junto al servidor HTTP, mismo ciclo de vida
 include 'jms'            // ligero-jms: mensajes JSON sobre cualquier broker Jakarta Messaging
+include 'amqp'           // ligero-amqp: mensajes JSON sobre AMQP 1.0 (Qpid ProtonJ2)
 include 'arch-test'      // solo tests de arquitectura (ArchUnit); no se publica
 include 'examples'  // Aplicación de ejemplo (no se publica)

@@ -1,0 +1,14 @@
+description = 'Ligero AMQP: send and consume JSON messages over AMQP 1.0 (Qpid ProtonJ2) — RabbitMQ 4, ActiveMQ Artemis, Azure Service Bus, ...'
+
+dependencies {
+    api project(':core')
+    api libs.protonj2.client
+
+    testImplementation project(':json')
+    testImplementation libs.artemis.server
+    testImplementation libs.artemis.amqp.protocol
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+    testRuntimeOnly libs.slf4j.simple
+}

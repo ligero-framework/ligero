@@ -76,9 +76,9 @@ grpc-protobuf = { module = "io.grpc:grpc-protobuf", version.ref = "grpc" }
 kafka-clients = { module = "org.apache.kafka:kafka-clients", version.ref = "kafka" }
 protonj2-client = { module = "org.apache.qpid:protonj2-client", version.ref = "protonj2" }
 jakarta-jms-api = { module = "jakarta.jms:jakarta.jms-api", version.ref = "jakartaJms" }
-artemis-server = { module = "org.apache.activemq:artemis-server", version.ref = "artemis" }
-artemis-jakarta-client = { module = "org.apache.activemq:artemis-jakarta-client", version.ref = "artemis" }
-artemis-jakarta-server = { module = "org.apache.activemq:artemis-jakarta-server", version.ref = "artemis" }
-artemis-amqp-protocol = { module = "org.apache.activemq:artemis-amqp-protocol", version.ref = "artemis" }
+artemis-server = { module = "org.apache.artemis:artemis-server", version.ref = "artemis" }
+artemis-jakarta-client = { module = "org.apache.artemis:artemis-jakarta-client", version.ref = "artemis" }
+artemis-jakarta-server = { module = "org.apache.artemis:artemis-jakarta-server", version.ref = "artemis" }
+artemis-amqp-protocol = { module = "org.apache.artemis:artemis-amqp-protocol", version.ref = "artemis" }
 testcontainers-kafka = { module = "org.testcontainers:testcontainers-kafka", version.ref = "testcontainers" }
 testcontainers-junit = { module = "org.testcontainers:testcontainers-junit-jupiter", version.ref = "testcontainers" }
