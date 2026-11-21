@@ -35,8 +35,8 @@ Dependencies flow downhill — release in this order:
   verified — see [MAVEN_CENTRAL_PUBLISHING.md](MAVEN_CENTRAL_PUBLISHING.md).
 - A **GPG key** published to a public keyserver.
 - Secrets configured on the `ligero` repo:
-  - `MAVEN_CENTRAL_USERNAME`, `MAVEN_CENTRAL_PASSWORD` (Central Portal token)
-  - `SIGNING_KEY` (ASCII-armored private key), `SIGNING_PASSWORD`
+  - `MAVEN_USERNAME`, `MAVEN_PASSWORD` (Central Portal token)
+  - `GPG_PRIVATE_KEY` (ASCII-armored private key), `GPG_PASSPHRASE`
 
 ## 1. Framework release (`ligero`)
 
@@ -67,7 +67,7 @@ The release is **tag-driven** — creating the GitHub Release does everything:
 > publish but **skip** the snapshot bump. If `main` is a protected branch, give
 > the bump job a `RELEASE_BOT_TOKEN` secret (a PAT or GitHub-App token allowed to
 > push to `main`); otherwise it uses the default `GITHUB_TOKEN`. CI also
-> auto-publishes **SNAPSHOTs** from `main` whenever the `MAVEN_CENTRAL_*` secrets
+> auto-publishes **SNAPSHOTs** from `main` whenever the `MAVEN_*` secrets
 > exist.
 
 ## 2. CLI release (`ligero-cli`)
