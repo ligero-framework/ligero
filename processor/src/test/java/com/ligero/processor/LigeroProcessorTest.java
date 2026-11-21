@@ -287,6 +287,45 @@ class LigeroProcessorTest {
             @Controller public class C {
                 @Get("/x") @Status(42) String get() { return ""; }
             }""", "valid HTTP status code");
+        assertRouteError("""
+            @Controller public class C {
+                @Get("/x") @ApiVersion("two") String get() { return ""; }
+            }""", "@ApiVersion must look like");
+        assertRouteError("""
+            @Controller @ApiVersion("1.x") public class C {
+                @Get("/x") String get() { return ""; }
+            }""", "@ApiVersion must look like");
+        assertRouteError("""
+            @Controller public class C {
+                @Get("/x") @ApiVersion("2") String a() { return ""; }
+                @Get("/x") @ApiVersion("v2.0") String b() { return ""; }
+            }""", "for API version v2.0");
+        assertRouteError("""
+            @Controller public class C {
+                @Get("/x") String a() { return ""; }
+                @Get("/x") String b() { return ""; }
+            }""", "give the methods different @ApiVersion values");
+    }
+
+    @Test
+    void classLevelApiVersionAppliesToEveryMethod() throws IOException {
+        Path src = freshDir("src/demo");
+        write(src, "C.java", """
+            package demo;
+            import com.ligero.beans.stereotype.Controller;
+            import com.ligero.web.*;
+            @Controller("/v") @ApiVersion("2+") public class C {
+                @Get("/x") String a() { return "a"; }
+                @Get("/x") @ApiVersion("1") String b() { return "b"; }
+                @Get("/y") String c() { return "c"; }
+            }""");
+        Path gen = freshDir("generated");
+        StringWriter diagnostics = new StringWriter();
+        assertThat(compileWithProcessor(src, gen, freshDir("classes"), diagnostics)).as(diagnostics.toString()).isTrue();
+        String routes = Files.readString(gen.resolve("demo/CRoutes.java"));
+        assertThat(routes).contains("com.ligero.versioning.ApiVersioning.handlers()")
+            .contains(".version(\"2+\", ctx -> {").contains(".version(\"1\", ctx -> {")
+            .contains("app.route(\"GET\", \"/v/y\", com.ligero.versioning.ApiVersioning.handlers()");
     }
 
     private void assertRouteError(String classBody, String expectedMessage) throws IOException {

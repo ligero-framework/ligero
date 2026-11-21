@@ -13,10 +13,12 @@ module com.ligero.core {
     exports com.ligero.config;
     exports com.ligero.events;
     exports com.ligero.http;
+    exports com.ligero.i18n;
     exports com.ligero.middleware;
     exports com.ligero.router;
     exports com.ligero.spi;
     exports com.ligero.validation;
+    exports com.ligero.versioning;
     exports com.ligero.web;
     exports com.ligero.websocket;
 

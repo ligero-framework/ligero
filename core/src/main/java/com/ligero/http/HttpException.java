@@ -22,4 +22,13 @@ public class HttpException extends RuntimeException {
     public int getStatus() {
         return status;
     }
+
+    /**
+     * This error as an RFC 9457 problem: the status, its reason phrase as
+     * title and the message as detail. Subclasses add members (validation
+     * errors, allowed methods, ...).
+     */
+    public ProblemDetail toProblem() {
+        return ProblemDetail.of(status, getMessage());
+    }
 }

@@ -76,6 +76,8 @@ public final class LigeroProcessor extends AbstractProcessor {
     /** Verb annotation -> HTTP method. {@code @Route} carries its own. */
     private static final Map<String, String> VERBS = verbs();
     private static final String ROUTE = WEB + "Route";
+    private static final String API_VERSION = WEB + "ApiVersion";
+    private static final String VERSION_PATTERN = "[vV]?[0-9]{1,9}(\\.[0-9]{1,9}){0,2}\\+?";
     private static final String CONTEXT = "com.ligero.http.Context";
     private static final String BINDING = "com.ligero.web.Binding";
     private static final String LIGERO = "com.ligero.Ligero";
@@ -196,6 +198,12 @@ public final class LigeroProcessor extends AbstractProcessor {
     private RoutesModel collectRoutes(TypeElement type, String pkg) {
         Object prefixValue = annotationValue(type, CONTROLLER, "value");
         String prefix = prefixValue == null ? "" : prefixValue.toString();
+        Object classVersionValue = annotationValue(type, API_VERSION, "value");
+        String classVersion = classVersionValue == null ? null : classVersionValue.toString().trim();
+        if (classVersion != null && !classVersion.matches(VERSION_PATTERN)) {
+            error(type, "@ApiVersion must look like \"2\", \"1.1\" or \"2+\"");
+            return null;
+        }
         List<RouteMethod> routes = new ArrayList<>();
         boolean valid = true;
         boolean usesValidation = false;
@@ -270,8 +278,27 @@ public final class LigeroProcessor extends AbstractProcessor {
                 valid = false;
                 continue;
             }
-            routes.add(new RouteMethod(httpMethod, fullPath, method.getSimpleName().toString(), arguments,
-                method.getReturnType().getKind() == TypeKind.VOID, statusCode));
+            Object versionValue = annotationValue(method, API_VERSION, "value");
+            String version = versionValue == null ? classVersion : versionValue.toString().trim();
+            if (version != null && !version.matches(VERSION_PATTERN)) {
+                error(method, "@ApiVersion must look like \"2\", \"1.1\" or \"2+\"");
+                valid = false;
+                continue;
+            }
+            RouteMethod route = new RouteMethod(httpMethod, fullPath, method.getSimpleName().toString(), arguments,
+                method.getReturnType().getKind() == TypeKind.VOID, statusCode, version);
+            for (RouteMethod other : routes) {
+                if (other.httpMethod.equals(route.httpMethod) && other.path.equals(route.path)
+                        && java.util.Objects.equals(canonicalVersion(other.apiVersion), canonicalVersion(route.apiVersion))) {
+                    error(method, route.apiVersion == null
+                        ? "another method already serves " + route.httpMethod + " " + route.path
+                            + " — give the methods different @ApiVersion values"
+                        : "another method already serves " + route.httpMethod + " " + route.path
+                            + " for API version " + route.apiVersion);
+                    valid = false;
+                }
+            }
+            routes.add(route);
         }
         if (!valid || routes.isEmpty()) {
             return null;
@@ -591,26 +618,65 @@ public final class LigeroProcessor extends AbstractProcessor {
         if (model.usesValidation) {
             sb.append("        ").append(BINDING).append(".requireValidator(); // fail at startup, not on the first request\n");
         }
+        // routes sharing a verb and path but not a version become one dispatching handler
+        Map<String, List<RouteMethod>> byRoute = new LinkedHashMap<>();
         for (RouteMethod route : model.routes) {
-            sb.append("        app.route(").append(literal(route.httpMethod)).append(", ")
-              .append(literal(route.path)).append(", ctx -> {\n");
-            String call = "controller." + route.methodName + "(" + joinArguments(route.arguments) + ")";
-            if (route.returnsVoid) {
-                sb.append("            ").append(call).append(";\n");
-            } else {
-                sb.append("            Object result = ").append(call).append(";\n");
+            byRoute.computeIfAbsent(route.httpMethod + " " + route.path, key -> new ArrayList<>()).add(route);
+        }
+        for (List<RouteMethod> group : byRoute.values()) {
+            RouteMethod first = group.get(0);
+            boolean versioned = group.stream().anyMatch(route -> route.apiVersion != null);
+            sb.append("        app.route(").append(literal(first.httpMethod)).append(", ")
+              .append(literal(first.path)).append(", ");
+            if (!versioned) {
+                appendHandler(sb, first, "        ");
+                sb.append(");\n");
+                continue;
             }
-            if (route.status != 0) {
-                sb.append("            if (!ctx.res().isCommitted()) {\n");
-                sb.append("                ctx.status(").append(route.status).append(");\n");
-                sb.append("            }\n");
+            sb.append("com.ligero.versioning.ApiVersioning.handlers()\n");
+            for (RouteMethod route : group) {
+                if (route.apiVersion == null) {
+                    sb.append("            .otherwise(");
+                } else {
+                    sb.append("            .version(").append(literal(route.apiVersion)).append(", ");
+                }
+                appendHandler(sb, route, "            ");
+                sb.append(")\n");
             }
-            sb.append("            ctx.respond(").append(route.returnsVoid ? "null" : "result").append(");\n");
-            sb.append("        });\n");
+            sb.append("            .build());\n");
         }
         sb.append("    }\n");
         sb.append("}\n");
         write(model.pkg + "." + model.simpleName, sb.toString());
+    }
+
+    private void appendHandler(StringBuilder sb, RouteMethod route, String indent) {
+        sb.append("ctx -> {\n");
+        String call = "controller." + route.methodName + "(" + joinArguments(route.arguments) + ")";
+        if (route.returnsVoid) {
+            sb.append(indent).append("    ").append(call).append(";\n");
+        } else {
+            sb.append(indent).append("    Object result = ").append(call).append(";\n");
+        }
+        if (route.status != 0) {
+            sb.append(indent).append("    if (!ctx.res().isCommitted()) {\n");
+            sb.append(indent).append("        ctx.status(").append(route.status).append(");\n");
+            sb.append(indent).append("    }\n");
+        }
+        sb.append(indent).append("    ctx.respond(").append(route.returnsVoid ? "null" : "result").append(");\n");
+        sb.append(indent).append("}");
+    }
+
+    /** "v2" and "2.0" name the same version as "2"; the "+" suffix is kept. */
+    private static String canonicalVersion(String version) {
+        if (version == null) {
+            return null;
+        }
+        boolean andLater = version.endsWith("+");
+        String number = (andLater ? version.substring(0, version.length() - 1) : version).replaceFirst("^[vV]", "");
+        String[] parts = (number + ".0.0").split("\\.");
+        return Integer.parseInt(parts[0]) + "." + Integer.parseInt(parts[1]) + "." + Integer.parseInt(parts[2])
+            + (andLater ? "+" : "");
     }
 
     private static String joinArguments(List<String> arguments) {
@@ -752,7 +818,7 @@ public final class LigeroProcessor extends AbstractProcessor {
     }
 
     private record RouteMethod(String httpMethod, String path, String methodName, List<String> arguments,
-                               boolean returnsVoid, int status) {
+                               boolean returnsVoid, int status, String apiVersion) {
     }
 
     private record ProvidesBinding(String returnType, String enclosing, String method) {
