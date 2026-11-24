@@ -1,0 +1,13 @@
+description = 'Ligero HTTP client: a fluent and declarative client on java.net.http, with Problem Details errors and SSRF protection.'
+
+dependencies {
+    api project(':core')
+
+    testImplementation project(':json')
+    testImplementation project(':testkit')
+    testImplementation project(':server')
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+    testRuntimeOnly libs.slf4j.simple
+}

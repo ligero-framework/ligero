@@ -1,0 +1,20 @@
+description = 'Ligero OTLP setup: export traces, metrics and request logs to any OpenTelemetry backend, configured with the standard OTEL_* variables'
+
+dependencies {
+    api project(':otel')
+    api libs.otel.sdk
+    implementation libs.otel.sdk.autoconfigure
+    // the JDK's HttpClient sends the data, instead of OkHttp: no Kotlin, no extra HTTP stack
+    implementation(libs.otel.exporter.otlp) {
+        exclude group: 'io.opentelemetry', module: 'opentelemetry-exporter-sender-okhttp'
+    }
+    implementation libs.otel.exporter.sender.jdk
+
+    testImplementation project(':testkit')
+    testImplementation project(':server')
+    testImplementation project(':json')
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+    testRuntimeOnly libs.slf4j.simple
+}

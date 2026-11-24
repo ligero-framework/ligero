@@ -1,6 +1,7 @@
 package com.ligero.validation;
 
 import com.ligero.http.BadRequestException;
+import com.ligero.http.ProblemDetail;
 
 import java.util.List;
 
@@ -16,5 +17,11 @@ public class ValidationException extends BadRequestException {
 
     public List<String> getErrors() {
         return errors;
+    }
+
+    /** As a problem: {@code "detail":"Validation failed"} plus an {@code "errors"} array. */
+    @Override
+    public ProblemDetail toProblem() {
+        return ProblemDetail.of(400, "Validation failed").with("errors", errors);
     }
 }

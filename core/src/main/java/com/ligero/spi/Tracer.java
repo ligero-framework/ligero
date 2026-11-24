@@ -25,6 +25,15 @@ public interface Tracer {
 
         Span setAttribute(String key, String value);
 
+        /**
+         * Renames the span once the route is known ({@code GET /users/{id}}),
+         * so span names stay low-cardinality. Implementations that cannot
+         * rename may ignore it.
+         */
+        default Span updateName(String name) {
+            return this;
+        }
+
         Span setAttribute(String key, long value);
 
         /** Marks the span as failed and records the throwable. */

@@ -1,0 +1,14 @@
+description = 'Ligero Kafka: produce and consume JSON records, with retries and a dead-letter topic'
+
+dependencies {
+    api project(':core')
+    api libs.kafka.clients
+
+    testImplementation project(':json')
+    testImplementation libs.testcontainers.kafka
+    testImplementation libs.testcontainers.junit
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.launcher
+    testImplementation libs.assertj.core
+    testRuntimeOnly libs.slf4j.simple
+}

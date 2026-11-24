@@ -9,6 +9,7 @@ include 'template-mustache'   // ligero-template-mustache: TemplateEngine con JM
 include 'template-freemarker' // ligero-template-freemarker: TemplateEngine con FreeMarker
 include 'template-pebble'     // ligero-template-pebble: TemplateEngine con Pebble
 include 'otel'                // ligero-otel: Tracer -> OpenTelemetry
+include 'otel-otlp'           // ligero-otel-otlp: SDK + exportador OTLP (trazas, métricas, logs) configurado con OTEL_*
 include 'testkit'             // ligero-test: utilidades de testing end-to-end
 include 'openapi'             // ligero-openapi: generación OpenAPI 3 desde las rutas
 include 'metrics-micrometer'  // ligero-metrics-micrometer: adapter MetricsCollector -> Micrometer
@@ -27,5 +28,11 @@ include 'benchmarks'          // JMH (no se publica)
 include 'mcp'            // ligero-mcp: servidores Model Context Protocol (JSON-RPC 2.0)
 include 'scheduler'      // ligero-scheduler: tareas en segundo plano (virtual threads)
 include 'resilience'     // ligero-resilience: retry, timeout y circuit-breaker
+include 'http-client'    // ligero-http-client: cliente HTTP fluido y declarativo (java.net.http), Problem Details, anti-SSRF
+include 'graphql'        // ligero-graphql: API GraphQL (graphql-java) con límites de profundidad, complejidad y tamaño
+include 'grpc'           // ligero-grpc: servicios gRPC (grpc-java) junto al servidor HTTP, mismo ciclo de vida
+include 'jms'            // ligero-jms: mensajes JSON sobre cualquier broker Jakarta Messaging
+include 'amqp'           // ligero-amqp: mensajes JSON sobre AMQP 1.0 (Qpid ProtonJ2)
+include 'kafka'          // ligero-kafka: productor y consumidores Kafka con reintentos y dead-letter topic
 include 'arch-test'      // solo tests de arquitectura (ArchUnit); no se publica
 include 'examples'  // Aplicación de ejemplo (no se publica)

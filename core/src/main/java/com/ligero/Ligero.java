@@ -72,6 +72,7 @@ public final class Ligero implements AutoCloseable {
     private BodyMapper bodyMapper;
     private TemplateEngine templateEngine;
     private volatile boolean started;
+    private boolean problemDetails;
 
     private Ligero(LigeroConfig config) {
         this.config = config;
@@ -219,6 +220,18 @@ public final class Ligero implements AutoCloseable {
     /** Maps an exception type (and its subclasses) to a custom handler. */
     public <T extends Throwable> Ligero exception(Class<T> type, ExceptionHandler<T> handler) {
         exceptionHandlers.put(type, handler);
+        return this;
+    }
+
+    /**
+     * Answers every error the framework renders — {@link HttpException}s,
+     * validation failures, 404/405 and unexpected exceptions — as an RFC 9457
+     * problem ({@code application/problem+json}) instead of the default
+     * {@code {"status":..,"error":..}} body. A {@link com.ligero.http.ProblemException}
+     * is always rendered as a problem.
+     */
+    public Ligero problemDetails(boolean enabled) {
+        this.problemDetails = enabled;
         return this;
     }
 
@@ -470,6 +483,8 @@ public final class Ligero implements AutoCloseable {
                 if (statusHandler != null) {
                     ctx.status(http.getStatus());
                     statusHandler.handle(ctx);
+                } else if (problemDetails || http instanceof com.ligero.http.ProblemException) {
+                    ctx.problem(http.toProblem());
                 } else {
                     sendErrorJson(ctx, http.getStatus(), http.getMessage());
                 }
@@ -477,7 +492,11 @@ public final class Ligero implements AutoCloseable {
             }
             // Unexpected exception: full details to the log, none to the client.
             log.error("Unhandled exception processing {} {}", ctx.method(), ctx.path(), t);
-            sendErrorJson(ctx, 500, "Internal server error");
+            if (problemDetails) {
+                ctx.problem(com.ligero.http.ProblemDetail.of(500));
+            } else {
+                sendErrorJson(ctx, 500, "Internal server error");
+            }
         } catch (Throwable secondary) {
             log.error("Exception handler itself failed", secondary);
             if (!ctx.res().isCommitted()) {
