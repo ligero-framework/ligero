@@ -17,7 +17,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       # Configurar el secret NVD_API_KEY (gratuito, https://nvd.nist.gov/developers/request-an-api-key)
       # acelera la descarga de la base de vulnerabilidades.
       - name: OWASP dependency check
