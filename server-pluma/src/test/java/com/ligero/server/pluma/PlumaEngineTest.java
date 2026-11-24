@@ -397,6 +397,9 @@ class PlumaEngineTest {
                     out.write(head.charAt(sent));
                     out.flush();
                     Thread.sleep(100);
+                    if (socket.getInputStream().available() > 0) {
+                        break; // the 408 has arrived: read it before the server's close resets us
+                    }
                 }
             } catch (IOException closedByServer) {
                 // expected once the server gives up
