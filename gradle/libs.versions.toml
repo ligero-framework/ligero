@@ -1,12 +1,12 @@
 [versions]
-jackson = "2.18.2"
-slf4j = "2.0.16"
+jackson = "2.23.0"
+slf4j = "2.0.20"
 junit = "5.11.4"
 assertj = "3.26.3"
 jmustache = "1.16"
 micrometer = "1.14.2"
 jetty = "12.0.16"
-freemarker = "2.3.33"
+freemarker = "2.3.35"
 pebble = "3.2.2"
 otel = "1.44.1"
 h2 = "2.3.232"
@@ -20,7 +20,7 @@ jedis = "5.2.0"
 commonsPool2 = "2.12.0"
 archunit = "1.3.0"
 hikari = "5.1.0"
-brotli4j = "1.18.0"
+brotli4j = "1.24.0"
 
 [libraries]
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
