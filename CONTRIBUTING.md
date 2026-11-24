@@ -19,6 +19,13 @@ they are what keeps Ligero "ligero".
 5. Every change ships with tests. Coverage gates run in the build
    (80 % line coverage in `core`).
 
+## Contributing from a fork
+
+External contributors: fork the repository, branch from the latest `main` and open a
+pull request. Workflows from first-time contributors need a maintainer's approval
+before they run. By contributing you agree your work is licensed under the
+[Apache License 2.0](LICENSE).
+
 ## Development
 
 ```bash
