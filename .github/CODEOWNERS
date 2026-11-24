@@ -1,33 +1,33 @@
 # Default owner for everything in the repo
-* @ligero-framework/maintainers
+* @duvanjamid
 
 # Core framework
-/ligero-core @ligero-framework/maintainers
+/ligero-core @duvanjamid
 
 # Server engines
-/ligero-server-jdk @ligero-framework/maintainers
-/ligero-server-jetty @ligero-framework/maintainers
+/ligero-server-jdk @duvanjamid
+/ligero-server-jetty @duvanjamid
 
 # Adapters and extensions
-/ligero-json @ligero-framework/maintainers
-/ligero-auth @ligero-framework/maintainers
-/ligero-template-* @ligero-framework/maintainers
-/ligero-openapi @ligero-framework/maintainers
-/ligero-metrics-micrometer @ligero-framework/maintainers
-/ligero-test @ligero-framework/maintainers
+/ligero-json @duvanjamid
+/ligero-auth @duvanjamid
+/ligero-template-* @duvanjamid
+/ligero-openapi @duvanjamid
+/ligero-metrics-micrometer @duvanjamid
+/ligero-test @duvanjamid
 
 # Documentation
-/docs @ligero-framework/maintainers
-/README.md @ligero-framework/maintainers
+/docs @duvanjamid
+/README.md @duvanjamid
 
 # Build and CI
-/gradle @ligero-framework/maintainers
-/build.gradle @ligero-framework/maintainers
-/gradle.properties @ligero-framework/maintainers
-/.github/workflows @ligero-framework/maintainers
+/gradle @duvanjamid
+/build.gradle @duvanjamid
+/gradle.properties @duvanjamid
+/.github/workflows @duvanjamid
 
 # Governance and community
-/CONTRIBUTING.md @ligero-framework/maintainers
-/GOVERNANCE.md @ligero-framework/maintainers
-/CODE_OF_CONDUCT.md @ligero-framework/maintainers
-/SECURITY.md @ligero-framework/maintainers
+/CONTRIBUTING.md @duvanjamid
+/GOVERNANCE.md @duvanjamid
+/CODE_OF_CONDUCT.md @duvanjamid
+/SECURITY.md @duvanjamid
